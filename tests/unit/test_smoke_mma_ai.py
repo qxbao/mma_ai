@@ -6,6 +6,7 @@ Hiện thực và xác thực các yêu cầu chức năng (functional requireme
 """
 
 import os
+import subprocess
 import sys
 
 import pytest
@@ -20,9 +21,15 @@ def test_smoke_version() -> None:
 
 def test_smoke_fr_015_clean_import_boundary() -> None:
     """FR-015: Nhập gói mma_ai không nạp các mô-đun huấn luyện nặng hoặc học máy."""
-    # Xác nhận ranh giới kiến trúc: mma_ai gốc không tự động kéo theo torch hoặc learning
-    assert "mma_ai.learning" not in sys.modules
-    assert "torch" not in sys.modules
+    subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            'import sys, mma_ai; assert "mma_ai.learning" not in sys.modules and '
+            '"torch" not in sys.modules',
+        ],
+        check=True,
+    )
 
 
 def test_smoke_fr_019_headless_display_isolation() -> None:
