@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mma-ai-lab/schemas/m0/benchmark-report.json",
+  "title": "BenchmarkReport",
+  "description": "Kết quả scripts/benchmark.py (benchmark.json). Mọi số steps/s đo thật, repeats >= 5 (NFR-PERF-001). GPU không khả dụng => gpu.available=false, các số null, reason khác null (INV-001).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["run_id", "seed", "model_sha256", "config", "results", "peak_ram_mb", "gpu", "libraries"],
+  "properties": {
+    "run_id": {"type": "string", "pattern": "^[0-9]{8}T[0-9]{6}Z-s[0-9]+$"},
+    "seed": {"type": "integer", "minimum": 0},
+    "model_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "config": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["steps_per_repeat", "repeats", "warmup_repeats", "timesteps_s", "scenarios", "policy_hold_steps"],
+      "properties": {
+        "steps_per_repeat": {"type": "integer", "minimum": 1},
+        "repeats": {"type": "integer", "minimum": 5},
+        "warmup_repeats": {"type": "integer", "minimum": 0},
+        "timesteps_s": {"type": "array", "minItems": 1, "items": {"type": "number", "exclusiveMinimum": 0}},
+        "scenarios": {"type": "array", "minItems": 1, "items": {"enum": ["constant", "policy_like"]}},
+        "policy_hold_steps": {"type": "integer", "minimum": 1}
+      }
+    },
+    "results": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["scenario", "timestep_s", "steps_per_second", "repeat_values", "nan_inf_count"],
+        "properties": {
+          "scenario": {"enum": ["constant", "policy_like"]},
+          "timestep_s": {"type": "number", "exclusiveMinimum": 0},
+          "steps_per_second": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["median", "mean", "min", "max", "stdev", "cv"],
+            "properties": {
+              "median": {"type": "number", "exclusiveMinimum": 0},
+              "mean": {"type": "number", "exclusiveMinimum": 0},
+              "min": {"type": "number", "exclusiveMinimum": 0},
+              "max": {"type": "number", "exclusiveMinimum": 0},
+              "stdev": {"type": "number", "minimum": 0},
+              "cv": {"type": "number", "minimum": 0}
+            }
+          },
+          "repeat_values": {"type": "array", "minItems": 5, "items": {"type": "number", "exclusiveMinimum": 0}},
+          "nan_inf_count": {"type": "integer", "minimum": 0}
+        }
+      }
+    },
+    "peak_ram_mb": {"type": ["number", "null"], "minimum": 0, "description": "null = không đo được (kèm cảnh báo trong báo cáo .md)"},
+    "gpu": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["available", "name", "total_mb", "peak_allocated_mb", "tensor_op_ok", "reason"],
+      "properties": {
+        "available": {"type": "boolean"},
+        "name": {"type": ["string", "null"]},
+        "total_mb": {"type": ["number", "null"], "minimum": 0},
+        "peak_allocated_mb": {"type": ["number", "null"], "minimum": 0},
+        "tensor_op_ok": {"type": ["boolean", "null"]},
+        "reason": {"type": ["string", "null"]}
+      }
+    },
+    "libraries": {"type": "object", "additionalProperties": {"type": "string"}}
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mma-ai-lab/schemas/m0/acceptance-report.json",
+  "title": "AcceptanceReport",
+  "description": "Báo cáo nghiệm thu M0 do scripts/m0_report.py ghi (acceptance.json), tổng hợp env/smoke/benchmark. Đủ 5 tiêu chí AC-1..AC-5 (NFR-DOC-001).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["milestone", "run_id", "criteria", "gate_open", "remaining_issues", "next_milestone_proposal", "sources"],
+  "properties": {
+    "milestone": {"const": "M0"},
+    "run_id": {"type": "string", "pattern": "^[0-9]{8}T[0-9]{6}Z-s[0-9]+$"},
+    "criteria": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "status", "evidence", "note"],
+        "properties": {
+          "id": {"enum": ["AC-1", "AC-2", "AC-3", "AC-4", "AC-5"]},
+          "status": {"enum": ["dat", "chua_dat", "chua_chay"]},
+          "evidence": {"type": "array", "items": {"type": "string"}, "description": "Đường dẫn tương đối tới tệp bằng chứng thật; status=dat => ít nhất 1 phần tử."},
+          "note": {"type": ["string", "null"], "description": "Bắt buộc khác null khi status khác dat."}
+        },
+        "if": {"properties": {"status": {"const": "dat"}}},
+        "then": {"properties": {"evidence": {"minItems": 1}}}
+      }
+    },
+    "gate_open": {"type": "boolean", "description": "true khi và chỉ khi cả 5 tiêu chí status=dat."},
+    "remaining_issues": {"type": "array", "items": {"type": "string"}},
+    "next_milestone_proposal": {"type": "string"},
+    "sources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["env", "smoke", "benchmark"],
+      "properties": {
+        "env": {"type": ["string", "null"]},
+        "smoke": {"type": ["string", "null"]},
+        "benchmark": {"type": ["string", "null"]}
+      }
+    }
+  }
+}

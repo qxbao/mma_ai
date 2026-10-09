@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mma-ai-lab/schemas/m0/smoke-result.json",
+  "title": "SmokeResult",
+  "description": "Kết quả scripts/smoke_test.py (smoke.json). Tiêu chí đạt: passed=true khi totals.nan=0, totals.inf=0, totals.physics_warnings=0, n_non_muscle_actuators=0, n_muscles=6 và mọi mẫu force_within_bound.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["run_id", "seed", "passed", "model", "rejection_checks", "samples", "totals", "failure", "trajectory_fingerprint", "libraries", "config"],
+  "properties": {
+    "run_id": {"type": "string", "pattern": "^[0-9]{8}T[0-9]{6}Z-s[0-9]+$"},
+    "seed": {"type": "integer", "minimum": 0},
+    "passed": {"type": "boolean"},
+    "model": {"$ref": "#/$defs/muscle_model"},
+    "rejection_checks": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Các vector không hợp lệ (sai kích thước, ngoài [0,1], NaN, Inf) PHẢI bị từ chối (FR-005).",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["case", "rejected"],
+        "properties": {
+          "case": {"enum": ["wrong_size", "below_zero", "above_one", "nan", "inf"]},
+          "rejected": {"type": "boolean"}
+        }
+      }
+    },
+    "samples": {"type": "array", "minItems": 3, "items": {"$ref": "#/$defs/sample"}},
+    "totals": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["nan", "inf", "physics_warnings"],
+      "properties": {
+        "nan": {"type": "integer", "minimum": 0},
+        "inf": {"type": "integer", "minimum": 0},
+        "physics_warnings": {"type": "integer", "minimum": 0}
+      }
+    },
+    "failure": {
+      "type": ["object", "null"],
+      "description": "null khi passed=true; ngược lại nêu đại lượng, bước và mẫu gây lỗi đầu tiên.",
+      "additionalProperties": false,
+      "required": ["quantity", "step", "sample", "message"],
+      "properties": {
+        "quantity": {"type": "string"},
+        "step": {"type": ["integer", "null"], "minimum": 0},
+        "sample": {"type": ["string", "null"]},
+        "message": {"type": "string"}
+      }
+    },
+    "trajectory_fingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "libraries": {"type": "object", "additionalProperties": {"type": "string"}},
+    "config": {"type": "object", "description": "Bản sao cấu hình hiệu lực (simulation.yaml + body.yaml) để tái lập (FR-018)."}
+  },
+  "$defs": {
+    "vec6": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "items": {"type": "number"}
+    },
+    "muscle_model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "sha256", "n_muscles", "n_non_muscle_actuators", "n_dof", "muscle_names", "joint_ranges_rad", "muscle_f0_n", "force_bound_n", "ctrl_range", "timestep_s"],
+      "properties": {
+        "source": {"type": "string"},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "n_muscles": {"type": "integer", "minimum": 0},
+        "n_non_muscle_actuators": {"type": "integer", "minimum": 0},
+        "n_dof": {"type": "integer", "minimum": 1},
+        "muscle_names": {"type": "array", "items": {"type": "string"}},
+        "joint_ranges_rad": {"type": "array", "items": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "number"}}},
+        "muscle_f0_n": {"type": "array", "items": {"type": "number"}},
+        "force_bound_n": {"type": "array", "items": {"type": "number"}},
+        "ctrl_range": {"type": "array", "items": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "number"}}},
+        "timestep_s": {"type": "number", "exclusiveMinimum": 0}
+      }
+    },
+    "sample": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "kind", "ctrl_requested", "ctrl_effective", "steps", "nan_count", "inf_count", "physics_warnings", "max_abs_force_n", "force_within_bound", "joint_state_final", "muscle_activation_final", "muscle_force_final_n"],
+      "properties": {
+        "name": {"type": "string"},
+        "kind": {"enum": ["constant", "random"]},
+        "ctrl_requested": {"$ref": "#/$defs/vec6"},
+        "ctrl_effective": {"$ref": "#/$defs/vec6"},
+        "steps": {"type": "integer", "minimum": 1},
+        "nan_count": {"type": "integer", "minimum": 0},
+        "inf_count": {"type": "integer", "minimum": 0},
+        "physics_warnings": {"type": "integer", "minimum": 0},
+        "max_abs_force_n": {"type": "number", "minimum": 0},
+        "force_within_bound": {"type": "boolean"},
+        "joint_state_final": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["qpos", "qvel"],
+          "properties": {
+            "qpos": {"type": "array", "items": {"type": "number"}},
+            "qvel": {"type": "array", "items": {"type": "number"}}
+          }
+        },
+        "muscle_activation_final": {"$ref": "#/$defs/vec6"},
+        "muscle_force_final_n": {"$ref": "#/$defs/vec6"}
+      }
+    }
+  }
+}

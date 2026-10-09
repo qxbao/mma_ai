@@ -1,0 +1,261 @@
+{
+  "run_id": "20261009T101500Z-s42",
+  "seed": 42,
+  "model": {
+    "source": "myo_sim/models/legacy/elbow/myoelbow_1dof6muscles.xml",
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "n_muscles": 6,
+    "n_non_muscle_actuators": 0,
+    "n_dof": 1,
+    "muscle_names": [
+      "TRIlong",
+      "TRIlat",
+      "TRImed",
+      "BIClong",
+      "BICshort",
+      "BRA"
+    ],
+    "joint_ranges_rad": [
+      [
+        0.0,
+        2.26893
+      ]
+    ],
+    "muscle_f0_n": [
+      769.6,
+      604.4,
+      604.2,
+      607.8,
+      423.7,
+      976.2
+    ],
+    "force_bound_n": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "ctrl_range": [
+      [
+        0.001,
+        1.0
+      ],
+      [
+        0.001,
+        1.0
+      ],
+      [
+        0.001,
+        1.0
+      ],
+      [
+        0.001,
+        1.0
+      ],
+      [
+        0.001,
+        1.0
+      ],
+      [
+        0.001,
+        1.0
+      ]
+    ],
+    "timestep_s": 0.002
+  },
+  "rejection_checks": [
+    {
+      "case": "wrong_size",
+      "rejected": true
+    },
+    {
+      "case": "below_zero",
+      "rejected": true
+    },
+    {
+      "case": "above_one",
+      "rejected": true
+    },
+    {
+      "case": "nan",
+      "rejected": true
+    },
+    {
+      "case": "inf",
+      "rejected": true
+    }
+  ],
+  "trajectory_fingerprint": "0000000000000000000000000000000000000000000000000000000000000000",
+  "libraries": {
+    "mujoco": "3.15.0",
+    "myo-sim": "0.2.3",
+    "numpy": "2.5.3"
+  },
+  "config": {},
+  "passed": false,
+  "samples": [
+    {
+      "name": "zeros",
+      "kind": "constant",
+      "ctrl_requested": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "ctrl_effective": [
+        0.001,
+        0.001,
+        0.001,
+        0.001,
+        0.001,
+        0.001
+      ],
+      "steps": 2000,
+      "nan_count": 0,
+      "inf_count": 0,
+      "physics_warnings": 0,
+      "max_abs_force_n": 0.0,
+      "force_within_bound": true,
+      "joint_state_final": {
+        "qpos": [
+          0.0
+        ],
+        "qvel": [
+          0.0
+        ]
+      },
+      "muscle_activation_final": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "muscle_force_final_n": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "ones",
+      "kind": "constant",
+      "ctrl_requested": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "ctrl_effective": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "steps": 2000,
+      "nan_count": 3,
+      "inf_count": 0,
+      "physics_warnings": 0,
+      "max_abs_force_n": 0.0,
+      "force_within_bound": true,
+      "joint_state_final": {
+        "qpos": [
+          0.0
+        ],
+        "qvel": [
+          0.0
+        ]
+      },
+      "muscle_activation_final": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "muscle_force_final_n": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "random_0",
+      "kind": "random",
+      "ctrl_requested": [
+        0.5,
+        0.5,
+        0.5,
+        0.5,
+        0.5,
+        0.5
+      ],
+      "ctrl_effective": [
+        0.5,
+        0.5,
+        0.5,
+        0.5,
+        0.5,
+        0.5
+      ],
+      "steps": 2000,
+      "nan_count": 0,
+      "inf_count": 0,
+      "physics_warnings": 0,
+      "max_abs_force_n": 0.0,
+      "force_within_bound": true,
+      "joint_state_final": {
+        "qpos": [
+          0.0
+        ],
+        "qvel": [
+          0.0
+        ]
+      },
+      "muscle_activation_final": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "muscle_force_final_n": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    }
+  ],
+  "totals": {
+    "nan": 3,
+    "inf": 0,
+    "physics_warnings": 0
+  },
+  "failure": {
+    "quantity": "qpos",
+    "step": 1200,
+    "sample": "ones",
+    "message": "NaN trong qpos"
+  }
+}

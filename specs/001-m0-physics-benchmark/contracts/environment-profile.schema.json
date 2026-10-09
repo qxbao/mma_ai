@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mma-ai-lab/schemas/m0/environment-profile.json",
+  "title": "EnvironmentProfile",
+  "description": "Hồ sơ môi trường do scripts/check_env.py ghi (env.json). Mục không dò được = null kèm reason (INV-001).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["run_id", "os", "python", "cpu", "ram_total_mb", "nvidia", "cuda", "libraries"],
+  "properties": {
+    "run_id": {"type": "string", "pattern": "^[0-9]{8}T[0-9]{6}Z-s[0-9]+$"},
+    "os": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["system", "release", "is_wsl2"],
+      "properties": {
+        "system": {"type": "string"},
+        "release": {"type": "string"},
+        "is_wsl2": {"type": ["boolean", "null"], "description": "null = không dò được"}
+      }
+    },
+    "python": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+"},
+    "cpu": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["model", "logical_cores"],
+      "properties": {
+        "model": {"type": ["string", "null"]},
+        "logical_cores": {"type": "integer", "minimum": 1}
+      }
+    },
+    "ram_total_mb": {"type": ["number", "null"], "minimum": 0},
+    "nvidia": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["smi_available", "driver_version", "reason"],
+      "properties": {
+        "smi_available": {"type": "boolean"},
+        "driver_version": {"type": ["string", "null"]},
+        "reason": {"type": ["string", "null"], "description": "Bắt buộc khác null khi driver_version = null"}
+      }
+    },
+    "cuda": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["torch_version", "torch_cuda_runtime", "available", "device_name", "capability", "arch_list", "arch_supported", "reason"],
+      "properties": {
+        "torch_version": {"type": ["string", "null"]},
+        "torch_cuda_runtime": {"type": ["string", "null"]},
+        "available": {"type": "boolean"},
+        "device_name": {"type": ["string", "null"]},
+        "capability": {"type": ["string", "null"], "pattern": "^[0-9]+\\.[0-9]+$"},
+        "arch_list": {"type": ["array", "null"], "items": {"type": "string"}},
+        "arch_supported": {"type": ["boolean", "null"], "description": "Kiến trúc của GPU có trong arch_list của bản torch cài hay không"},
+        "reason": {"type": ["string", "null"]}
+      }
+    },
+    "libraries": {
+      "type": "object",
+      "description": "tên gói → phiên bản đang cài",
+      "additionalProperties": {"type": "string"},
+      "required": ["mujoco", "myo-sim", "numpy"]
+    }
+  }
+}
