@@ -23,6 +23,7 @@ version: "1.0.0"
 - [Lệnh build / test (cho task khung dựng đúng một lần)](#lenh-build-test-cho-task-khung-dung-dung-mot-lan)
 - [Truy vết yêu cầu → thiết kế](#truy-vet-yeu-cau-thiet-ke)
 - [Rủi ro & việc CHƯA KIỂM](#rui-ro-viec-chua-kiem)
+- [Quyết định ở bước tasks](#quyet-dinh-o-buoc-tasks)
 - [Phản biện plan_lint](#phan-bien-plan-lint)
 - [Complexity Tracking](#complexity-tracking)
 
@@ -229,6 +230,17 @@ Cổng máy (`gates:`) do bước plan_fix nháp từ tệp này; plan không kh
 6. **Tên thẻ nhật ký thật của con 2 (D-5)** — cấu hình `logs.tags`; test dùng nhật ký mẫu; chỉnh khi con 2 có mã.
 7. **Kết quả đo trên checkpoint thật chưa biết** — một checkpoint train ngắn có thể "không tốt hơn random"; đó là kết quả hợp lệ, không phải lỗi hệ thống (mã thoát 0).
 8. **`test_unimplemented_cli` của 001 hiện đòi `evaluate.py` thoát 3** — task chủ của 004 cập nhật đúng tệp test đó (bỏ `evaluate` khỏi danh sách), sau khi `scripts/evaluate.py` được thay.
+
+<a id="quyet-dinh-o-buoc-tasks"></a>
+## Quyết định ở bước tasks
+
+- **Vai `challenger`: CÓ DÙNG** (task `T425` trong `tasks.md`) — Tự chốt: spec khai INV-001…007; INV-001 (rò rỉ tập train), INV-003 (hành động hỏng), INV-004 (ngắt/ghi lỗi), INV-005 (ghi đè) và INV-006 (đổi tiêu chí sau kết quả) là bất biến mà đầu vào người dùng chạm được và đánh sập được bằng property/fuzz không cần màn hình; rò rỉ tập train làm kết luận "tốt hơn random" vô giá trị mà không báo lỗi nên đáng thêm một lượt. Cổng review cần nhất trí reviewer + challenger.
+- **Khoảng trống năng lực (capability gap)**: bảng vùng ghi hiệu lực của dự án không phủ `scripts/**`, `configs/**` và `tests/regression/**`. Tự chốt: KHÔNG khai output ngoài vùng và KHÔNG sửa vùng ghi; đặt mọi logic CLI ở `src/mma_ai/evaluation/cli.py`, cấu hình mặc định đóng gói ở `src/mma_ai/evaluation/eval_elbow.yaml`, test tái lập ở `tests/integration/test_eval_determinism.py`; entrypoint của test là `python -m mma_ai.evaluation.cli`. Việc CHƯA CÓ CHỦ: (a) vỏ `scripts/evaluate.py` 5 dòng gọi `mma_ai.evaluation.cli.main` (stub của 001 vẫn thoát mã 3 nên `test_unimplemented_cli` của 001 giữ nguyên; khi vỏ có chủ thì cập nhật test đó CÙNG task); (b) bản chép `configs/eval_elbow.yaml` cho người dùng sửa. Đề xuất: `ai-sdlc capability propose fighterl "vai builder cần vùng ghi scripts/** và configs/** (vỏ CLI mỏng và cấu hình mẫu) cho các feature M1"`.
+- **Tên test đã tách theo story** (cùng nội dung bảng "Truy vết yêu cầu → thiết kế", khác tệp): `test_evaluate_cli::test_leak_exits5_no_episode_run` → `test_evaluate_leakage.py`; `test_evaluate_cli::test_missing_checkpoint_exit4_no_output`, `::test_corrupt_checkpoint_exit4_names_cause`, `::test_missing_component_exit4`, `::test_xml_hash_mismatch_exit4`, `::test_no_eval_dir_after_checkpoint_error` → `test_evaluate_bad_checkpoint.py`; `test_eval_determinism` ở `tests/integration/`. `test_unimplemented_cli` của 001 KHÔNG bị task nào của 004 đổi (mục "Rủi ro" 8 chuyển thành điều kiện của task thay stub).
+- **Accessor `target_index` ở `single_agent.py` (D-2)**: một task chủ `T405` của 004; task `read_state()` của `005-replay-3d-muscle-demo` (cùng tệp) khai `depends_on` T405 để một chủ một tệp.
+- **Khung dự án và `pyproject.toml`**: `T401` thêm extra `eval` và `depends_on` `T501` (task khung của 005, hiện là task duy nhất giữ `pyproject.toml`); khi 001/003 có `tasks.md`, bước converge/`plan_fix` thêm `depends_on` theo mục "Phụ thuộc chéo feature" của `tasks.md`.
+- **Ca "policy chắc chắn tới mục tiêu" (AC-2)**: chưa đo được policy kịch bản tới MỌI mục tiêu thật, nên `T417` chứng minh cơ chế kết luận bằng `EpisodeRecord` tổng hợp có đáp án tay (50/50 so với 0/50) qua `summarize` + `decide`, và dùng môi trường thật cho ca "không bao giờ tới" và "giống hệt".
+- **Cổng E2E**: task `qa` `T424` chạy `uv run python -m pytest -q tests/e2e` trên entrypoint thật (subprocess); cổng `e2e` do `plan_fix` nháp từ `tasks.md`, không khai tay trong `.ai/profile.yml`.
 
 <a id="phan-bien-plan-lint"></a>
 ## Phản biện plan_lint
