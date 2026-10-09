@@ -13,7 +13,7 @@ import pytest
 pytest.importorskip("jsonschema", reason="Cần jsonschema để xác thực hợp đồng JSON Schema.")
 
 from jsonschema import Draft202012Validator
-from referencing import Registry, Resource  # type: ignore[import-not-found]
+from referencing import Registry, Resource
 
 from mma_ai.environment.env_config import ElbowEnvConfig
 from mma_ai.environment.single_agent import ElbowReachEnv
