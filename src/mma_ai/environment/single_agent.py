@@ -88,7 +88,6 @@ class ElbowReachEnv(gym.Env[np.ndarray, np.ndarray]):
 
         # 3. Nạp và thẩm định mô hình MyoElbow MỘT lần (FR-001, FR-013)
         if model is not None:
-            self._validate_model_structure(model)
             self.model: mujoco.MjModel = model
             sha256_hex = self._compute_model_sha256(model)
             muscle_names = [
@@ -115,6 +114,7 @@ class ElbowReachEnv(gym.Env[np.ndarray, np.ndarray]):
             self.loaded_model = load_muscle_model("myoelbow")
             self.model = self.loaded_model.model
 
+        self._validate_model_structure(self.model)
         self.model_info: MuscleModelInfo = self.loaded_model.info
         self.model_sha256: str = self.model_info.sha256
         self.muscle_names: list[str] = list(self.model_info.muscle_names)
