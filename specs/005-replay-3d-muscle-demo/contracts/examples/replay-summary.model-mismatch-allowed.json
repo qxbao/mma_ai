@@ -1,0 +1,91 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "episode",
+  "headless": false,
+  "source": {
+    "episode_path": "runs/example_run/replays/test0.episode.json",
+    "checkpoint_path": null,
+    "checkpoint_sha256": null
+  },
+  "model_check": {
+    "match": false,
+    "compatible": true,
+    "episode_sha256": "9f2c1ab07d3e4c55111111111111111111111111111111111111111111111111",
+    "current_sha256": "384dcb555561287f000000000000000000000000000000000000000000000000",
+    "reasons": [
+      "hash XML của episode khác mô hình hiện tại"
+    ]
+  },
+  "n_frames": 5,
+  "n_actions": 4,
+  "duration_sim_s": 0.16,
+  "seed": 12345,
+  "target": {
+    "position_m": [
+      -0.21,
+      -0.106,
+      1.12
+    ],
+    "split": "test",
+    "index": 0
+  },
+  "outcome": {
+    "end_reason": "reached",
+    "reached": true,
+    "final_distance_m": 0.012
+  },
+  "activation": {
+    "muscle_names": [
+      "TRIlong",
+      "TRIlat",
+      "TRImed",
+      "BIClong",
+      "BICshort",
+      "BRA"
+    ],
+    "min": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "max": [
+      0.04,
+      0.04,
+      0.04,
+      0.55,
+      0.5,
+      0.46
+    ],
+    "mean": [
+      0.016,
+      0.016,
+      0.016,
+      0.334,
+      0.31,
+      0.284
+    ],
+    "final": [
+      0.04,
+      0.04,
+      0.04,
+      0.42,
+      0.4,
+      0.38
+    ]
+  },
+  "saved_episode": null,
+  "playback": {
+    "speed": 0.25,
+    "frames_shown": 640,
+    "wall_s": 0.64,
+    "sim_s": 0.16,
+    "ratio": 1.0,
+    "frames_late": 0
+  },
+  "warnings": [
+    "MÔ HÌNH LỆCH: đã chấp nhận bằng --allow-model-mismatch"
+  ]
+}

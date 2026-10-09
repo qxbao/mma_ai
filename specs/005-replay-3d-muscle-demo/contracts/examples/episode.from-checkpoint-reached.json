@@ -1,0 +1,207 @@
+{
+  "schema_version": "1.0.0",
+  "created_utc": "2026-10-09T08:00:00Z",
+  "seed": 12345,
+  "model": {
+    "sha256": "384dcb555561287f000000000000000000000000000000000000000000000000",
+    "source": "myo_sim/elbow/myoelbow_1dof6muscles.xml",
+    "muscle_names": [
+      "TRIlong",
+      "TRIlat",
+      "TRImed",
+      "BIClong",
+      "BICshort",
+      "BRA"
+    ],
+    "nq": 1,
+    "nv": 1
+  },
+  "target": {
+    "position_m": [
+      -0.21,
+      -0.106,
+      1.12
+    ],
+    "split": "test",
+    "index": 0,
+    "tolerance_m": 0.02
+  },
+  "source": {
+    "checkpoint_path": "runs/example_run/checkpoints/ckpt_u000050_final.pt",
+    "checkpoint_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+    "run_id": "example_run",
+    "update_idx": 50
+  },
+  "library_versions": {
+    "mujoco": "3.15.0",
+    "numpy": "2.4.6",
+    "python": "3.11.15"
+  },
+  "timing": {
+    "action_dt_s": 0.04,
+    "physics_timestep_s": 0.0025
+  },
+  "outcome": {
+    "terminated": true,
+    "truncated": false,
+    "end_reason": "reached",
+    "reached": true,
+    "n_actions": 4,
+    "final_distance_m": 0.012
+  },
+  "frames": [
+    {
+      "t_s": 0.0,
+      "qpos": [
+        0.05
+      ],
+      "qvel": [
+        0.0
+      ],
+      "activation": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "excitation": null,
+      "fingertip_position_m": [
+        -0.21,
+        0.05,
+        0.9
+      ],
+      "distance_m": 0.3,
+      "reward": 0.0
+    },
+    {
+      "t_s": 0.04,
+      "qpos": [
+        0.55
+      ],
+      "qvel": [
+        12.0
+      ],
+      "activation": [
+        0.01,
+        0.01,
+        0.01,
+        0.22,
+        0.2,
+        0.18
+      ],
+      "excitation": [
+        0.0,
+        0.0,
+        0.0,
+        0.9,
+        0.85,
+        0.8
+      ],
+      "fingertip_position_m": [
+        -0.21,
+        0.0,
+        0.97
+      ],
+      "distance_m": 0.22,
+      "reward": -0.22
+    },
+    {
+      "t_s": 0.08,
+      "qpos": [
+        1.15
+      ],
+      "qvel": [
+        14.5
+      ],
+      "activation": [
+        0.01,
+        0.01,
+        0.01,
+        0.48,
+        0.45,
+        0.4
+      ],
+      "excitation": [
+        0.0,
+        0.0,
+        0.0,
+        0.95,
+        0.9,
+        0.8
+      ],
+      "fingertip_position_m": [
+        -0.21,
+        -0.06,
+        1.05
+      ],
+      "distance_m": 0.11,
+      "reward": -0.11
+    },
+    {
+      "t_s": 0.12,
+      "qpos": [
+        1.62
+      ],
+      "qvel": [
+        9.0
+      ],
+      "activation": [
+        0.02,
+        0.02,
+        0.02,
+        0.55,
+        0.5,
+        0.46
+      ],
+      "excitation": [
+        0.1,
+        0.1,
+        0.1,
+        0.6,
+        0.55,
+        0.5
+      ],
+      "fingertip_position_m": [
+        -0.21,
+        -0.1,
+        1.1
+      ],
+      "distance_m": 0.03,
+      "reward": -0.03
+    },
+    {
+      "t_s": 0.16,
+      "qpos": [
+        1.7
+      ],
+      "qvel": [
+        1.2
+      ],
+      "activation": [
+        0.04,
+        0.04,
+        0.04,
+        0.42,
+        0.4,
+        0.38
+      ],
+      "excitation": [
+        0.2,
+        0.2,
+        0.2,
+        0.3,
+        0.3,
+        0.3
+      ],
+      "fingertip_position_m": [
+        -0.21,
+        -0.105,
+        1.115
+      ],
+      "distance_m": 0.012,
+      "reward": 0.0
+    }
+  ]
+}

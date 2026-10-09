@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "replay-summary.schema.json",
+  "title": "ReplaySummary — tóm tắt máy đọc được của một phiên replay/demo (FR-006, FR-010, FR-012)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "mode", "headless", "source", "model_check", "n_frames", "n_actions", "duration_sim_s", "seed", "target", "outcome", "activation", "saved_episode", "playback", "warnings"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "mode": {"enum": ["episode", "demo"]},
+    "headless": {"type": "boolean"},
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["episode_path", "checkpoint_path", "checkpoint_sha256"],
+      "properties": {
+        "episode_path": {"type": ["string", "null"], "description": "Tương đối; null ở chế độ demo"},
+        "checkpoint_path": {"type": ["string", "null"]},
+        "checkpoint_sha256": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "model_check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["match", "compatible", "episode_sha256", "current_sha256", "reasons"],
+      "properties": {
+        "match": {"type": "boolean", "description": "Hash XML của episode bằng hash mô hình hiện tại"},
+        "compatible": {"type": "boolean", "description": "Số khớp, số cơ và tên cơ khớp mô hình hiện tại"},
+        "episode_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "current_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "reasons": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "n_frames": {"type": "integer", "minimum": 1},
+    "n_actions": {"type": "integer", "minimum": 0},
+    "duration_sim_s": {"type": "number", "minimum": 0},
+    "seed": {"type": "integer", "minimum": 0},
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["position_m", "split", "index"],
+      "properties": {
+        "position_m": {"type": "array", "prefixItems": [{"type": "number"}, {"type": "number"}, {"type": "number"}], "minItems": 3, "maxItems": 3},
+        "split": {"type": ["string", "null"], "enum": ["train", "test", null]},
+        "index": {"type": ["integer", "null"], "minimum": 0}
+      }
+    },
+    "outcome": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["end_reason", "reached", "final_distance_m"],
+      "properties": {
+        "end_reason": {"type": ["string", "null"], "enum": ["reached", "max_actions", "abnormal", null]},
+        "reached": {"type": "boolean"},
+        "final_distance_m": {"type": ["number", "null"], "minimum": 0}
+      }
+    },
+    "activation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["muscle_names", "min", "max", "mean", "final"],
+      "properties": {
+        "muscle_names": {"type": "array", "minItems": 6, "maxItems": 6, "items": {"type": "string"}},
+        "min": {"type": "array", "minItems": 6, "maxItems": 6, "items": {"type": "number", "minimum": 0, "maximum": 1}},
+        "max": {"type": "array", "minItems": 6, "maxItems": 6, "items": {"type": "number", "minimum": 0, "maximum": 1}},
+        "mean": {"type": "array", "minItems": 6, "maxItems": 6, "items": {"type": "number", "minimum": 0, "maximum": 1}},
+        "final": {"type": "array", "minItems": 6, "maxItems": 6, "items": {"type": "number", "minimum": 0, "maximum": 1}}
+      }
+    },
+    "saved_episode": {"type": ["string", "null"], "description": "Đường dẫn tương đối của episode vừa lưu; null khi không lưu"},
+    "playback": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["speed", "frames_shown", "wall_s", "sim_s", "ratio", "frames_late"],
+      "description": "null ở chế độ không màn hình (không có phiên phát)",
+      "properties": {
+        "speed": {"type": "number", "exclusiveMinimum": 0},
+        "frames_shown": {"type": "integer", "minimum": 0},
+        "wall_s": {"type": "number", "minimum": 0},
+        "sim_s": {"type": "number", "minimum": 0},
+        "ratio": {"type": ["number", "null"], "minimum": 0, "description": "Thời gian phát / thời gian mô phỏng (đã chia tốc độ); null khi sim_s = 0"},
+        "frames_late": {"type": "integer", "minimum": 0}
+      }
+    },
+    "warnings": {"type": "array", "items": {"type": "string"}}
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "schema_version": "1.0.0",
+  "created_utc": "2026-10-09T08:00:00Z",
+  "seed": 12345,
+  "model": {
+    "sha256": "384dcb555561287f000000000000000000000000000000000000000000000000",
+    "source": "myo_sim/elbow/myoelbow_1dof6muscles.xml",
+    "muscle_names": [
+      "TRIlong",
+      "TRIlat",
+      "TRImed",
+      "BIClong",
+      "BICshort",
+      "BRA"
+    ],
+    "nq": 1,
+    "nv": 1
+  },
+  "target": {
+    "position_m": [
+      -0.21,
+      -0.106,
+      1.12
+    ],
+    "split": null,
+    "index": null,
+    "tolerance_m": null
+  },
+  "source": null,
+  "library_versions": {
+    "mujoco": "3.15.0",
+    "numpy": "2.4.6",
+    "python": "3.11.15"
+  },
+  "timing": {
+    "action_dt_s": 0.04,
+    "physics_timestep_s": 0.0025
+  },
+  "outcome": {
+    "terminated": false,
+    "truncated": false,
+    "end_reason": null,
+    "reached": false,
+    "n_actions": 0,
+    "final_distance_m": 0.3
+  },
+  "frames": [
+    {
+      "t_s": 0.0,
+      "qpos": [
+        0.05
+      ],
+      "qvel": [
+        0.0
+      ],
+      "activation": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "excitation": null,
+      "fingertip_position_m": [
+        -0.21,
+        0.05,
+        0.9
+      ],
+      "distance_m": 0.3,
+      "reward": 0.0
+    }
+  ]
+}
