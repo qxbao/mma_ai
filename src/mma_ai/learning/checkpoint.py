@@ -498,6 +498,11 @@ def load_checkpoint(
             stacklevel=2,
         )
 
+    raw = dict(data)
+    raw["path"] = f"checkpoints/{target_path.name}"
+    raw["sha256"] = _compute_sha256(target_path)
+    raw["run_id"] = target_path.parent.parent.name
+
     return LoadedCheckpoint(
         actor_state_dict=actor_sd,
         critic_state_dict=critic_sd,
@@ -511,7 +516,7 @@ def load_checkpoint(
         library_versions=lib_versions,
         config=config,
         log_std=log_std,
-        raw_data=dict(data),
+        raw_data=raw,
     )
 
 
