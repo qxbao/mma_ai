@@ -19,6 +19,7 @@ from mma_ai.environment.errors import (
     ActivationError,
     PhysicsInstabilityError,
 )
+from mma_ai.physics import numeric_health
 
 
 @dataclass(frozen=True)
@@ -142,21 +143,21 @@ class HeadlessSimulator:
         for step_idx in range(n_steps):
             mujoco.mj_step(self.model, self.data)
 
-            # Kiểm tra mất ổn định số học giữa các bước
-            for name, arr in [
-                ("qpos", self.data.qpos),
-                ("qvel", self.data.qvel),
-                ("act", self.data.act),
-                ("actuator_force", self.data.actuator_force),
-            ]:
-                if bool(np.isnan(arr).any()) or bool(np.isinf(arr).any()):
-                    raise PhysicsInstabilityError(
-                        f"Mất ổn định vật lý tại substep {step_idx + 1}: "
-                        f"phát hiện NaN/Inf trong đại lượng {name}."
-                    )
+            nan_count, inf_count, first_violating_name = numeric_health.scan_nonfinite(
+                {
+                    "qpos": self.data.qpos,
+                    "qvel": self.data.qvel,
+                    "act": self.data.act,
+                    "actuator_force": self.data.actuator_force,
+                }
+            )
+            if first_violating_name is not None:
+                raise PhysicsInstabilityError(
+                    f"Mất ổn định vật lý tại substep {step_idx + 1}: phát hiện "
+                    f"{nan_count} NaN và {inf_count} Inf trong đại lượng {first_violating_name}."
+                )
 
-            # Kiểm tra cảnh báo từ MuJoCo
-            total_warnings = sum(int(w.number) for w in self.data.warning)
+            total_warnings = numeric_health.read_physics_warnings(self.data)
             if total_warnings > 0:
                 raise PhysicsInstabilityError(
                     f"Mất ổn định vật lý tại substep {step_idx + 1}: "
