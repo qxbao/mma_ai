@@ -1,8 +1,17 @@
 """Cấu hình chung cho kiểm thử (pytest fixtures và thiết lập môi trường)."""
 
-from typing import Generator
+from __future__ import annotations
+
+import sys
+from collections.abc import Generator
+from pathlib import Path
 
 import pytest
+
+# Thiết lập đường dẫn fixture tích hợp dùng chung cho toàn bộ bộ kiểm thử
+_INTEGRATION_DIR = str(Path(__file__).resolve().parent / "tests" / "integration")
+if _INTEGRATION_DIR not in sys.path:
+    sys.path.insert(0, _INTEGRATION_DIR)
 
 
 @pytest.fixture(autouse=True)
