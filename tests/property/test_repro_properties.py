@@ -28,3 +28,12 @@ def test_inv_004_relative_tolerance_property() -> None:
         report = compare_manifests(first, second)
         assert report.comparable is True
         assert report.matches is True
+
+
+def teardown_module() -> None:
+    """Dọn dẹp các mô-đun trì hoãn để bảo vệ ranh giới kiểm thử."""
+    import sys
+
+    sys.modules.pop("mma_ai.learning.repro", None)
+    sys.modules.pop("mma_ai.learning", None)
+

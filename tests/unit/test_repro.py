@@ -88,3 +88,12 @@ def test_fr_001_seed_everything_same_draws() -> None:
     second = (second_rng.random(4), torch.rand(4).tolist())
     assert np.array_equal(first[0], second[0])
     assert first[1] == second[1]
+
+
+def teardown_module() -> None:
+    """Dọn dẹp các mô-đun trì hoãn để bảo vệ ranh giới kiểm thử."""
+    import sys
+
+    sys.modules.pop("mma_ai.learning.repro", None)
+    sys.modules.pop("mma_ai.learning", None)
+

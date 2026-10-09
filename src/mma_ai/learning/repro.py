@@ -11,8 +11,6 @@ from typing import Any
 
 import numpy as np
 
-from mma_ai.learning.manifest import read_manifest
-
 
 @dataclass(frozen=True)
 class ReproReport:
@@ -90,6 +88,8 @@ def compare_manifests(
 
 def compare_runs(run_a: str | Path | Any, run_b: str | Path | Any) -> ReproReport:
     """Đọc hai hồ sơ rồi so sánh tính tái lập của chúng."""
+    from mma_ai.learning.manifest import read_manifest
+
     return compare_manifests(read_manifest(run_a), read_manifest(run_b))
 
 
