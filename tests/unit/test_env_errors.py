@@ -109,6 +109,9 @@ def test_register_envs_idempotent() -> None:
 
 def test_import_package_has_no_viewer() -> None:
     """FR-002: Nhập gói mma_ai.environment không nạp mujoco.viewer hoặc single_agent."""
+    sys.modules.pop("mma_ai.environment.single_agent", None)
+    sys.modules.pop("mujoco.viewer", None)
+    sys.modules.pop("glfw", None)
     import mma_ai.environment
 
     assert mma_ai.environment.__doc__ is not None

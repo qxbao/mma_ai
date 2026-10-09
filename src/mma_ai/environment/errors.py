@@ -41,11 +41,22 @@ class EnvStateError(EnvironmentBaseError):
     """Lỗi trạng thái vòng đời môi trường (gọi step trước khi reset hoặc sau khi kết thúc)."""
 
 
+class ModelError(EnvironmentBaseError):
+    """Lỗi thẩm định mô hình vật lý cơ bắp (FR-001, AC-1)."""
+
+
+class ActivationError(EnvironmentBaseError, ValueError):
+    """Lỗi kích hoạt cơ bắp khi vector hành động không hợp lệ (FR-003, AC-1)."""
+
+
 __all__: list[str] = [
+    "ActivationError",
     "EnvConfigError",
     "EnvStateError",
     "EnvironmentBaseError",
+    "ModelError",
     "ObservationError",
     "PhysicsInstabilityError",
     "TargetConfigError",
 ]
+
