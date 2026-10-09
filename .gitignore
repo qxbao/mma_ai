@@ -46,3 +46,11 @@ deliverables/**/*.docx
 deliverables/**/*.pdf
 deliverables/**/*.xlsx
 # <<< ai-sdlc
+
+graphify-out/
+.agents/
+.claude/
+.codex/
+.ai/
+.cursor
+.kiro
