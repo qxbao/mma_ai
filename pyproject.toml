@@ -78,5 +78,7 @@ module = [
     "yaml.*",
     "torch.*",
     "jsonschema.*",
+    "tensorboard.*",
+    "packaging.*",
 ]
 ignore_missing_imports = true
