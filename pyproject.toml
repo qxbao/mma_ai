@@ -19,6 +19,7 @@ dependencies = [
 [project.optional-dependencies]
 rl = [
     "torch",
+    "tensorboard",
 ]
 dev = [
     "pytest",
@@ -30,6 +31,7 @@ packages = ["src/mma_ai"]
 artifacts = [
     "src/mma_ai/visualization/*.yaml",
     "src/mma_ai/environment/*.yaml",
+    "src/mma_ai/learning/*.yaml",
 ]
 
 [tool.hatch.build.targets.sdist]
