@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
+import importlib.util
 from dataclasses import replace
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
-
-torch = pytest.importorskip("torch")
 
 if TYPE_CHECKING:
     from mma_ai.learning.train_config import TrainConfig
@@ -19,10 +18,19 @@ def _config() -> TrainConfig:
     return TrainConfig.load()
 
 
+def _torch() -> Any:
+    return pytest.importorskip("torch")
+
+
+def test_regress_tdd_red_network_module_is_present() -> None:
+    """FR-002: mô-đun mạng phải được đóng gói để PPO có implementation thực."""
+    assert importlib.util.find_spec("mma_ai.learning.networks") is not None
+
+
 def test_actor_critic_2x256() -> None:
     """FR-002: mạng mặc định có hai lớp ẩn rộng 256 ở mỗi nhánh."""
+    torch = _torch()
     from mma_ai.learning.networks import ActorCritic
-
     model = ActorCritic(obs_dim=11, act_dim=6, cfg=_config())
 
     for branch in (model.actor, model.critic):
@@ -37,8 +45,8 @@ def test_actor_critic_2x256() -> None:
 
 def test_custom_structure_follows_config() -> None:
     """FR-002: độ rộng từng nhánh lấy từ cấu hình, không hằng số rải trong mã."""
+    torch = _torch()
     from mma_ai.learning.networks import ActorCritic
-
     cfg = _config()
     network = replace(cfg.network, actor_hidden=(7, 3, 2), critic_hidden=(5,))
     model = ActorCritic(obs_dim=4, act_dim=6, cfg=replace(cfg, network=network))
@@ -56,8 +64,8 @@ def test_custom_structure_follows_config() -> None:
 
 def test_action_always_in_unit_interval() -> None:
     """INV-002: logits cực trị vẫn tạo kích thích cơ trong khoảng mở đơn vị."""
+    torch = _torch()
     from mma_ai.learning.networks import ActorCritic
-
     model = ActorCritic(obs_dim=3, act_dim=6, cfg=_config())
     for parameter in model.actor.parameters():
         parameter.data.zero_()
@@ -72,8 +80,8 @@ def test_action_always_in_unit_interval() -> None:
 
 def test_deterministic_action_is_sigmoid_of_mean() -> None:
     """FR-005: chế độ xác định dùng mean thô rồi biến đổi sigmoid."""
+    torch = _torch()
     from mma_ai.learning.networks import ActorCritic
-
     model = ActorCritic(obs_dim=3, act_dim=6, cfg=_config())
     observation = torch.tensor([[0.25, -0.5, 0.75]])
     expected = torch.sigmoid(model.actor(observation))
@@ -86,6 +94,7 @@ def test_deterministic_action_is_sigmoid_of_mean() -> None:
 
 def test_nonfinite_raw_network_output_raises() -> None:
     """FR-005: đầu ra thô NaN không được chuyển thành action hợp lệ."""
+    torch = _torch()
     from mma_ai.learning.errors import NonFiniteError
     from mma_ai.learning.networks import ActorCritic
 

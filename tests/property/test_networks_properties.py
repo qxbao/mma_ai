@@ -2,15 +2,25 @@
 
 from __future__ import annotations
 
+import importlib.util
 import random
+from typing import Any
 
 import pytest
 
-torch = pytest.importorskip("torch")
+
+def _torch() -> Any:
+    return pytest.importorskip("torch")
+
+
+def test_regress_tdd_red_network_module_is_present() -> None:
+    """FR-002: property suite phụ thuộc vào mô-đun mạng đã được đóng gói."""
+    assert importlib.util.find_spec("mma_ai.learning.networks") is not None
 
 
 def test_inv_002_generated_observations_always_produce_open_unit_actions() -> None:
     """INV-002: 100 lô observation hữu hạn luôn sinh action nằm trong khoảng mở đơn vị."""
+    torch = _torch()
     from mma_ai.learning.networks import ActorCritic
     from mma_ai.learning.train_config import TrainConfig
 
