@@ -11,8 +11,18 @@ version: "1.0.0"
 
 # Mô hình dữ liệu — M1 (3/4)
 
+- [Thực thể → đối tượng / tệp](#thuc-the-doi-tuong-tep)
+- [Cấu trúc thư mục một lượt đánh giá](#cau-truc-thu-muc-mot-luot-danh-gia)
+- [Máy trạng thái của một lượt đánh giá](#may-trang-thai-cua-mot-luot-danh-gia)
+- [Luật hợp lệ chéo (schema không diễn đạt hết — kiểm bởi mã/test)](#luat-hop-le-cheo-schema-khong-dien-dat-het-kiem-boi-matest)
+- [Ánh xạ nhãn ↔ khoá](#anh-xa-nhan-khoa)
+- [Bất biến liên quan (khai ở spec.md, chỉ tham chiếu mã)](#bat-bien-lien-quan-khai-o-specmd-chi-tham-chieu-ma)
+- [Cấu hình (đọc, không phải bản ghi báo cáo)](#cau-hinh-doc-khong-phai-ban-ghi-bao-cao)
+
+
 Cập nhật theo `spec.md` hiện tại. Không có cơ sở dữ liệu ⇒ không có bảng `TBL-*`, không có index; không có `EVT-*`. Dữ liệu là đối tượng trong bộ nhớ và **tệp** trong thư mục `eval` của run (JSON theo `contracts/*.schema.json`, CSV, PNG). Tên trường KHÔNG chép lại ở đây — xem schema; chỉ ghi luật và quan hệ. Mọi tệp trong `contracts/examples/` là **ví dụ minh hoạ khuôn**, không phải kết quả đo.
 
+<a id="thuc-the-doi-tuong-tep"></a>
 ## Thực thể → đối tượng / tệp
 
 | Thực thể (spec) | Đối tượng | Khuôn dây / tệp | Người ghi | Người đọc |
@@ -26,6 +36,7 @@ Cập nhật theo `spec.md` hiện tại. Không có cơ sở dữ liệu ⇒ kh
 | Cấu hình đánh giá | `EvalConfig` | `configs/eval_elbow.yaml` ([eval-config.schema.json](contracts/eval-config.schema.json)); bản nhúng nguyên văn trong `report.config` | người dùng / `EvalConfig.load` | mọi mô-đun `evaluation`, báo cáo |
 | Bản ghi episode (mức thấp) | `EpisodeRecord` | `episodes.csv` (một dòng mỗi episode, cột liệt kê dưới) | `rollout` | `metrics`, người dùng |
 
+<a id="cau-truc-thu-muc-mot-luot-danh-gia"></a>
 ## Cấu trúc thư mục một lượt đánh giá
 
 ```text
@@ -42,6 +53,7 @@ runs/<run_id>/eval/.tmp-<eval_id>/   # chỉ tồn tại LÚC chạy; bị đổ
 
 `eval_id = <UTC YYYYMMDDTHHMMSSZ>_e<seed episode đầu>[-n]` (mẫu regex ở schema). Các tệp của run (`manifest.json`, `checkpoints/`, `tb/`, `metrics.jsonl`, `progress.json`) **không bao giờ** bị sửa (INV-005).
 
+<a id="may-trang-thai-cua-mot-luot-danh-gia"></a>
 ## Máy trạng thái của một lượt đánh giá
 
 ```text
@@ -54,6 +66,7 @@ done | done_charts_incomplete ──▶ (bất biến: không sửa nữa, INV-0
 
 Lỗi checkpoint, cấu hình, giao rỗng xảy ra **trước** khi tạo `.tmp`; ngoài `done` và `done_charts_incomplete` không có trạng thái nào được công bố (INV-004).
 
+<a id="luat-hop-le-cheo-schema-khong-dien-dat-het-kiem-boi-matest"></a>
 ## Luật hợp lệ chéo (schema không diễn đạt hết — kiểm bởi mã/test)
 
 | Luật | Nơi kiểm | Mã |
@@ -70,6 +83,7 @@ Lỗi checkpoint, cấu hình, giao rỗng xảy ra **trước** khi tạo `.tmp
 | `run.train_seeds` gồm `run.seed` và seed mọi run cha; chuỗi cha ≤ 100 bậc | `split_guard` + test | INV-001 |
 | `checkpoint.sha256` = SHA-256 nội dung tệp `.pt` được dùng | `runner` + test | KQ-4 |
 
+<a id="anh-xa-nhan-khoa"></a>
 ## Ánh xạ nhãn ↔ khoá
 
 Yêu cầu không có bảng ánh xạ nhãn hiển thị ↔ khoá dữ liệu cho dây; báo cáo chỉ mang **khoá** (`success_rate`, `final_distance_m`, `mean_return`, `effort`, `activation_per_muscle`, `abnormal_rate`, `nan_count`, `inf_count`). Nhãn tiếng Việt chỉ sinh ở bước in `stdout` và nhãn trục biểu đồ:
@@ -84,10 +98,12 @@ Yêu cầu không có bảng ánh xạ nhãn hiển thị ↔ khoá dữ liệu 
 | `abnormal_rate` | Tỷ lệ episode kết thúc bất thường |
 | `nan_count`, `inf_count` | Số NaN, số Inf |
 
+<a id="bat-bien-lien-quan-khai-o-specmd-chi-tham-chieu-ma"></a>
 ## Bất biến liên quan (khai ở spec.md, chỉ tham chiếu mã)
 
 INV-001 (tập đánh giá không giao tập train) · INV-002 (cùng tập, thứ tự, cấu hình, hash XML) · INV-003 (hành động ∈ [0,1]^6, chỉ kích thích cơ) · INV-004 (lỗi không để lại kết quả hợp lệ giả) · INV-005 (chỉ đọc đối với dữ liệu con 2) · INV-006 (tiêu chí khai trước) · INV-007 (tái lập theo seed).
 
+<a id="cau-hinh-doc-khong-phai-ban-ghi-bao-cao"></a>
 ## Cấu hình (đọc, không phải bản ghi báo cáo)
 
 | Tệp | Khoá chính | Dùng bởi |

@@ -11,16 +11,33 @@ version: "1.0.0"
 
 # Implementation Plan: M1 (1/4) — Môi trường khuỷu tay điều khiển bằng cơ & tập mục tiêu train/test
 
+- [Summary](#summary)
+- [Technical Context](#technical-context)
+- [Constitution Check](#constitution-check)
+- [Phụ thuộc vào 001 (M0)](#phu-thuoc-vao-001-m0)
+- [Kiến trúc & tách trách nhiệm](#kien-truc-tach-trach-nhiem)
+  - [Quyết định thiết kế](#quyet-dinh-thiet-ke)
+- [Project Structure](#project-structure)
+  - [Documentation (this feature)](#documentation-this-feature)
+  - [Source Code (repository root) — chỉ phần 002 thêm vào cây của 001](#source-code-repository-root-chi-phan-002-them-vao-cay-cua-001)
+- [Lệnh build / test (cho task khung dựng đúng một lần)](#lenh-build-test-cho-task-khung-dung-dung-mot-lan)
+- [Truy vết yêu cầu → thiết kế](#truy-vet-yeu-cau-thiet-ke)
+- [Rủi ro & việc CHƯA KIỂM](#rui-ro-viec-chua-kiem)
+- [Complexity Tracking](#complexity-tracking)
+
+
 **Branch**: `002-elbow-muscle-env` (tên thư mục feature; không tạo nhánh git) | **Date**: 2026-10-09 | **Spec**: [spec.md](spec.md)
 
 **Input**: `specs/002-elbow-muscle-env/spec.md` (bản hiện tại, REQ-0101)
 
+<a id="summary"></a>
 ## Summary
 
 Feature dựng **môi trường Gymnasium một agent** `ElbowReachEnv` (`single_agent.py`) bọc mô hình **MyoElbow 6 cơ** (`myo-sim==0.2.3`) chạy headless, chỉ điều khiển bằng kích thích cơ `u ∈ [0,1]^6`, cùng **bộ sinh mục tiêu** tách tập train/test theo seed với giao rỗng, và **quyết định phiên bản** `gymnasium`/`myosuite`. Đây là nền cho con 2 (PPO), con 3 (đánh giá), con 4 (replay/demo) của M1.
 
 Cách tiếp cận kỹ thuật (chi tiết và số đo ở `research.md`): **bỏ MyoSuite**, dùng `myo-sim` + `mujoco` + `gymnasium>=1.4,<1.5` (MyoSuite 3.0.0 ghim `gymnasium<1.3` — không giải được cùng 1.4.0; Q1); **tái dùng** các mô-đun `physics` của 001 (nạp mô hình, kiểm tra vector kích hoạt, `HeadlessSimulator` chỉ ghi `ctrl`, quét NaN/Inf); mục tiêu là vị trí đầu mút tay (site `wrist`) ở một góc khớp hợp lệ nên luôn với tới được, tách train/test theo **khối cung** với khoảng cách tối thiểu (Q3); observation 14 chiều có cận hữu hạn đã khai báo (Q4); reward gồm hai thành phần có trọng số và kết thúc terminated/truncated (Q6); mọi tham số ở `configs/elbow_env.yaml` (FR-014). Không PPO, không replay, không đánh giá (Out of Scope).
 
+<a id="technical-context"></a>
 ## Technical Context
 
 **Language/Version**: Python 3.11 (ghim `.python-version` và `requires-python = ">=3.11,<3.13"` của 001)
@@ -41,6 +58,7 @@ Cách tiếp cận kỹ thuật (chi tiết và số đo ở `research.md`): **b
 
 **Scale/Scope**: 1 mô hình (1 DoF, 6 cơ); ≈ 6 mô-đun mới trong `mma_ai.environment`; ≈ 10 tệp test; 1 tệp cấu hình; 1 script xác minh cài sạch
 
+<a id="constitution-check"></a>
 ## Constitution Check
 
 *Cổng: phải qua trước Phase 0; kiểm lại sau Phase 1.* Nguồn: `.specify/memory/constitution.md` v1.0.0.
@@ -59,6 +77,7 @@ Cách tiếp cận kỹ thuật (chi tiết và số đo ở `research.md`): **b
 
 **Kiểm lại sau Phase 1**: Đạt — thiết kế không thêm dependency ngoài danh sách trên; không có vi phạm cần ghi ở Complexity Tracking.
 
+<a id="phu-thuoc-vao-001-m0"></a>
 ## Phụ thuộc vào 001 (M0)
 
 001 mới có spec + plan, **chưa có mã**. 002 dựa vào các phần sau theo đúng plan của 001 (`specs/001-m0-physics-benchmark/contracts/cli.md`, `data-model.md`):
@@ -73,6 +92,7 @@ Cách tiếp cận kỹ thuật (chi tiết và số đo ở `research.md`): **b
 
 **Quy tắc thứ tự** (cho bước tasks): mọi task của 002 chạm mã đứng SAU task tương ứng của 001 (`depends_on`). Tệp chung duy nhất là `pyproject.toml` (thêm `gymnasium`): một task riêng của 002 phụ trách việc này, sau task khung của 001. Nếu `HeadlessSimulator` của 001 chưa cho đọc-chỉ `model`/`data` (research Q5), task của 002 thêm accessor đọc-chỉ vào đúng tệp đó sau task của 001 — không sao chép mã.
 
+<a id="kien-truc-tach-trach-nhiem"></a>
 ## Kiến trúc & tách trách nhiệm
 
 Phụ thuộc một chiều: `environment → physics (001) → config`. `physics` không import `environment`. Mô-đun mới (đều dưới `src/mma_ai/environment/`):
@@ -86,6 +106,7 @@ Phụ thuộc một chiều: `environment → physics (001) → config`. `physic
 | `reward` | `compute_reward(distance, action, cfg) -> RewardTerms` (hai thành phần + tổng), `is_reached` | FR-008, FR-009 |
 | `single_agent` | `ElbowReachEnv(gymnasium.Env)`: `reset(seed, options={"split": ...})`, `step`, `observation_space`, `action_space`, `model_record()`; `make_env(config_path=None, split="train")`; đăng ký `MmaElbowReach-v0` | FR-002, FR-004, FR-012, FR-013 |
 
+<a id="quyet-dinh-thiet-ke"></a>
 ### Quyết định thiết kế
 
 - **Một đường điều khiển**: `ElbowReachEnv.step` chỉ gọi `validate_activation` rồi `HeadlessSimulator.step(u, n_steps=substeps)`; không có phương thức nào ghi `qpos/qvel/site_xpos/actuator_force` (INV-003). Động học thuận cho mục tiêu dùng `MjData` riêng, không bao giờ chạm `MjData` của episode.
@@ -96,8 +117,10 @@ Phụ thuộc một chiều: `environment → physics (001) → config`. `physic
 - **Không tự viết validator an ninh/công cụ kiểm riêng** ngoài `validate_observation` và `validate_activation` theo spec; test assert thẳng trên sản phẩm.
 - **Quyết định phiên bản** (AC-5): bỏ MyoSuite — chi tiết ở `research.md` Q1; `pyproject.toml` có chú thích một dòng trỏ tới `specs/002-elbow-muscle-env/research.md`; `test_dependency_decision` khẳng định `myosuite` không có trong `pyproject.toml`/`uv.lock` và `gymnasium` ≥ 1.4.
 
+<a id="project-structure"></a>
 ## Project Structure
 
+<a id="documentation-this-feature"></a>
 ### Documentation (this feature)
 
 ```text
@@ -118,6 +141,7 @@ specs/002-elbow-muscle-env/
 └── tasks.md             # bước /speckit-tasks — KHÔNG tạo ở bước plan
 ```
 
+<a id="source-code-repository-root-chi-phan-002-them-vao-cay-cua-001"></a>
 ### Source Code (repository root) — chỉ phần 002 thêm vào cây của 001
 
 ```text
@@ -145,6 +169,7 @@ logs/m1/         # đầu ra chạy (bỏ khỏi git)
 
 **Structure Decision**: dự án đơn (single project), mở rộng cây `src/mma_ai/` của 001 bằng đúng một gói con `environment/`. Các gói `learning/`, `evaluation/`, `visualization/` (con 2–4) **chưa tạo**. `.gitignore` đã có `logs/` theo plan của 001.
 
+<a id="lenh-build-test-cho-task-khung-dung-dung-mot-lan"></a>
 ## Lệnh build / test (cho task khung dựng đúng một lần)
 
 | Việc | Lệnh |
@@ -158,6 +183,7 @@ logs/m1/         # đầu ra chạy (bỏ khỏi git)
 
 Cổng máy (`gates:`) do bước plan_fix nháp từ tệp này; plan không khai tay trong `.ai/profile.yml`.
 
+<a id="truy-vet-yeu-cau-thiet-ke"></a>
 ## Truy vết yêu cầu → thiết kế
 
 | Yêu cầu | Thực hiện bởi | Bằng chứng/Test |
@@ -179,6 +205,7 @@ Cổng máy (`gates:`) do bước plan_fix nháp từ tệp này; plan không kh
 | FR-015 | `research.md` Q1 | `test_dependency_decision` |
 | FR-016, NFR-INST-001 | `pyproject.toml`, `uv.lock`, `verify_clean_install.py` | `scripts/verify_clean_install.py` (mã thoát 0 + `logs/m1/verify_clean_install.json`) |
 
+<a id="rui-ro-viec-chua-kiem"></a>
 ## Rủi ro & việc CHƯA KIỂM
 
 1. **001 chưa có mã** — 002 dựa vào giao diện theo plan của 001; lệch giao diện khi triển khai ⇒ sửa ở nơi chủ sở hữu (001), 002 chỉ thêm accessor đọc-chỉ (research Q5).
@@ -187,6 +214,7 @@ Cổng máy (`gates:`) do bước plan_fix nháp từ tệp này; plan không kh
 4. **Số mục tiêu 200/50 so với độ phân giải đích** (≈ 14 vị trí phân biệt ở dung sai 0,02 m, research Q3) — con 3 không được coi 50 mục tiêu test là 50 tình huống độc lập.
 5. **Khớp vượt nhẹ giới hạn mềm** (qpos tới −0,11 rad) — cận góc chuẩn hoá ±1,5 đã tính; test `test_normalisation_matches_bounds` phải chạy rollout cực đoan (toàn 0, toàn 1, nhóm gập, nhóm duỗi) để xác nhận không ngoài cận.
 
+<a id="complexity-tracking"></a>
 ## Complexity Tracking
 
 Không có vi phạm hiến chương cần biện minh.

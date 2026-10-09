@@ -11,8 +11,20 @@ version: "1.0.0"
 
 # Nghiên cứu Phase 0 — M1 (1/4): Môi trường khuỷu tay điều khiển bằng cơ & tập mục tiêu
 
+- [Q1. Ghim `gymnasium<1.3` theo MyoSuite hay bỏ MyoSuite? (FR-015, FR-016, AC-5)](#q1-ghim-gymnasium13-theo-myosuite-hay-bo-myosuite-fr-015-fr-016-ac-5)
+- [Q2. Mô hình và đầu mút tay (FR-001, FR-005, FR-010)](#q2-mo-hinh-va-dau-mut-tay-fr-001-fr-005-fr-010)
+- [Q3. Hình học tầm với & bộ sinh mục tiêu (FR-010, FR-011, FR-012, INV-001, INV-002)](#q3-hinh-hoc-tam-voi-bo-sinh-muc-tieu-fr-010-fr-011-fr-012-inv-001-inv-002)
+- [Q4. Observation: bố cục, chuẩn hoá, cận (FR-005, FR-006, INV-004)](#q4-observation-bo-cuc-chuan-hoa-can-fr-005-fr-006-inv-004)
+- [Q5. Action, kích thích và kẹp ctrl (FR-003, FR-004, INV-003)](#q5-action-kich-thich-va-kep-ctrl-fr-003-fr-004-inv-003)
+- [Q6. Reward, kết thúc episode (FR-008, FR-009)](#q6-reward-ket-thuc-episode-fr-008-fr-009)
+- [Q7. Tần số, bước vật lý, tái lập (FR-014, INV-002)](#q7-tan-so-buoc-vat-ly-tai-lap-fr-014-inv-002)
+- [Q8. Quy mô tài liệu & stack](#q8-quy-mo-tai-lieu-stack)
+- [Tổng kết](#tong-ket)
+
+
 Mọi mục "ĐÃ ĐO" là kết quả chạy thật ngày 2026-10-09 trên máy phát triển (Linux gốc, 12 luồng CPU, Python 3.11.15 do `uv` cấp, chưa có NVIDIA) trong hai môi trường ảo tạm: **A** = `myosuite==3.0.0`, **B** = `myo-sim==0.2.3` + `gymnasium` mới nhất. Mã thăm dò chạy ở thư mục tạm, KHÔNG nằm trong repo. Mục "CHƯA KIỂM" là việc phải xác minh ở bước triển khai — plan không giả định kết quả. Các con số hiệu năng ở đây là thăm dò sơ bộ, KHÔNG dùng để suy ra thời gian huấn luyện (master plan XI.10).
 
+<a id="q1-ghim-gymnasium13-theo-myosuite-hay-bo-myosuite-fr-015-fr-016-ac-5"></a>
 ## Q1. Ghim `gymnasium<1.3` theo MyoSuite hay bỏ MyoSuite? (FR-015, FR-016, AC-5)
 
 - **Quyết định**: **bỏ MyoSuite** ở feature này; dùng `myo-sim==0.2.3` + `mujoco` + `gymnasium>=1.4,<1.5` (ĐÃ ĐO: 1.4.0). `myosuite` KHÔNG nằm trong `pyproject.toml`; `uv.lock` khoá phiên bản chính xác chỉ sau khi smoke test của môi trường đạt (FR-016).
@@ -25,6 +37,7 @@ Mọi mục "ĐÃ ĐO" là kết quả chạy thật ngày 2026-10-09 trên máy
 - **CHƯA KIỂM (giao con 2)**: tương thích `gymnasium 1.4` với thư viện PPO/`torch` sẽ chọn ở con 2 — con 2 phải đo và ghi vào plan của nó; nếu con 2 buộc lùi `gymnasium`, đổi ghim ở `pyproject.toml` và chạy lại `verify_clean_install` (AC-5).
 - **Cách chứng minh AC-5**: script `scripts/verify_clean_install.py` tạo môi trường ảo mới trong thư mục tạm, cài theo `uv.lock` (`uv sync --frozen`), chạy bộ test của môi trường, trả mã thoát; đầu ra được ghi vào `logs/m1/verify_clean_install.json` (chạy khi triển khai, không phải bây giờ).
 
+<a id="q2-mo-hinh-va-dau-mut-tay-fr-001-fr-005-fr-010"></a>
 ## Q2. Mô hình và đầu mút tay (FR-001, FR-005, FR-010)
 
 - **Quyết định**: dùng lại `load_muscle_model` của 001 (`mma_ai.physics.body_model`) để nạp `myoelbow_1dof6muscles.xml` và tính `MuscleModelInfo` (số cơ, số actuator không phải cơ, SHA-256, tên cơ). Đầu mút tay = site **`wrist`** (`site_xpos`), tên site đặt trong cấu hình `configs/elbow_env.yaml`.
@@ -33,6 +46,7 @@ Mọi mục "ĐÃ ĐO" là kết quả chạy thật ngày 2026-10-09 trên máy
 - **Phát hiện quan trọng #2 (rất nhanh)**: dưới kích thích tối đa của nhóm gập (BIClong/BICshort/BRA = 1, còn lại 0), khuỷu đi từ 0 tới 2,0 rad chỉ trong **4 hành động** (16 bước × 0,0025 s = 0,04 s mỗi hành động ⇒ ≈ 0,16 s); vận tốc khớp đỉnh quan sát được `|qvel|` ≈ 20,9 rad/s (random: `[-18,6; 14,5]`). Hệ quả: dung sai 0,02 m và bước 25 Hz là bài toán điều khiển tinh; số hành động tối đa 100 (≈ 4 s) dư rộng để tới mục tiêu.
 - **Phát hiện quan trọng #3 (tất định)**: cùng seed, cùng chuỗi hành động ⇒ cùng `qpos/qvel/act` (SHA-256 trùng giữa hai lần chạy) — nền cho INV-002.
 
+<a id="q3-hinh-hoc-tam-voi-bo-sinh-muc-tieu-fr-010-fr-011-fr-012-inv-001-inv-002"></a>
 ## Q3. Hình học tầm với & bộ sinh mục tiêu (FR-010, FR-011, FR-012, INV-001, INV-002)
 
 - **Quyết định**:
@@ -46,6 +60,7 @@ Mọi mục "ĐÃ ĐO" là kết quả chạy thật ngày 2026-10-09 trên máy
 - **Phương án đã loại**: (a) rejection sampling train rồi test với khoảng cách tối thiểu — với 200 điểm dày trên cung 0,57 m, test hầu như không có chỗ (khoảng cách trung bình 2,9 mm ≪ 0,02 m) ⇒ vòng lặp vô hạn; (b) chia theo chỉ số (xen kẽ) — test nằm sát train, không đạt khoảng cách tối thiểu; (c) mục tiêu 3D tuỳ ý trong khối hộp — không với tới được với khuỷu 1 bậc tự do (Tự chốt trong spec).
 - **Mở rộng nằm ngoài feature (không làm)**: tập test "ngoài vùng" (extrapolation) — là câu hỏi đánh giá của con 3.
 
+<a id="q4-observation-bo-cuc-chuan-hoa-can-fr-005-fr-006-inv-004"></a>
 ## Q4. Observation: bố cục, chuẩn hoá, cận (FR-005, FR-006, INV-004)
 
 - **Quyết định**: vector 14 chiều `float32`, thứ tự cố định:
@@ -63,6 +78,7 @@ Mọi mục "ĐÃ ĐO" là kết quả chạy thật ngày 2026-10-09 trên máy
 - **Quy tắc kiểm** (FR-006): `validate_observation` kiểm chiều, hữu hạn, nằm trong cận; chỉ `qvel` được kẹp (có ghi `info["qvel_clipped"]`), các thành phần khác ngoài cận ⇒ `ObservationError` (không trả ra). Mất ổn định số (NaN/Inf ở `qpos/qvel/act/actuator_force` hoặc `data.warning` > 0) ⇒ `PhysicsInstabilityError` (tái dùng `numeric_health` của 001).
 - **Phương án đã loại**: chuẩn hoá chạy (running mean/std) trong môi trường — việc của PPO (con 2, "chuẩn hoá observation"); cận `±inf` — `check_env` cảnh báo và không "xác định miền giá trị" (KQ-2).
 
+<a id="q5-action-kich-thich-va-kep-ctrl-fr-003-fr-004-inv-003"></a>
 ## Q5. Action, kích thích và kẹp ctrl (FR-003, FR-004, INV-003)
 
 - **Quyết định**: `action_space = Box(0, 1, (6,), float32)`. Mỗi `step` gọi `validate_activation` của 001 (ném `ActivationError` nêu giá trị vi phạm khi sai kích thước/NaN/Inf/ngoài [0,1]) rồi `HeadlessSimulator.step(activation, n_steps=16)` — đường ghi duy nhất là `data.ctrl`. `info["ctrl_effective"]` ghi giá trị sau khi MuJoCo kẹp về `[0.001, 1]` bên cạnh giá trị yêu cầu (đã nêu ở 001 research Q3 #1).
@@ -71,6 +87,7 @@ Mọi mục "ĐÃ ĐO" là kết quả chạy thật ngày 2026-10-09 trên máy
 - **Phương án đã loại**: tạo lớp ghi `ctrl` mới trong `environment/` — trùng chức năng với `HeadlessSimulator`; cho phép action ngoài [0,1] rồi kẹp âm thầm — vi phạm FR-003.
 - **Giả định giao diện với 001 (CHƯA KIỂM — 001 chưa có mã)**: `HeadlessSimulator` cho đọc (chỉ đọc) `model`/`data` và `LoadedModel` có `info: MuscleModelInfo`; nếu khi triển khai 001 chưa cung cấp, task của 002 chỉ ĐƯỢC thêm accessor đọc-chỉ vào đúng tệp đó (sau task của 001), không sao chép mã.
 
+<a id="q6-reward-ket-thuc-episode-fr-008-fr-009"></a>
 ## Q6. Reward, kết thúc episode (FR-008, FR-009)
 
 - **Quyết định** (tham số khởi tạo trong `configs/elbow_env.yaml`, CHƯA KIỂM bằng huấn luyện — con 2 sẽ chỉnh):
@@ -79,17 +96,20 @@ Mọi mục "ĐÃ ĐO" là kết quả chạy thật ngày 2026-10-09 trên máy
 - **Căn cứ**: reward dày, hữu hạn, đơn điệu theo khoảng cách ⇒ đủ cho AC-2 (hữu hạn) và Story 4; thành phần "tiến tới mục tiêu" biểu diễn bằng −khoảng cách (dày) thay vì hiệu khoảng cách giữa hai bước để không phụ thuộc trạng thái bước trước. `d_ref` bằng cỡ cung để thành phần ~ O(1).
 - **Phương án đã loại**: thưởng thưa (chỉ +1 khi tới) — PPO khó học ở M1; thêm thưởng tới đích/phạt thời gian — thành phần thứ ba, ngoài hai thành phần của yêu cầu.
 
+<a id="q7-tan-so-buoc-vat-ly-tai-lap-fr-014-inv-002"></a>
 ## Q7. Tần số, bước vật lý, tái lập (FR-014, INV-002)
 
 - **Quyết định**: `physics_timestep_s = 0,0025` gán qua `model.opt.timestep` (không sửa XML; mặc định mô hình 0,002), `substeps_per_action = 16`. Trạng thái đầu episode cố định: `mj_resetData` (qpos = 0, act = 0); độ ngẫu nhiên của một episode chỉ đến từ việc chọn mục tiêu bằng `self.np_random` của Gymnasium (`reset(seed)`).
 - **Căn cứ (ĐÃ ĐO, sơ bộ — không phải benchmark)**: bước vật lý 0,0025 s + 16 bước/hành động ⇒ ≈ 9,1 nghìn hành động/s ≈ 1,46×10⁵ bước vật lý/s trên CPU phát triển (một môi trường, Python thuần). KHÔNG dùng để suy thời gian huấn luyện; số chính thức thuộc benchmark 001/con 2.
 - **Hệ quả**: ở nhịp 25 Hz, 100 hành động ≈ 4 s mô phỏng; thời gian thực tế một episode ≈ 11 ms CPU (thăm dò).
 
+<a id="q8-quy-mo-tai-lieu-stack"></a>
 ## Q8. Quy mô tài liệu & stack
 
 - **Quyết định**: một bounded context duy nhất (mô phỏng cơ–xương, cùng 001) ⇒ không tạo `docs/02-strategic/`, `docs/03-tactical/`, `rbac.md` (không phân quyền); không có API mạng ⇒ hợp đồng là API Python + định dạng JSON ở `contracts/`. `docs/` hiện chỉ có `00-input/`; không có tệp chiến lược/chiến thuật để đồng bộ. Stack không đổi so với `.ai/stack-proposal.yml` đã ghi ở 001 (`python-mujoco-cli`) ⇒ chỉ bổ sung một dòng `evidence`, không tạo preset mới.
 - **Phương án đã loại**: tách `mma_ai.environment` thành gói riêng/repo riêng — chưa có lý do.
 
+<a id="tong-ket"></a>
 ## Tổng kết
 
 Không còn câu hỏi chưa giải quyết. Việc CHƯA KIỂM được giao thành bước triển khai bắt buộc có kết quả ghi lại: (1) tương thích `gymnasium 1.4` với thư viện PPO/`torch` — con 2; (2) chạy `verify_clean_install` trên môi trường ảo sạch — AC-5 của feature này; (3) giao diện đọc-chỉ `model`/`data` của `HeadlessSimulator` từ 001 (Q5); (4) giá trị mặc định reward/dung sai được chốt lại sau khi con 2 chạy PPO thử.

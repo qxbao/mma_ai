@@ -11,14 +11,28 @@ version: "1.0.0"
 
 # Nghiên cứu Phase 0 — M0: Thiết lập môi trường & Benchmark vật lý
 
+- [Q1. Phiên bản Python](#q1-phien-ban-python)
+- [Q2. Gói mô hình cơ–xương: MyoSim hay MyoSuite?](#q2-goi-mo-hinh-coxuong-myosim-hay-myosuite)
+- [Q3. Mô hình MyoElbow 6 cơ có đúng như yêu cầu không?](#q3-mo-hinh-myoelbow-6-co-co-dung-nhu-yeu-cau-khong)
+- [Q4. Bắt "lỗi vật lý" (AC-2)](#q4-bat-loi-vat-ly-ac-2)
+- [Q5. Đo hiệu năng CPU (AC-3, NFR-PERF-001)](#q5-do-hieu-nang-cpu-ac-3-nfr-perf-001)
+- [Q6. RAM đỉnh & GPU (AC-4)](#q6-ram-dinh-gpu-ac-4)
+- [Q7. Quản lý phụ thuộc & khoá phiên bản (FR-002, AC-5)](#q7-quan-ly-phu-thuoc-khoa-phien-ban-fr-002-ac-5)
+- [Q8. Tính tất định (INV-002, NFR-REPRO-001)](#q8-tinh-tat-dinh-inv-002-nfr-repro-001)
+- [Q9. Quy mô tài liệu](#q9-quy-mo-tai-lieu)
+- [Tổng kết](#tong-ket)
+
+
 Mọi mục "ĐÃ ĐO" dưới đây là kết quả chạy thật trên máy phát triển ngày 2026-10-09 (Linux gốc, Python 3.12.3, 12 luồng CPU, chưa có công cụ NVIDIA) trong một môi trường ảo tạm dùng Python 3.11 do `uv` tải về. Mục "CHƯA KIỂM" là việc phải xác minh trên máy đích (Legion Pro 5 + WSL2) ở bước triển khai — plan không giả định kết quả (INV-001).
 
+<a id="q1-phien-ban-python"></a>
 ## Q1. Phiên bản Python
 
 - **Quyết định**: Python **3.11** (ghim bằng `.python-version` và `requires-python = ">=3.11,<3.13"`), cài bằng `uv` (`uv python install 3.11`).
 - **Căn cứ (ĐÃ ĐO)**: máy phát triển chỉ có Python 3.12.3; `uv python list` thấy cpython-3.11.15 tải được. `mujoco 3.15.0` + `myo-sim 0.2.3` + `numpy` + `pytest` cài và chạy được trên 3.11 trong môi trường ảo tạm. Yêu cầu gốc nhắm 3.11; metadata MyoSuite 3.0.0 cũng liệt kê hỗ trợ 3.10–3.14.
 - **Phương án đã loại**: dùng 3.12.3 hệ thống — lệch mục tiêu của yêu cầu gốc, khó tái lập giữa máy phát triển và máy đích.
 
+<a id="q2-goi-mo-hinh-coxuong-myosim-hay-myosuite"></a>
 ## Q2. Gói mô hình cơ–xương: MyoSim hay MyoSuite?
 
 - **Quyết định**: M0 cài **`myo-sim==0.2.3`** (gói tài nguyên mô hình MyoSim) cùng `mujoco`; **không** cài `myosuite` ở M0.
@@ -26,6 +40,7 @@ Mọi mục "ĐÃ ĐO" dưới đây là kết quả chạy thật trên máy ph
 - **Việc để M1**: quyết định ghim `gymnasium` theo MyoSuite hay bỏ MyoSuite; ghi vào plan của M1.
 - **Phương án đã loại**: cài `myosuite[rl]` ngay — thêm bề mặt xung đột phiên bản mà M0 không dùng.
 
+<a id="q3-mo-hinh-myoelbow-6-co-co-dung-nhu-yeu-cau-khong"></a>
 ## Q3. Mô hình MyoElbow 6 cơ có đúng như yêu cầu không?
 
 - **Quyết định**: dùng `myoelbow_1dof6muscles.xml` (bản "legacy/elbow" trong myo-sim) làm mô hình M0; hash SHA-256 của tệp XML là định danh mô hình trong mọi báo cáo.
@@ -40,12 +55,14 @@ Mọi mục "ĐÃ ĐO" dưới đây là kết quả chạy thật trên máy ph
 - **Phát hiện quan trọng #2 (forcerange)**: `actuator_forcerange = [0, 0]` và `forcelimited = False` ⇒ MuJoCo không tự kẹp lực. "Giới hạn lực" của kiểm tra FR-004 phải lấy từ mô hình cơ: lực chủ động ≤ F0 · hệ số lực–vận tốc cực đại; lực thụ động có thể cộng thêm khi cơ kéo giãn. **Quyết định**: kiểm tra `|actuator_force| ≤ F0 · (fvmax + fpmax)` với `fvmax`, `fpmax` đọc từ `gainprm[8]`, `gainprm[7]` của chính actuator; nếu số đo thực vượt ngưỡng này thì báo cáo ghi là phát hiện (không đạt) chứ không nới ngưỡng cho đẹp. Công thức này CHƯA KIỂM bằng quét toàn dải góc khớp — task kiểm thử đầu tiên phải chạy quét và xác nhận hoặc sửa công thức trong `configs/body.yaml`, ghi lý do.
 - **Phương án đã loại**: tự dựng mô hình khuỷu tay có motor — vi phạm FR-006 và ràng buộc "không joint motor" của yêu cầu gốc.
 
+<a id="q4-bat-loi-vat-ly-ac-2"></a>
 ## Q4. Bắt "lỗi vật lý" (AC-2)
 
 - **Quyết định**: sau mỗi mẫu, đọc `mjData.warning[k].number` cho mọi `k` trong `mujoco.mjtWarning` (cảnh báo như `INERTIA`, `CONTACTFULL`, `BADQPOS`, `BADQVEL`, `BADQACC`, `BADCTRL`); tổng > 0 ⇒ không đạt. Thêm quét `np.isfinite` trên `qpos, qvel, qacc, act, ctrl, actuator_force, actuator_length, actuator_velocity, sensordata` sau mỗi bước.
 - **Căn cứ**: đây là cơ chế chính thức MuJoCo dùng để báo mất ổn định; chuyển cảnh báo thành tín hiệu số đếm được giúp báo cáo tất định (INV-002). Tự chốt trong spec đã nêu hướng này; chi tiết cách đọc chốt ở đây.
 - **Phương án đã loại**: bắt qua `mju_user_warning` (callback toàn cục) — không an toàn đa luồng, khó gắn vào từng mẫu.
 
+<a id="q5-do-hieu-nang-cpu-ac-3-nfr-perf-001"></a>
 ## Q5. Đo hiệu năng CPU (AC-3, NFR-PERF-001)
 
 - **Quyết định** (tham số khởi tạo, chỉnh theo đo thực tế rồi ghi vào `configs/simulation.yaml`):
@@ -56,6 +73,7 @@ Mọi mục "ĐÃ ĐO" dưới đây là kết quả chạy thật trên máy ph
   - Không đặt ngưỡng steps/s tối thiểu (Tự chốt trong spec).
 - **Phương án đã loại**: dùng `timeit` mặc định (gộp lặp, mất phân tán); đo đa môi trường 1/2/4/8 (ngoài phạm vi M0).
 
+<a id="q6-ram-dinh-gpu-ac-4"></a>
 ## Q6. RAM đỉnh & GPU (AC-4)
 
 - **Quyết định**: RAM đỉnh = `resource.getrusage(RUSAGE_SELF).ru_maxrss` (KB trên Linux/WSL2 → MB) đọc ở cuối benchmark; không thêm dependency `psutil`. GPU: `torch.cuda.is_available()`, tên GPU, `torch.cuda.mem_get_info()`, `torch.cuda.max_memory_allocated()` sau một phép nhân ma trận nhỏ, kèm `torch.cuda.get_arch_list()`; thêm đọc `nvidia-smi` nếu có (driver, CUDA version) — thiếu thì ghi "không dò được".
@@ -63,20 +81,24 @@ Mọi mục "ĐÃ ĐO" dưới đây là kết quả chạy thật trên máy ph
 - **CHƯA KIỂM (bắt buộc trên máy đích)**: GPU RTX 5060 là kiến trúc Blackwell (compute capability 12.0 / `sm_120`). Bản PyTorch cài phải có `sm_120` trong `torch.cuda.get_arch_list()` thì mới chạy được kernel; nếu bản mặc định trên PyPI thiếu, cài từ chỉ mục wheel CUDA ≥ 12.8 do PyTorch cung cấp. Task cài đặt phải ghi lại bản torch + CUDA runtime + arch list thực tế vào hồ sơ môi trường, không chọn số phiên bản từ trí nhớ. Dò phiên bản mới nhất trên PyPI ngày 2026-10-09 (`pip index`): torch 2.14.1, mujoco 3.15.0, numpy 2.5.3, pytest 9.1.1 — chỉ là ứng viên, lockfile mới là sự thật.
 - **Phương án đã loại**: `pynvml`/`nvidia-ml-py` — thêm dependency chỉ để đọc thứ `torch` + `nvidia-smi` đã cho.
 
+<a id="q7-quan-ly-phu-thuoc-khoa-phien-ban-fr-002-ac-5"></a>
 ## Q7. Quản lý phụ thuộc & khoá phiên bản (FR-002, AC-5)
 
 - **Quyết định**: `uv` + `pyproject.toml` + `uv.lock`; torch nằm ở extra `gpu` (không kéo ~GB khi chỉ chạy CPU/CI); `uv lock` chỉ chạy và commit **sau khi** `scripts/smoke_test.py` đạt (FR-002). Xung đột phiên bản làm `uv sync` dừng với thông điệp nêu cặp xung đột — đúng Edge Case, không tự hạ phiên bản.
 - **Phương án đã loại**: `pip freeze` thủ công (không băm, không giải xung đột); conda (không có trên máy phát triển).
 
+<a id="q8-tinh-tat-dinh-inv-002-nfr-repro-001"></a>
 ## Q8. Tính tất định (INV-002, NFR-REPRO-001)
 
 - **Quyết định**: MuJoCo `mj_step` tất định với cùng trạng thái đầu và ctrl. Ngẫu nhiên chỉ đến từ `numpy.random.default_rng(seed)` sinh mẫu kích hoạt. Smoke test xuất `trajectory_fingerprint` (SHA-256 của qpos/qvel/actuator_force làm tròn float64 → bytes) để test hồi quy so hai lần chạy cùng seed.
 - **Rủi ro biết trước**: khác biệt dấu phẩy động giữa máy/phiên bản MuJoCo ⇒ fingerprint chỉ so trong cùng môi trường khoá; báo cáo ghi phiên bản. Nếu hai lần cùng máy cho fingerprint khác ⇒ ghi giới hạn (Edge Case INV-002), không che.
 
+<a id="q9-quy-mo-tai-lieu"></a>
 ## Q9. Quy mô tài liệu
 
 - **Quyết định**: một bounded context duy nhất (mô phỏng cơ–xương) ⇒ không tạo `docs/02-strategic/`, `docs/03-tactical/`, `rbac.md` (không phân quyền); không có API mạng ⇒ hợp đồng là CLI + định dạng tệp báo cáo JSON ở `contracts/`. Không có `docs/` sẵn để đọc.
 
+<a id="tong-ket"></a>
 ## Tổng kết
 
 Không còn mục `NEEDS CLARIFICATION`. Hai việc CHƯA KIỂM được giao thành task bắt buộc có kết quả ghi vào báo cáo: (1) công thức ngưỡng lực (Q3), (2) torch có `sm_120` trên máy đích (Q6).

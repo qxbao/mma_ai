@@ -11,8 +11,17 @@ version: "1.0.0"
 
 # Mô hình dữ liệu — M1 (4/4)
 
+- [Thực thể → đối tượng / tệp](#thuc-the-doi-tuong-tep)
+- [Luật nhất quán mà JSON Schema không diễn đạt được (kiểm trong `read_episode`, FR-009)](#luat-nhat-quan-ma-json-schema-khong-dien-dat-duoc-kiem-trong-read-episode-fr-009)
+- [Ánh xạ nhãn ↔ khoá](#anh-xa-nhan-khoa)
+- [Trạng thái của một phiên `replay.py`](#trang-thai-cua-mot-phien-replaypy)
+- [Tệp cấu hình và nơi dùng](#tep-cau-hinh-va-noi-dung)
+- [Bất biến liên quan dữ liệu](#bat-bien-lien-quan-du-lieu)
+
+
 Không có cơ sở dữ liệu ⇒ không có bảng `TBL-*`, không có index; không có `EVT-*`. Dữ liệu là đối tượng trong bộ nhớ và **tệp JSON** theo `contracts/*.schema.json`. Tên trường KHÔNG chép lại ở đây — xem schema; chỉ ghi luật và quan hệ. Mọi tệp trong `contracts/examples/` là **ví dụ minh hoạ khuôn**, không phải kết quả đo.
 
+<a id="thuc-the-doi-tuong-tep"></a>
 ## Thực thể → đối tượng / tệp
 
 | Thực thể (spec) | Đối tượng | Khuôn dây / tệp | Người ghi | Người đọc |
@@ -21,10 +30,11 @@ Không có cơ sở dữ liệu ⇒ không có bảng `TBL-*`, không có index;
 | Khung | `Frame` | phần tử của `episode.frames`; khung nội suy `frame_at(t)` chỉ tồn tại trong bộ nhớ | `record_episode` | `play`, `summarize_episode` |
 | Phiên phát | `PlaybackStats` + `ModelCheck` | không có tệp riêng; kết quả vào tóm tắt | `play`, `check_model` | `summarize_episode`, stdout |
 | Tóm tắt không màn hình | dict | stdout (`--headless`) — [replay-summary.schema.json](contracts/replay-summary.schema.json) | `summarize_episode` | người dùng, test |
-| Cấu hình replay | `ReplayConfig` | `configs/replay.yaml` — [replay-config.schema.json](contracts/replay-config.schema.json) | người dùng | `visualization.*` |
+| Cấu hình replay | `ReplayConfig` | `src/mma_ai/visualization/replay.yaml` — [replay-config.schema.json](contracts/replay-config.schema.json) | người dùng | `visualization.*` |
 
 Quan hệ: một `Episode` có ≥ 1 `Frame` (khung 0 = sau `reset`); `Episode.source` trỏ tới một checkpoint của con 2 (qua tên + hash nội dung, không qua khoá ngoại) hoặc `null`; `Episode.model.sha256` so với mô hình hiện tại bằng `check_model`. Con 4 **không** thêm trường vào hồ sơ run của con 2.
 
+<a id="luat-nhat-quan-ma-json-schema-khong-dien-dat-duoc-kiem-trong-read-episode-fr-009"></a>
 ## Luật nhất quán mà JSON Schema không diễn đạt được (kiểm trong `read_episode`, FR-009)
 
 | # | Luật | Vi phạm ⇒ | Test |
@@ -37,10 +47,12 @@ Quan hệ: một `Episode` có ≥ 1 `Frame` (khung 0 = sau `reset`); `Episode.s
 | R6 | `outcome.end_reason = "reached"` ⇔ `outcome.reached = true` ⇔ `terminated = true`; `"max_actions"` ⇔ `truncated = true` | `EpisodeInvalid` | `test_episode::test_outcome_consistent` |
 | R7 | mọi số hữu hạn (`allow_nan=False` khi ghi; `parse_constant` từ chối `NaN`/`Infinity` khi đọc) | `EpisodeInvalid` nêu trường | `test_episode::test_nonfinite_rejected` |
 
+<a id="anh-xa-nhan-khoa"></a>
 ## Ánh xạ nhãn ↔ khoá
 
 Dây chỉ mang **chỉ số**: `activation[i]`, `excitation[i]` với `i ∈ 0…5`; **nhãn** là `model.muscle_names[i]` của chính episode (thứ tự cố định theo mô hình lúc ghi; ĐÃ ĐO với `myoelbow_1dof6muscles.xml`: `TRIlong, TRIlat, TRImed, BIClong, BICshort, BRA`). HUD gắn nhãn từ `muscle_names`, không có bảng nhãn thứ hai trong mã; so sánh với mô hình hiện tại là so *danh sách có thứ tự* (R5 + `check_model`).
 
+<a id="trang-thai-cua-mot-phien-replaypy"></a>
 ## Trạng thái của một phiên `replay.py`
 
 ```text
@@ -55,12 +67,14 @@ khởi động → [tham số/cấu hình hợp lệ?]        --không--> mã 2
 
 Không có trạng thái bền; ngắt (Ctrl-C) ở bất kỳ nơi nào ⇒ xoá tệp tạm, mã 130.
 
+<a id="tep-cau-hinh-va-noi-dung"></a>
 ## Tệp cấu hình và nơi dùng
 
 | Tệp | Khoá (đủ trong schema) | Dùng bởi |
 |---|---|---|
-| `configs/replay.yaml` | `playback.{speed, loop, display_hz, hold_after_end_s}`, `demo.{split, target_index, seed}`, `hud.{decimals, bar_width}`, `target_marker.{radius_m, rgba}` | `replay_config` → `playback`, `viewer`, `hud`, `replay` |
+| `src/mma_ai/visualization/replay.yaml` | `playback.{speed, loop, display_hz, hold_after_end_s}`, `demo.{split, target_index, seed}`, `hud.{decimals, bar_width}`, `target_marker.{radius_m, rgba}` | `replay_config` → `playback`, `viewer`, `hud`, `replay` |
 
+<a id="bat-bien-lien-quan-du-lieu"></a>
 ## Bất biến liên quan dữ liệu
 
 INV-003 (episode tự đủ: seed · hash XML · 6 tên cơ · phiên bản · `null` tường minh) · INV-005 (chỉ đọc, không ghi đè) · INV-006 (làm tròn chỉ ở HUD) — khai ở `spec.md`; file này chỉ tham chiếu.

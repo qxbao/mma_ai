@@ -11,8 +11,19 @@ version: "1.0.0"
 
 # Mô hình dữ liệu — M1 (1/4)
 
+- [Thực thể → đối tượng / bản ghi](#thuc-the-doi-tuong-ban-ghi)
+- [Thực thể: Target / TargetSetPair](#thuc-the-target-targetsetpair)
+- [Thực thể: Cấu hình môi trường](#thuc-the-cau-hinh-moi-truong)
+- [Bố cục Observation (14 chiều, `float32`)](#bo-cuc-observation-14-chieu-float32)
+  - [Ánh xạ chỉ số ↔ cơ (nhắc từ 001)](#anh-xa-chi-so-co-nhac-tu-001)
+- [Máy trạng thái của môi trường](#may-trang-thai-cua-moi-truong)
+- [Bất biến liên quan (đã khai ở spec.md, chỉ tham chiếu mã)](#bat-bien-lien-quan-da-khai-o-specmd-chi-tham-chieu-ma)
+- [Cấu hình (đọc, không phải bản ghi báo cáo)](#cau-hinh-doc-khong-phai-ban-ghi-bao-cao)
+
+
 Không có cơ sở dữ liệu ⇒ không có bảng `TBL-*`, không có index; không có `EVT-*`, `CMD-*`/`QRY-*`/`API-*` mạng. Dữ liệu là các đối tượng trong bộ nhớ và **bản ghi JSON** theo `contracts/*.schema.json` (không chép lại tên trường ở đây — chỉ ghi luật và quan hệ).
 
+<a id="thuc-the-doi-tuong-ban-ghi"></a>
 ## Thực thể → đối tượng / bản ghi
 
 | Thực thể (spec) | Đối tượng | Khuôn dây | Người tạo | Người đọc |
@@ -24,6 +35,7 @@ Không có cơ sở dữ liệu ⇒ không có bảng `TBL-*`, không có index;
 | Hồ sơ mô hình | `ModelRecord` (dict) | [model-record.schema.json](contracts/model-record.schema.json) | `env.model_record()` | hồ sơ thí nghiệm (con 2, 3) |
 | Info của reset / step | dict | [reset-info.schema.json](contracts/reset-info.schema.json), [step-info.schema.json](contracts/step-info.schema.json) | env | PPO, đánh giá, test |
 
+<a id="thuc-the-target-targetsetpair"></a>
 ## Thực thể: Target / TargetSetPair
 
 | Trường | Kiểu | Luật hợp lệ |
@@ -37,14 +49,17 @@ Không có cơ sở dữ liệu ⇒ không có bảng `TBL-*`, không có index;
 
 Luật tách: cung khả dụng chia thành `n_blocks = ⌊L_khả_dụng / split_block_m⌋` khối; seed xáo trộn rồi gán khối cho `test` (⌈n_blocks · n_test/(n_train+n_test)⌉ khối, tối đa `n_blocks − 1`) và `train` (phần còn lại); mỗi khối thu hẹp `1,1 · min_separation_m / 2` ở hai biên (hệ số 1,1 bù chênh dây cung–cung). Bất khả thi (`split_block_m ≤ 1,1 · min_separation_m`, `n_blocks < 2`, kích thước ≤ 0) ⇒ `TargetConfigError`. Lý do và số đo: `research.md` Q3.
 
+<a id="thuc-the-cau-hinh-moi-truong"></a>
 ## Thực thể: Cấu hình môi trường
 
 Khoá và ràng buộc ở [env-config.schema.json](contracts/env-config.schema.json); ràng buộc chéo mà schema không diễn đạt, kiểm bởi `ElbowEnvConfig.load`: `split_block_m > 1,1 · min_separation_m`; `tolerance_m` > 0 (khởi đầu 0,02 và bằng `min_separation_m` khởi đầu theo Tự chốt của spec, nhưng không buộc bằng nhau); `n_train`, `n_test` ≥ 1. Giá trị khởi đầu: ví dụ [examples/env-config.default.json](contracts/examples/env-config.default.json).
 
+<a id="bo-cuc-observation-14-chieu-float32"></a>
 ## Bố cục Observation (14 chiều, `float32`)
 
 Nguồn chân lý của bố cục và cận: `research.md` Q4 (bảng chỉ số 0–13). Dây chỉ mang **chỉ số** trong vector; nhãn thành phần chỉ có ở tài liệu/ test. Test `test_layout_is_14_with_finite_bounds` đối chiếu `observation_space.shape == (14,)`, cận hữu hạn, và thứ tự với bảng.
 
+<a id="anh-xa-chi-so-co-nhac-tu-001"></a>
 ### Ánh xạ chỉ số ↔ cơ (nhắc từ 001)
 
 | Chỉ số trong action / `act` | Khoá (`muscle_names[i]`) |
@@ -58,6 +73,7 @@ Nguồn chân lý của bố cục và cận: `research.md` Q4 (bảng chỉ s�
 
 Bảng được đọc từ mô hình khi nạp (001 đã ghi ĐÃ ĐO) và so với danh sách này trong `test_elbow_env::test_loads_exactly_six_muscles`; lệch ⇒ không đạt, không tự đổi tên.
 
+<a id="may-trang-thai-cua-moi-truong"></a>
 ## Máy trạng thái của môi trường
 
 ```text
@@ -70,10 +86,12 @@ created | done ──step()──▶ EnvStateError
 
 Khi cả hai điều kiện kết thúc cùng bước: `terminated=True`, `truncated=False`, `end_reason="reached"`.
 
+<a id="bat-bien-lien-quan-da-khai-o-specmd-chi-tham-chieu-ma"></a>
 ## Bất biến liên quan (đã khai ở spec.md, chỉ tham chiếu mã)
 
 INV-001 (train ∩ test = ∅ + khoảng cách tối thiểu) · INV-002 (tất định theo seed) · INV-003 (chỉ điều khiển bằng kích thích cơ) · INV-004 (observation đúng chiều, hữu hạn, trong cận).
 
+<a id="cau-hinh-doc-khong-phai-ban-ghi-bao-cao"></a>
 ## Cấu hình (đọc, không phải bản ghi báo cáo)
 
 | Tệp | Khoá chính | Dùng bởi |

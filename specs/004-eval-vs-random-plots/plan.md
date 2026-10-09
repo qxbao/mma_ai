@@ -11,10 +11,27 @@ version: "1.0.0"
 
 # Implementation Plan: M1 (3/4) — Đánh giá policy so với random policy và biểu đồ loss/reward/activation
 
+- [Summary](#summary)
+- [Technical Context](#technical-context)
+- [Constitution Check](#constitution-check)
+- [Phụ thuộc vào 001, 002 và 003](#phu-thuoc-vao-001-002-va-003)
+- [Kiến trúc & tách trách nhiệm](#kien-truc-tach-trach-nhiem)
+  - [Quyết định thiết kế](#quyet-dinh-thiet-ke)
+- [Project Structure](#project-structure)
+  - [Documentation (this feature)](#documentation-this-feature)
+  - [Source Code (repository root) — chỉ phần 004 thêm vào cây của 001–003](#source-code-repository-root-chi-phan-004-them-vao-cay-cua-001003)
+- [Lệnh build / test (cho task khung dựng đúng một lần)](#lenh-build-test-cho-task-khung-dung-dung-mot-lan)
+- [Truy vết yêu cầu → thiết kế](#truy-vet-yeu-cau-thiet-ke)
+- [Rủi ro & việc CHƯA KIỂM](#rui-ro-viec-chua-kiem)
+- [Phản biện plan_lint](#phan-bien-plan-lint)
+- [Complexity Tracking](#complexity-tracking)
+
+
 **Branch**: `004-eval-vs-random-plots` (tên thư mục feature; không tạo nhánh git) | **Date**: 2026-10-09 | **Spec**: [spec.md](spec.md)
 
 **Input**: `specs/004-eval-vs-random-plots/spec.md` (bản hiện tại, REQ-0103; không có `[NEEDS CLARIFICATION]`; Q-0001 thuộc `003-ppo-train-repro` và không đổi phạm vi con 3)
 
+<a id="summary"></a>
 ## Summary
 
 Feature dựng **đường đánh giá** cho checkpoint của con 2 (`003-ppo-train-repro`): lệnh `python scripts/evaluate.py --checkpoint <path>` nạp policy chỉ-đọc, chạy nó và một **random policy có seed** trên **tập mục tiêu kiểm thử** của con 1 (`002-elbow-muscle-env`; mỗi mục tiêu một episode cho mỗi policy), tính bảy nhóm chỉ số kèm khoảng tin cậy, đưa ra **kết luận "tốt hơn random" theo tiêu chí khai trước**, vẽ **ba biểu đồ headless** (loss, reward, activation 6 cơ) từ nhật ký của run, và **lưu kết quả cạnh run** mà không sửa tệp nào con 2 đã ghi.
@@ -28,6 +45,7 @@ Cách tiếp cận (chi tiết và số đo ở [research.md](research.md)):
 - **Random policy tất định** (Q4, INV-007): một bộ sinh `default_rng(seed)` xuyên lượt, không nhìn observation; policy học được dùng hành động xác định; cả hai chạy bằng cùng một vòng `run_policy_on_targets` với cùng danh sách mục tiêu/thứ tự (INV-002).
 - Một cấu hình duy nhất `configs/eval_elbow.yaml` (khuôn [eval-config.schema.json](contracts/eval-config.schema.json)) lưu nguyên văn vào báo cáo; tiêu chí kết luận chỉ đọc từ cấu hình, **không có cờ ghi đè khi chạy** (INV-006). Phạm vi CHỈ M1: không giao diện tương tác (đã thuộc con 2), không replay/demo (con 4), không baseline/chỉ số ngoài yêu cầu, không M2–M9.
 
+<a id="technical-context"></a>
 ## Technical Context
 
 **Language/Version**: Python 3.11 (ghim `.python-version` và `requires-python = ">=3.11,<3.13"` của 001)
@@ -48,6 +66,7 @@ Cách tiếp cận (chi tiết và số đo ở [research.md](research.md)):
 
 **Scale/Scope**: 1 mô hình (1 DoF, 6 cơ); mặc định khởi đầu 50 mục tiêu kiểm thử × 1 lần × 2 policy = 100 episode; ≈ 10 mô-đun mới (`evaluation/`); 1 script; ≈ 14 tệp test; 1 tệp cấu hình
 
+<a id="constitution-check"></a>
 ## Constitution Check
 
 *Cổng: phải qua trước Phase 0; kiểm lại sau Phase 1.* Nguồn: `.specify/memory/constitution.md` v1.0.0.
@@ -68,6 +87,7 @@ Cách tiếp cận (chi tiết và số đo ở [research.md](research.md)):
 
 **Quy mô tài liệu & kiến trúc**: vẫn **một bounded context** (mô phỏng và huấn luyện cơ–xương, gói `mma_ai`) như 001–003 ⇒ KHÔNG ghi `docs/02-strategic/context-map.md`, `docs/03-tactical/*` hay `docs/01-intent/overview.md`; **không có phân quyền** (lệnh dòng lệnh cục bộ, không vai/khoá/token) ⇒ không `rbac.md`. Hợp đồng dây (một CLI + tệp báo cáo JSON) có schema và ví dụ ở `contracts/`. Stack không đổi (`python-mujoco-cli`); `.ai/stack-proposal.yml` chỉ thêm một dòng căn cứ.
 
+<a id="phu-thuoc-vao-001-002-va-003"></a>
 ## Phụ thuộc vào 001, 002 và 003
 
 001–003 mới có spec + plan, **chưa có mã**. 004 dựa vào giao diện theo hợp đồng đã công bố của chúng (giả định CHƯA KIỂM — research Q11):
@@ -83,6 +103,7 @@ Cách tiếp cận (chi tiết và số đo ở [research.md](research.md)):
 
 **Quy tắc thứ tự** (cho bước tasks): mọi task của 004 chạm mã đứng SAU task tương ứng của 001–003 (`depends_on`); `pyproject.toml` (thêm extra `eval`) do một task riêng, sau task thêm extra `rl` của 003; task accessor `target_index` ở `single_agent.py` của 002 đứng sau task `single_agent.py` của 002 và TRƯỚC `rollout`. Lệch giao diện khi triển khai ⇒ sửa ở nơi chủ sở hữu, 004 không sao chép.
 
+<a id="kien-truc-tach-trach-nhiem"></a>
 ## Kiến trúc & tách trách nhiệm
 
 Phụ thuộc một chiều: `evaluation → learning.checkpoint (003, chỉ nạp) → environment (002) → physics (001) → config`. `evaluation` không import `learning.trainer`/`learning.ppo`. Mô-đun mới:
@@ -101,6 +122,7 @@ Phụ thuộc một chiều: `evaluation → learning.checkpoint (003, chỉ n�
 | `evaluation/errors` | `EvalConfigError`, `CheckpointUnusable`, `LeakageError`, `TrainSetUnknown`, `LogMissing`, `EvalWriteError` | FR-015 |
 | `scripts/evaluate.py` | lệnh CLI mỏng gọi `evaluate_checkpoint`, in tóm tắt tiếng Việt | FR-001 |
 
+<a id="quyet-dinh-thiet-ke"></a>
 ### Quyết định thiết kế
 
 - **Hai policy, một vòng**: `run_policy_on_targets` nhận `policy` qua giao diện `act(obs_raw)`; không có nhánh riêng cho random/learned ngoài việc dựng policy (INV-002). Seed episode `episode_base + k` đếm tuần tự; hai policy dùng cùng dãy seed.
@@ -110,8 +132,10 @@ Phụ thuộc một chiều: `evaluation → learning.checkpoint (003, chỉ n�
 - **Báo cáo**: một tệp `report.json` theo schema + `episodes.csv` mức thấp; trạng thái công bố chỉ `done` / `done_charts_incomplete`; `limits` luôn có (độ rộng khoảng tin cậy thật, phạm vi kết luận).
 - **Không mock vật lý**: test đường chính dùng mô hình thật; policy kịch bản chỉ thay *policy*, không thay môi trường; `monkeypatch` chỉ để tiêm lỗi ghi đĩa/hành động hỏng và được gọi tên rõ. Không tự viết validator an ninh riêng ngoài `jsonschema` và các kiểm tra theo spec; test assert thẳng trên sản phẩm.
 
+<a id="project-structure"></a>
 ## Project Structure
 
+<a id="documentation-this-feature"></a>
 ### Documentation (this feature)
 
 ```text
@@ -131,6 +155,7 @@ specs/004-eval-vs-random-plots/
 └── tasks.md             # bước /speckit-tasks — KHÔNG tạo ở bước plan
 ```
 
+<a id="source-code-repository-root-chi-phan-004-them-vao-cay-cua-001003"></a>
 ### Source Code (repository root) — chỉ phần 004 thêm vào cây của 001–003
 
 ```text
@@ -154,6 +179,7 @@ tests/
 
 **Structure Decision**: dự án đơn (single project), mở rộng cây `src/mma_ai/` của 001–003 bằng một gói con `evaluation/`. Gói `visualization/` (con 4) **chưa tạo**. Không thêm quy tắc `.gitignore` (thư mục `runs/` đã bỏ khỏi git theo 003).
 
+<a id="lenh-build-test-cho-task-khung-dung-dung-mot-lan"></a>
 ## Lệnh build / test (cho task khung dựng đúng một lần)
 
 | Việc | Lệnh |
@@ -167,6 +193,7 @@ tests/
 
 Cổng máy (`gates:`) do bước plan_fix nháp từ tệp này; plan không khai tay trong `.ai/profile.yml`.
 
+<a id="truy-vet-yeu-cau-thiet-ke"></a>
 ## Truy vết yêu cầu → thiết kế
 
 | Yêu cầu | Thực hiện bởi | Bằng chứng / Test |
@@ -191,6 +218,7 @@ Cổng máy (`gates:`) do bước plan_fix nháp từ tệp này; plan không kh
 | NFR-REPRO-001 | `policies`, `stats`, `runner` | `test_eval_determinism::test_same_seed_same_actions_and_metrics`, `::test_diff_seed_diff_random_actions` |
 | NFR-HEADLESS-001 | `charts`, `runner` | `test_evaluate_headless::test_evaluate_with_display_unset_exit0` |
 
+<a id="rui-ro-viec-chua-kiem"></a>
 ## Rủi ro & việc CHƯA KIỂM
 
 1. **001–003 chưa có mã** — 004 dựa vào hợp đồng đã công bố (D-1…D-6); lệch ⇒ sửa ở nơi chủ sở hữu, 004 chỉ thêm accessor đọc-chỉ.
@@ -202,6 +230,7 @@ Cổng máy (`gates:`) do bước plan_fix nháp từ tệp này; plan không kh
 7. **Kết quả đo trên checkpoint thật chưa biết** — một checkpoint train ngắn có thể "không tốt hơn random"; đó là kết quả hợp lệ, không phải lỗi hệ thống (mã thoát 0).
 8. **`test_unimplemented_cli` của 001 hiện đòi `evaluate.py` thoát 3** — task chủ của 004 cập nhật đúng tệp test đó (bỏ `evaluate` khỏi danh sách), sau khi `scripts/evaluate.py` được thay.
 
+<a id="phan-bien-plan-lint"></a>
 ## Phản biện plan_lint
 
 - Cạnh tranh phương pháp khoảng tin cậy: bootstrap ghép cặp bị loại vì thoái hoá ([1,0 ; 1,0] cho 50 vs 0; [0 ; 0] khi ghép cặp giống hệt — ĐÃ ĐO); Wald z-test vỡ ở tỷ lệ 0/1; Fisher/z chính xác cần `scipy`. Newcombe đủ tốt, giải tích, kiểm được bằng đáp án tay.
@@ -209,6 +238,7 @@ Cổng máy (`gates:`) do bước plan_fix nháp từ tệp này; plan không kh
 - Ghi nguyên tử bằng đổi tên thư mục: thêm một bước công bố đổi lấy bảo đảm không có kết quả dở dang (INV-004); chi phí tối thiểu.
 - Chưa có số đo thật nào về kết quả đánh giá hay thời gian chạy: mọi con số trong plan là thiết kế hoặc thăm dò; nghiệm thu dựa vào `report.json` và test, không dựa vào plan.
 
+<a id="complexity-tracking"></a>
 ## Complexity Tracking
 
 Không có vi phạm hiến chương cần biện minh. Độ phức tạp thêm vào (kiểm giao rỗng bằng dựng lại tập train, thư mục tạm công bố bằng đổi tên) được biện minh trực tiếp bởi AC-4/INV-001 (đánh giá giả nếu rò rỉ) và AC-5/INV-004 (không kết quả giả); phương án đơn giản hơn (tin hồ sơ không kiểm, ghi thẳng vào thư mục đích) không đáp ứng các tiêu chí đó.

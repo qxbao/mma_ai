@@ -11,10 +11,28 @@ version: "1.1.0"
 
 # Implementation Plan: M1 (2/4) — Huấn luyện PPO, checkpoint, hồ sơ tái lập & giao diện quan sát huấn luyện
 
+- [Summary](#summary)
+- [Technical Context](#technical-context)
+- [Constitution Check](#constitution-check)
+- [Giao diện quan sát — phương án chọn, lý do, chi phí (FR-024, AC-7)](#giao-dien-quan-sat-phuong-an-chon-ly-do-chi-phi-fr-024-ac-7)
+- [Phụ thuộc vào 001 và 002](#phu-thuoc-vao-001-va-002)
+- [Kiến trúc & tách trách nhiệm](#kien-truc-tach-trach-nhiem)
+  - [Quyết định thiết kế](#quyet-dinh-thiet-ke)
+- [Project Structure](#project-structure)
+  - [Documentation (this feature)](#documentation-this-feature)
+  - [Source Code (repository root) — chỉ phần 003 thêm vào cây của 001/002](#source-code-repository-root-chi-phan-003-them-vao-cay-cua-001002)
+- [Lệnh build / test (cho task khung dựng đúng một lần)](#lenh-build-test-cho-task-khung-dung-dung-mot-lan)
+- [Truy vết yêu cầu → thiết kế](#truy-vet-yeu-cau-thiet-ke)
+- [Rủi ro & việc CHƯA KIỂM](#rui-ro-viec-chua-kiem)
+- [Phản biện plan_lint](#phan-bien-plan-lint)
+- [Complexity Tracking](#complexity-tracking)
+
+
 **Branch**: `003-ppo-train-repro` (tên thư mục feature; không tạo nhánh git) | **Date**: 2026-10-09 | **Spec**: [spec.md](spec.md)
 
 **Input**: `specs/003-ppo-train-repro/spec.md` (bản hiện tại, REQ-0102 + bổ sung C-0009; Q-0001 đã được người dùng trả lời và áp vào `## Clarifications`)
 
+<a id="summary"></a>
 ## Summary
 
 Feature dựng **đường huấn luyện PPO** cho môi trường khuỷu tay của con 1 (`002-elbow-muscle-env`): lệnh `python scripts/train.py --stage elbow --seed 42`, **PPO tự cài trên PyTorch** (`ppo.py`; actor và critic MLP 2×256, chuẩn hoá observation, gradient clipping), **checkpoint một tệp khứ hồi** (policy, critic, bộ chuẩn hoá, optimizer, seed, trạng thái RNG), **hồ sơ thí nghiệm** (run manifest) mỗi run một thư mục không ghi đè, phép so sánh tái lập theo seed/dung sai, báo cáo env steps/s + wall-clock, và **giao diện quan sát thời gian thực** (C-0009, AC-7).
@@ -27,6 +45,7 @@ Cách tiếp cận (chi tiết và số đo ở [research.md](research.md)):
 - Tái lập: một seed gốc điều khiển torch, numpy, môi trường; `use_deterministic_algorithms`, 1 luồng torch; dung sai 1×10⁻⁶ chỉ giữa hai run cùng loại thiết bị (Q7).
 - Một cấu hình duy nhất `configs/train_elbow.yaml` (khuôn [train-config.schema.json](contracts/train-config.schema.json)) lưu nguyên văn vào hồ sơ (FR-018). Phạm vi CHỈ M1: không đánh giá/biểu đồ (con 3), không replay/demo (con 4), không môi trường song song, không M2–M9.
 
+<a id="technical-context"></a>
 ## Technical Context
 
 **Language/Version**: Python 3.11 (ghim `.python-version` và `requires-python = ">=3.11,<3.13"` của 001)
@@ -47,6 +66,7 @@ Cách tiếp cận (chi tiết và số đo ở [research.md](research.md)):
 
 **Scale/Scope**: 1 mô hình (1 DoF, 6 cơ), 1 môi trường, actor/critic ≈ 2×256; ≈ 12 mô-đun mới (`learning/` 10, `monitoring/` 2); 4 script; ≈ 20 tệp test; 2 tệp cấu hình
 
+<a id="constitution-check"></a>
 ## Constitution Check
 
 *Cổng: phải qua trước Phase 0; kiểm lại sau Phase 1.* Nguồn: `.specify/memory/constitution.md` v1.0.0.
@@ -67,6 +87,7 @@ Cách tiếp cận (chi tiết và số đo ở [research.md](research.md)):
 
 **Quy mô tài liệu & kiến trúc**: vẫn **một bounded context** (mô phỏng và huấn luyện cơ–xương, cùng gói `mma_ai`) như 001/002 ⇒ KHÔNG ghi `docs/02-strategic/context-map.md` hay `docs/03-tactical/*`; yêu cầu không vượt một trang cần `docs/01-intent/overview.md`; **không có phân quyền** (giao diện loopback chỉ-đọc, không vai/khoá/token) ⇒ không `rbac.md`. Hợp đồng dây (CLI + một điểm HTTP đọc-chỉ + bản ghi tệp) có schema và ví dụ ở `contracts/`. Stack không đổi (`python-mujoco-cli`); `.ai/stack-proposal.yml` đã khớp.
 
+<a id="giao-dien-quan-sat-phuong-an-chon-ly-do-chi-phi-fr-024-ac-7"></a>
 ## Giao diện quan sát — phương án chọn, lý do, chi phí (FR-024, AC-7)
 
 Câu hỏi giao cho plan (Q-0001): TensorBoard + bảng điều khiển web nhẹ, MuJoCo Viewer đọc checkpoint mới nhất, hay cả hai? Căn cứ và phương án đã loại đầy đủ ở [research.md](research.md) Q8; tóm tắt quyết định:
@@ -79,6 +100,7 @@ Câu hỏi giao cho plan (Q-0001): TensorBoard + bảng điều khiển web nh�
 
 Ràng buộc kiến trúc: trainer chỉ GHI (`progress.json`, `metrics.jsonl`, tfevents); `monitoring.*` chỉ ĐỌC và **không import** `learning.trainer`/`learning.ppo` (INV-005, kiểm bằng `test_monitoring_has_no_training_imports`); cổng bị chiếm hoặc giao diện lỗi ⇒ cảnh báo, train vẫn chạy; đóng giao diện giữa chừng không ảnh hưởng train. Quy tắc này là **ràng buộc cho mọi stage train sau này** (M2–M9 dùng lại `monitoring/` và `ProgressWriter`, không đặc tả ở đây).
 
+<a id="phu-thuoc-vao-001-va-002"></a>
 ## Phụ thuộc vào 001 và 002
 
 001 và 002 mới có spec + plan, **chưa có mã**. 003 dựa vào giao diện theo plan của chúng (giả định CHƯA KIỂM — research Q12):
@@ -91,6 +113,7 @@ Ràng buộc kiến trúc: trainer chỉ GHI (`progress.json`, `metrics.jsonl`, 
 
 **Quy tắc thứ tự** (cho bước tasks): mọi task của 003 chạm mã đứng SAU task tương ứng của 001/002 (`depends_on`); `pyproject.toml` (thêm extra `rl`) do một task riêng, sau task khung của 001 và task thêm `gymnasium` của 002. Lệch giao diện khi triển khai ⇒ sửa ở nơi chủ sở hữu.
 
+<a id="kien-truc-tach-trach-nhiem"></a>
 ## Kiến trúc & tách trách nhiệm
 
 Phụ thuộc một chiều: `learning → environment (002) → physics (001) → config`; `monitoring → (chỉ đọc tệp run)`; `monitoring` không phụ thuộc `learning.trainer`/`learning.ppo`. Mô-đun mới:
@@ -112,6 +135,7 @@ Phụ thuộc một chiều: `learning → environment (002) → physics (001) �
 | `monitoring/viewer3d` | `View3D`: tiến trình riêng, thiếu `DISPLAY` ⇒ "3D không khả dụng" | FR-022 |
 | `scripts/train.py` · `watch_train.py` · `compare_runs.py` · `benchmark_train.py` | bốn lệnh CLI mỏng gọi thư viện | FR-001, FR-013…FR-015, FR-020, FR-023 |
 
+<a id="quyet-dinh-thiet-ke"></a>
 ### Quyết định thiết kế
 
 - **Hành động**: `Trainer` chuyển cho môi trường LUÔN `sigmoid(a)`; không có đường ghi lực, góc khớp hay toạ độ tay (INV-002). `log_prob` tính trên `a`.
@@ -122,8 +146,10 @@ Phụ thuộc một chiều: `learning → environment (002) → physics (001) �
 - **Siêu tham số khởi đầu** (chưa tinh chỉnh; `total_timesteps = 100 000` chỉ là giữ chỗ để chạy được, KHÔNG phải ngân sách huấn luyện): research Q4. Con 2 không khẳng định policy học được — việc của con 3.
 - **Không mock vật lý**: test đường chính dùng mô hình thật; `monkeypatch` chỉ để tiêm NaN/lỗi ghi đĩa và được gọi tên rõ. Không tự viết validator an ninh riêng ngoài `jsonschema` và các kiểm tra theo spec; test assert thẳng trên sản phẩm.
 
+<a id="project-structure"></a>
 ## Project Structure
 
+<a id="documentation-this-feature"></a>
 ### Documentation (this feature)
 
 ```text
@@ -145,6 +171,7 @@ specs/003-ppo-train-repro/
 └── tasks.md             # bước /speckit-tasks — KHÔNG tạo ở bước plan
 ```
 
+<a id="source-code-repository-root-chi-phan-003-them-vao-cay-cua-001002"></a>
 ### Source Code (repository root) — chỉ phần 003 thêm vào cây của 001/002
 
 ```text
@@ -178,6 +205,7 @@ logs/m1/                  # benchmark_train.json (bỏ khỏi git)
 
 **Structure Decision**: dự án đơn (single project), mở rộng cây `src/mma_ai/` của 001/002 bằng hai gói con `learning/` và `monitoring/`. Các gói `evaluation/`, `visualization/` (con 3–4) **chưa tạo**. `.gitignore` thêm `runs/` (cùng task với cấu hình); `logs/` đã có theo plan của 001.
 
+<a id="lenh-build-test-cho-task-khung-dung-dung-mot-lan"></a>
 ## Lệnh build / test (cho task khung dựng đúng một lần)
 
 | Việc | Lệnh |
@@ -193,6 +221,7 @@ logs/m1/                  # benchmark_train.json (bỏ khỏi git)
 
 Cổng máy (`gates:`) do bước plan_fix nháp từ tệp này; plan không khai tay trong `.ai/profile.yml`.
 
+<a id="truy-vet-yeu-cau-thiet-ke"></a>
 ## Truy vết yêu cầu → thiết kế
 
 | Yêu cầu | Thực hiện bởi | Bằng chứng / Test |
@@ -220,6 +249,7 @@ Cổng máy (`gates:`) do bước plan_fix nháp từ tệp này; plan không kh
 | FR-023, NFR-PERF-001, INV-005 | `scripts/benchmark_train.py` | `test_benchmark_train::test_benchmark_schema_and_ratio`, `test_dashboard::test_train_survives_ui_failure`; số đo thật ở `logs/m1/benchmark_train.json` |
 | FR-024 | mục "Giao diện quan sát" của plan + `research.md` Q8 | rà soát tài liệu (không có mã) |
 
+<a id="rui-ro-viec-chua-kiem"></a>
 ## Rủi ro & việc CHƯA KIỂM
 
 1. **001 và 002 chưa có mã** — 003 dựa vào giao diện theo plan của chúng; lệch ⇒ sửa ở nơi chủ sở hữu, 003 chỉ thêm accessor đọc-chỉ (research Q12).
@@ -230,12 +260,14 @@ Cổng máy (`gates:`) do bước plan_fix nháp từ tệp này; plan không kh
 6. **Hiển thị 3D** — cần màn hình, chi phí chỉ đo khi có; thiếu `DISPLAY` ⇒ không khả dụng nhưng không làm hỏng train.
 7. **Train tiếp không trùng từng bit với chạy liền** (episode dở bị bỏ khi dừng) — chỉ cam kết trạng thái học được và thống kê chuẩn hoá liên tục.
 
+<a id="phan-bien-plan-lint"></a>
 ## Phản biện plan_lint
 
 - Cạnh tranh phương án giao diện: chỉ TensorBoard bị loại vì thiếu env steps/s, số bước / tổng, trạng thái checkpoint và 6 cơ trên một màn; Streamlit/Flask/Gradio bị loại vì thêm phụ thuộc nặng cho một trang số liệu; 3D mặc định bật bị loại theo master plan XI.8.
 - Tự cài PPO đổi lấy rủi ro sai thuật toán; chấp nhận vì INV-004 cần checkpoint một tệp có RNG và quyền móc dữ liệu vào vòng lặp, rủi ro có test chặn riêng.
 - Chưa có số đo thật nào về chi phí giao diện: mọi con số trong plan là thiết kế hoặc thăm dò; nghiệm thu phải dựa vào `logs/m1/benchmark_train.json`, không dựa vào plan.
 
+<a id="complexity-tracking"></a>
 ## Complexity Tracking
 
 Không có vi phạm hiến chương cần biện minh. Độ phức tạp thêm vào (một tiến trình giao diện riêng, hai gói con) được biện minh bởi yêu cầu AC-7/FR-022: giao diện ở tiến trình riêng để không kéo chậm vòng train và để lỗi giao diện không dừng train (INV-005); phương án đơn giản hơn (chỉ TensorBoard) không đủ 6 số liệu của AC-7.

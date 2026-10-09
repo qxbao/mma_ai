@@ -11,8 +11,18 @@ version: "1.1.0"
 
 # Mô hình dữ liệu — M1 (2/4)
 
+- [Thực thể → đối tượng / tệp](#thuc-the-doi-tuong-tep)
+- [Cấu trúc thư mục một run](#cau-truc-thu-muc-mot-run)
+- [Máy trạng thái của run](#may-trang-thai-cua-run)
+- [Luật hợp lệ chéo (schema không diễn đạt hết — kiểm bởi mã/test)](#luat-hop-le-cheo-schema-khong-dien-dat-het-kiem-boi-matest)
+- [Bố cục checkpoint (nội dung tệp `.pt`)](#bo-cuc-checkpoint-noi-dung-tep-pt)
+- [Bất biến liên quan (khai ở spec.md, chỉ tham chiếu mã)](#bat-bien-lien-quan-khai-o-specmd-chi-tham-chieu-ma)
+- [Cấu hình (đọc, không phải bản ghi báo cáo)](#cau-hinh-doc-khong-phai-ban-ghi-bao-cao)
+
+
 Cập nhật theo `spec.md` hiện tại (có Q-0001 đã trả lời, AC-7). Không có cơ sở dữ liệu ⇒ không có bảng `TBL-*`, không có index; không có `EVT-*`. Dữ liệu là đối tượng trong bộ nhớ và **tệp** trong thư mục run (JSON theo `contracts/*.schema.json`, `.pt`, tfevents, JSONL). Tên trường KHÔNG chép lại ở đây — xem schema; chỉ ghi luật và quan hệ. Mọi tệp trong `contracts/examples/` là **ví dụ minh hoạ khuôn**, không phải kết quả đo.
 
+<a id="thuc-the-doi-tuong-tep"></a>
 ## Thực thể → đối tượng / tệp
 
 | Thực thể (spec) | Đối tượng | Khuôn dây / tệp | Người ghi | Người đọc |
@@ -25,6 +35,7 @@ Cập nhật theo `spec.md` hiện tại (có Q-0001 đã trả lời, AC-7). Kh
 | Ảnh chụp tiến trình | `ProgressSnapshot` | `progress.json` ([progress-snapshot.schema.json](contracts/progress-snapshot.schema.json)) | trainer (thay thế nguyên tử, ≥ 1 s/lần) | giao diện (qua `API-TRN-0001`), test |
 | Kết quả đo chi phí giao diện | `TrainBenchmark` | `logs/m1/benchmark_train.json` ([train-benchmark.schema.json](contracts/train-benchmark.schema.json)) | `scripts/benchmark_train.py` | hồ sơ nghiệm thu, người duyệt |
 
+<a id="cau-truc-thu-muc-mot-run"></a>
 ## Cấu trúc thư mục một run
 
 ```text
@@ -43,6 +54,7 @@ runs/<run_id>/
 
 `run_id = <UTC YYYYMMDDTHHMMSSZ>_<stage>_s<seed>[-n]` (mẫu regex ở schema). Thư mục gốc `runs/` cấu hình được (`paths.runs_dir`), nằm trên SSD, bỏ khỏi git.
 
+<a id="may-trang-thai-cua-run"></a>
 ## Máy trạng thái của run
 
 ```text
@@ -55,6 +67,7 @@ done | error | interrupted ──────▶ (bất biến: không sửa n�
 
 Train tiếp (`--resume`) **không** đổi trạng thái run cha; nó tạo run con mới có `resumed_from`.
 
+<a id="luat-hop-le-cheo-schema-khong-dien-dat-het-kiem-boi-matest"></a>
 ## Luật hợp lệ chéo (schema không diễn đạt hết — kiểm bởi mã/test)
 
 | Luật | Nơi kiểm | Mã |
@@ -68,6 +81,7 @@ Train tiếp (`--resume`) **không** đổi trạng thái run cha; nó tạo run
 | Trường không áp dụng ghi `null` tường minh (GPU/VRAM khi không có GPU, `finished_utc` khi `running`) | schema (`required` + `["…","null"]`) | AC-3 |
 | `progress.timestamp_utc` đơn điệu không giảm | `test_snapshot_atomic_and_schema` | AC-7 |
 
+<a id="bo-cuc-checkpoint-noi-dung-tep-pt"></a>
 ## Bố cục checkpoint (nội dung tệp `.pt`)
 
 | Khoá | Nội dung | Ghi chú |
@@ -80,10 +94,12 @@ Train tiếp (`--resume`) **không** đổi trạng thái run cha; nó tạo run
 | `update_idx`, `env_steps` | số nguyên | bộ đếm tiếp nối khi train tiếp |
 | `model_sha256`, `library_versions`, `config` | chuỗi / từ điển | đối chiếu khi nạp |
 
+<a id="bat-bien-lien-quan-khai-o-specmd-chi-tham-chieu-ma"></a>
 ## Bất biến liên quan (khai ở spec.md, chỉ tham chiếu mã)
 
 INV-001 (thư mục run duy nhất, không ghi đè) · INV-002 (hành động ∈ [0,1]^6) · INV-003 (chỉ tập train) · INV-004 (checkpoint khứ hồi đủ trạng thái, không NaN/Inf) · INV-005 (giao diện chỉ đọc).
 
+<a id="cau-hinh-doc-khong-phai-ban-ghi-bao-cao"></a>
 ## Cấu hình (đọc, không phải bản ghi báo cáo)
 
 | Tệp | Khoá chính | Dùng bởi |

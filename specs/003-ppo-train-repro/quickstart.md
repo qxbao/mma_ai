@@ -11,10 +11,21 @@ version: "1.1.0"
 
 # Quickstart — kiểm chứng huấn luyện PPO, checkpoint, hồ sơ và giao diện quan sát
 
+- [Kịch bản 1 — Lượt train ngắn (smoke), 0 NaN/Inf, TensorBoard + checkpoint (AC-1, NFR-REL-001, NFR-HEADLESS-001, INV-002, INV-003)](#kich-ban-1-luot-train-ngan-smoke-0-naninf-tensorboard-checkpoint-ac-1-nfr-rel-001-nfr-headless-001-inv-002-inv-003)
+- [Kịch bản 2 — Lưu, nạp checkpoint, train tiếp (AC-2, INV-004)](#kich-ban-2-luu-nap-checkpoint-train-tiep-ac-2-inv-004)
+- [Kịch bản 3 — Hồ sơ thí nghiệm đủ trường (AC-3, NFR-RES-001, INV-001)](#kich-ban-3-ho-so-thi-nghiem-du-truong-ac-3-nfr-res-001-inv-001)
+- [Kịch bản 4 — Tái lập theo seed (AC-4, NFR-REPRO-001)](#kich-ban-4-tai-lap-theo-seed-ac-4-nfr-repro-001)
+- [Kịch bản 5 — Cấu trúc mạng 2×256, chuẩn hoá, gradient clipping, PPO đúng (AC-6, FR-002…FR-004)](#kich-ban-5-cau-truc-mang-2256-chuan-hoa-gradient-clipping-ppo-dung-ac-6-fr-002fr-004)
+- [Kịch bản 6 — Stage chưa triển khai (AC-5)](#kich-ban-6-stage-chua-trien-khai-ac-5)
+- [Kịch bản 7 — Giao diện quan sát khi đang train (AC-7, NFR-PERF-001, NFR-PERF-002, INV-005)](#kich-ban-7-giao-dien-quan-sat-khi-dang-train-ac-7-nfr-perf-001-nfr-perf-002-inv-005)
+- [Kịch bản 8 — Hợp đồng bản ghi và phụ thuộc (AC-3, AC-7)](#kich-ban-8-hop-dong-ban-ghi-va-phu-thuoc-ac-3-ac-7)
+
+
 Lệnh: `contracts/cli.md`; API: `contracts/python-api.md`; khuôn bản ghi: `contracts/*.schema.json`; thực thể: `data-model.md`. Chỉ thực hiện sau khi các task triển khai đã dựng mã, con 1 (`002-elbow-muscle-env`) đã xanh và M0 (001) đã có mã. Mọi tên test dưới đây là tên **kế hoạch**; chưa chạy nghĩa là chưa có kết quả.
 
 **Điều kiện tiên quyết**: `uv` đã cài; Linux/WSL2 Ubuntu; `uv sync --extra dev --extra rl`; mã của 001 và 002.
 
+<a id="kich-ban-1-luot-train-ngan-smoke-0-naninf-tensorboard-checkpoint-ac-1-nfr-rel-001-nfr-headless-001-inv-002-inv-003"></a>
 ## Kịch bản 1 — Lượt train ngắn (smoke), 0 NaN/Inf, TensorBoard + checkpoint (AC-1, NFR-REL-001, NFR-HEADLESS-001, INV-002, INV-003)
 
 1. `uv run python scripts/train.py --stage elbow --seed 42 --config configs/train_elbow_smoke.yaml`
@@ -22,28 +33,33 @@ Lệnh: `contracts/cli.md`; API: `contracts/python-api.md`; khuôn bản ghi: `c
 
 Kỳ vọng: mã thoát 0; `runs/<run_id>/` có `tb/`, `checkpoints/` (≥ 1 tệp `.pt`), `manifest.json` `status:"done"`; `numeric_health` = 0/0; chuỗi loss, reward, `activation/<tên cơ>` (6 cơ) có trong TensorBoard; mọi `reset` trong lúc train báo `target_split == "train"`.
 
+<a id="kich-ban-2-luu-nap-checkpoint-train-tiep-ac-2-inv-004"></a>
 ## Kịch bản 2 — Lưu, nạp checkpoint, train tiếp (AC-2, INV-004)
 
 1. `uv run python -m pytest -q tests/unit/test_checkpoint.py tests/integration/test_resume.py`
 2. Kỳ vọng: `test_roundtrip_same_action` (lô 64 observation, sai khác tuyệt đối ≤ 1×10⁻⁶), `test_missing_component_raises`, `test_shape_mismatch_raises`, `test_nan_not_written`, `test_atomic_write_no_partial`, `test_resume_creates_new_run_with_parent`, `test_resume_restores_normalizer_optimizer_rng`, `test_resume_refused_when_xml_hash_differs`.
 3. Chạy tay (tuỳ chọn): `uv run python scripts/train.py --stage elbow --seed 42 --config configs/train_elbow_smoke.yaml --resume runs/<run_id>/checkpoints/latest.json`.
 
+<a id="kich-ban-3-ho-so-thi-nghiem-du-truong-ac-3-nfr-res-001-inv-001"></a>
 ## Kịch bản 3 — Hồ sơ thí nghiệm đủ trường (AC-3, NFR-RES-001, INV-001)
 
 1. `uv run python -m pytest -q tests/integration/test_manifest_contract.py tests/unit/test_run_dir.py tests/unit/test_manifest.py`
 2. Kỳ vọng: `test_manifest_fields_and_schema` (seed, config, phiên bản thư viện, hash XML, checkpoint, reward metrics, env steps/s, wall-clock, tài nguyên — 100% trường có mặt), `test_manifest_hash_matches_env_model_record`, `test_resources_fields_null_explicit` (không GPU ⇒ `null`, không bỏ trường), `test_two_runs_two_dirs` (hai run liên tiếp cùng seed ⇒ hai thư mục, run cũ không đổi), `test_unique_dirs_no_overwrite`, `tests/unit/test_manifest.py::test_throughput_and_wallclock_measured` (env steps/s và wall-clock do máy đo, FR-013).
 
+<a id="kich-ban-4-tai-lap-theo-seed-ac-4-nfr-repro-001"></a>
 ## Kịch bản 4 — Tái lập theo seed (AC-4, NFR-REPRO-001)
 
 1. `uv run python -m pytest -q tests/regression/test_train_determinism.py tests/unit/test_repro.py`
 2. Kỳ vọng: `test_same_seed_head_curve_within_tolerance` (hai run smoke cùng seed/cấu hình/thiết bị: lệch tương đối ≤ 1×10⁻⁶ tại mỗi điểm, K = min(10, số lượt)), `test_diff_seed_differs`, `test_manifest_records_tolerance`, `test_compare_within_tolerance`, `test_compare_outside`.
 3. Chạy tay: `uv run python scripts/compare_runs.py runs/<run_a> runs/<run_b>` (mã thoát 0 = trong dung sai).
 
+<a id="kich-ban-5-cau-truc-mang-2256-chuan-hoa-gradient-clipping-ppo-dung-ac-6-fr-002fr-004"></a>
 ## Kịch bản 5 — Cấu trúc mạng 2×256, chuẩn hoá, gradient clipping, PPO đúng (AC-6, FR-002…FR-004)
 
 1. `uv run python -m pytest -q tests/unit/test_networks.py tests/unit/test_normalizer.py tests/unit/test_ppo.py tests/unit/test_train_config.py`
 2. Kỳ vọng: `test_actor_critic_2x256`, `test_config_changes_structure`, `test_action_always_in_unit_interval`, `test_matches_numpy_stats`, `test_grad_norm_after_clip_le_threshold`, `test_gae_matches_hand_computed`, `test_learns_toy_env`, `test_invalid_values_raise`.
 
+<a id="kich-ban-6-stage-chua-trien-khai-ac-5"></a>
 ## Kịch bản 6 — Stage chưa triển khai (AC-5)
 
 1. `uv run python scripts/train.py --stage balance --seed 42; echo $?`
@@ -51,6 +67,7 @@ Kỳ vọng: mã thoát 0; `runs/<run_id>/` có `tb/`, `checkpoints/` (≥ 1 t�
 
 Kỳ vọng: thông báo "chưa triển khai", mã thoát 3 (khác 0), không có thư mục run mới.
 
+<a id="kich-ban-7-giao-dien-quan-sat-khi-dang-train-ac-7-nfr-perf-001-nfr-perf-002-inv-005"></a>
 ## Kịch bản 7 — Giao diện quan sát khi đang train (AC-7, NFR-PERF-001, NFR-PERF-002, INV-005)
 
 1. Chạy train nền với giao diện web (mặc định): `uv run python scripts/train.py --stage elbow --seed 42 --ui web &` rồi mở URL được in ra (`http://127.0.0.1:<cổng>/`); mở thêm TensorBoard: `uv run tensorboard --logdir runs`.
@@ -60,6 +77,7 @@ Kỳ vọng: thông báo "chưa triển khai", mã thoát 3 (khác 0), không c�
 
 Kỳ vọng: giao diện hiện reward, loss, kích hoạt 6 cơ, env steps/s, số bước đã chạy / tổng, trạng thái checkpoint; số liệu mới xuất hiện ≤ 5 giây; tắt/đóng giao diện hoặc cổng bị chiếm không dừng train; không thao tác nào trên giao diện đổi được policy hay cấu hình.
 
+<a id="kich-ban-8-hop-dong-ban-ghi-va-phu-thuoc-ac-3-ac-7"></a>
 ## Kịch bản 8 — Hợp đồng bản ghi và phụ thuộc (AC-3, AC-7)
 
 1. `uv run python -m pytest -q tests/integration/test_contract_examples_train.py tests/integration/test_dependency_train.py`

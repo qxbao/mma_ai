@@ -1,3 +1,12 @@
+---
+id: REQUEST-00-input-yeu-cau-f28dc219
+title: 'Yêu cầu: Huấn luyện PPO, checkpoint và hồ sơ tái lập'
+doc_type: request
+owner_agent: spec
+status: draft
+updated: '2026-10-09'
+track: "G"
+---
 Yêu cầu con 2/4 của M1 (REQ-0102). ---
 
 # Yêu cầu: Huấn luyện PPO, checkpoint và hồ sơ tái lập
@@ -12,6 +21,7 @@ Yêu cầu con 2/4 của M1 (REQ-0102). ---
 - [6. Tiêu chí chấp nhận](#6-tieu-chi-chap-nhan)
 - [7. Tài liệu kèm theo](#7-tai-lieu-kem-theo)
 - [8. Câu hỏi còn mở](#8-cau-hoi-con-mo)
+- [BỔ SUNG TỪ NGƯỜI DÙNG (C-0009) — giao diện quan sát huấn luyện](#bo-sung-tu-nguoi-dung-c-0009-giao-dien-quan-sat-huan-luyen)
 
 <a id="1-boi-canh"></a>
 ## 1. Bối cảnh
@@ -85,6 +95,7 @@ Dự án MMA-AI-LAB (mô phỏng cơ–xương 3D, học tăng cường): Milest
 - Tự cài PPO hay dùng thư viện (vd Stable-Baselines3)? [KHÔNG BIẾT] — plan quyết định, phải thoả actor/critic 2×256.
 - Dung sai tái lập GPU vs CPU? [KHÔNG BIẾT]
 
+<a id="bo-sung-tu-nguoi-dung-c-0009-giao-dien-quan-sat-huan-luyen"></a>
 ## BỔ SUNG TỪ NGƯỜI DÙNG (C-0009) — giao diện quan sát huấn luyện
 Người dùng yêu cầu: MỌI bước huấn luyện phải có giao diện hiển thị để người QUAN SÁT được khi đang train (không chỉ đọc log sau). Đưa vào phạm vi con 2 (và là ràng buộc cho mọi stage train sau này):
 - KQ/AC mới: trong lúc `train.py --stage elbow` chạy, người mở được một giao diện (cổng/URL hoặc cửa sổ) thấy tiến trình theo thời gian thực: reward, loss, activation 6 cơ, env steps/s, số bước đã chạy / tổng, trạng thái checkpoint; cập nhật định kỳ; xem được mà không dừng train.

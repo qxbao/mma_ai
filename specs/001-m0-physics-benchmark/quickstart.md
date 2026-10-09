@@ -11,10 +11,20 @@ version: "1.0.0"
 
 # Quickstart — kiểm chứng M0
 
+- [Kịch bản 1 — Dựng môi trường & nạp mô hình 6 cơ (AC-1, AC-5, INV-004)](#kich-ban-1-dung-moi-truong-nap-mo-hinh-6-co-ac-1-ac-5-inv-004)
+- [Kịch bản 2 — Smoke test không NaN/Inf, không lỗi vật lý (AC-1, AC-2, INV-004)](#kich-ban-2-smoke-test-khong-naninf-khong-loi-vat-ly-ac-1-ac-2-inv-004)
+- [Kịch bản 3 — Tất định theo seed (AC-2, INV-002, NFR-REPRO-001)](#kich-ban-3-tat-dinh-theo-seed-ac-2-inv-002-nfr-repro-001)
+- [Kịch bản 4 — Benchmark CPU + RAM đỉnh (AC-3, AC-4, NFR-PERF-001, INV-001)](#kich-ban-4-benchmark-cpu-ram-dinh-ac-3-ac-4-nfr-perf-001-inv-001)
+- [Kịch bản 5 — GPU/CUDA (AC-4, INV-001)](#kich-ban-5-gpucuda-ac-4-inv-001)
+- [Kịch bản 6 — Báo cáo nghiệm thu & cổng M0 (AC-1…AC-5, NFR-DOC-001, INV-001, INV-003)](#kich-ban-6-bao-cao-nghiem-thu-cong-m0-ac-1ac-5-nfr-doc-001-inv-001-inv-003)
+- [Kịch bản 7 — Lệnh chưa triển khai & dựng lại sạch (AC-5, FR-016)](#kich-ban-7-lenh-chua-trien-khai-dung-lai-sach-ac-5-fr-016)
+
+
 Hướng dẫn chạy để chứng minh M0 hoạt động. Lệnh và đầu ra: `contracts/cli.md`; khuôn tệp: `contracts/*.schema.json`; thực thể: `data-model.md`. Chỉ thực hiện sau khi các task triển khai đã dựng mã. Mọi tên test dưới đây là tên **kế hoạch**; chưa chạy nghĩa là chưa có kết quả (INV-001).
 
 **Điều kiện tiên quyết**: `uv` đã cài; Linux/WSL2 Ubuntu; (cho AC-4) driver NVIDIA nhìn thấy GPU từ WSL2.
 
+<a id="kich-ban-1-dung-moi-truong-nap-mo-hinh-6-co-ac-1-ac-5-inv-004"></a>
 ## Kịch bản 1 — Dựng môi trường & nạp mô hình 6 cơ (AC-1, AC-5, INV-004)
 
 1. `uv python install 3.11`
@@ -24,6 +34,7 @@ Hướng dẫn chạy để chứng minh M0 hoạt động. Lệnh và đầu ra
 
 Kỳ vọng: `n_muscles = 6`, `n_non_muscle_actuators = 0`, hash mô hình in ra.
 
+<a id="kich-ban-2-smoke-test-khong-naninf-khong-loi-vat-ly-ac-1-ac-2-inv-004"></a>
 ## Kịch bản 2 — Smoke test không NaN/Inf, không lỗi vật lý (AC-1, AC-2, INV-004)
 
 1. `python scripts/smoke_test.py --seed 42`
@@ -31,6 +42,7 @@ Kỳ vọng: `n_muscles = 6`, `n_non_muscle_actuators = 0`, hash mô hình in ra
 3. Test tự động: `tests/integration/test_smoke_cli.py::test_smoke_passes_and_matches_schema`; từ chối vector sai: `tests/unit/test_activation_validation.py` (sai kích thước, <0, >1, NaN, Inf); quét: `tests/unit/test_numeric_health.py`; lực trong ngưỡng: `tests/unit/test_force_bound.py` (kèm quét toàn dải góc — xác nhận công thức ngưỡng ở research Q3).
 4. Ca âm: `tests/integration/test_smoke_cli.py::test_smoke_exits_nonzero_on_injected_nan` (tiêm NaN vào mô hình giả lập hỏng bằng `monkeypatch` trên hàm quét, không đổi vật lý thật) → mã thoát 1 và nêu đại lượng/bước/mẫu.
 
+<a id="kich-ban-3-tat-dinh-theo-seed-ac-2-inv-002-nfr-repro-001"></a>
 ## Kịch bản 3 — Tất định theo seed (AC-2, INV-002, NFR-REPRO-001)
 
 1. Chạy `smoke_test.py --seed 42` hai lần.
@@ -38,6 +50,7 @@ Kỳ vọng: `n_muscles = 6`, `n_non_muscle_actuators = 0`, hash mô hình in ra
 
 Kỳ vọng: không khác biệt. Nếu khác ⇒ ghi vào "vấn đề còn lại" của báo cáo nghiệm thu.
 
+<a id="kich-ban-4-benchmark-cpu-ram-dinh-ac-3-ac-4-nfr-perf-001-inv-001"></a>
 ## Kịch bản 4 — Benchmark CPU + RAM đỉnh (AC-3, AC-4, NFR-PERF-001, INV-001)
 
 1. `python scripts/benchmark.py --seed 42`
@@ -45,6 +58,7 @@ Kỳ vọng: không khác biệt. Nếu khác ⇒ ghi vào "vấn đề còn l�
 3. Test tự động: `tests/integration/test_benchmark_cli.py::test_benchmark_report_matches_schema_and_has_min_repeats`, `::test_benchmark_rejects_fewer_than_five_repeats` (mã thoát 2); `tests/unit/test_stats.py` (median/stdev/cv tính đúng trên vectơ cố định).
 4. Nhiễu nền: chạy benchmark khi một tiến trình khác đang bận CPU và đọc `cv` — không có test tự động (ghi tay vào báo cáo nếu thực hiện).
 
+<a id="kich-ban-5-gpucuda-ac-4-inv-001"></a>
 ## Kịch bản 5 — GPU/CUDA (AC-4, INV-001)
 
 1. `python scripts/check_env.py` rồi `python scripts/benchmark.py` trên máy đích.
@@ -52,12 +66,14 @@ Kỳ vọng: không khác biệt. Nếu khác ⇒ ghi vào "vấn đề còn l�
 3. Kỳ vọng trên máy không GPU: `gpu.available = false`, các số `null`, `reason` khác null; AC-4 = `chua_dat`.
 4. Test tự động: `tests/unit/test_gpu_probe.py::test_probe_without_cuda_returns_reason_not_numbers` (giả lập thiếu CUDA bằng `monkeypatch`) — kiểm hành vi dự phòng, KHÔNG thay thế phép đo trên máy đích (bước 1–2 là bằng chứng duy nhất cho AC-4 đạt).
 
+<a id="kich-ban-6-bao-cao-nghiem-thu-cong-m0-ac-1ac-5-nfr-doc-001-inv-001-inv-003"></a>
 ## Kịch bản 6 — Báo cáo nghiệm thu & cổng M0 (AC-1…AC-5, NFR-DOC-001, INV-001, INV-003)
 
 1. `python scripts/m0_report.py`
 2. Kỳ vọng: `acceptance.json` có đủ 5 tiêu chí; `acceptance.md` theo mẫu báo cáo cột mốc (Milestone · Các thành phần hoàn thành · Các file được tạo/sửa · Cách chạy · Test đã chạy và kết quả · Benchmark · Vấn đề còn lại · Tiêu chí nghiệm thu đã đạt/chưa đạt · Đề xuất milestone tiếp theo); `gate_open = true` chỉ khi cả 5 AC = `dat`.
 3. Test tự động: `tests/unit/test_acceptance.py::test_no_dat_without_evidence`, `::test_missing_gpu_keeps_gate_closed`, `::test_report_has_five_criteria`; `tests/unit/test_runlog.py::test_rejects_absolute_paths_and_nan` (INV-003, INV-001); `tests/integration/test_repo_hygiene.py::test_no_absolute_home_paths_in_tracked_text` (quét mã/tài liệu theo mẫu `/home/`, `/mnt/`, `C:\\`).
 
+<a id="kich-ban-7-lenh-chua-trien-khai-dung-lai-sach-ac-5-fr-016"></a>
 ## Kịch bản 7 — Lệnh chưa triển khai & dựng lại sạch (AC-5, FR-016)
 
 1. `python scripts/train.py --stage elbow --seed 42; echo $?` → in `chưa triển khai (M0)`, mã 3. Test: `tests/integration/test_unimplemented_cli.py::test_train_evaluate_replay_exit_3`.

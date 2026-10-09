@@ -143,7 +143,7 @@ Reward gồm thành phần tiến tới mục tiêu và thành phần phạt kí
 
 ---
 
-<a id="user-story-5-quyet-dinh-phien-ban-gymnasium-myosuite-va-cai-duoc-trong-moi-truong-sach-priority-p2"></a>
+<a id="user-story-5-quyet-dinh-phien-ban-gymnasiummyosuite-va-cai-duoc-trong-moi-truong-sach-priority-p2"></a>
 ### User Story 5 - Quyết định phiên bản gymnasium/myosuite và cài được trong môi trường sạch (Priority: P2)
 
 **Tần suất**: hiếm — nhà nghiên cứu hoặc người cộng tác mới, khoảng 1 lần mỗi vài tháng hoặc khi đổi máy.

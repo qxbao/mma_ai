@@ -1,9 +1,25 @@
+---
+id: SPEC-004-eval-vs-random-plots-requirements
+title: 'Specification Quality Checklist: M1 (3/4) — Đánh giá policy so với random
+  policy và biểu đồ'
+doc_type: spec
+owner_agent: spec
+status: draft
+updated: '2026-10-09'
+---
 # Specification Quality Checklist: M1 (3/4) — Đánh giá policy so với random policy và biểu đồ
+
+- [Content Quality](#content-quality)
+- [Requirement Completeness](#requirement-completeness)
+- [Feature Readiness](#feature-readiness)
+- [Notes](#notes)
+
 
 **Purpose**: Validate specification completeness and quality before proceeding to planning
 **Created**: 2026-10-09
 **Feature**: [spec.md](../spec.md)
 
+<a id="content-quality"></a>
 ## Content Quality
 
 - [x] No implementation details (languages, frameworks, APIs) — chỉ nhắc tên do yêu cầu gốc ràng buộc (`scripts/evaluate.py`, `metrics.py`, TensorBoard/CSV, NumPy/Pandas); phương pháp tính khoảng tin cậy và thư viện vẽ để plan quyết định
@@ -11,6 +27,7 @@
 - [x] Written for non-technical stakeholders — mức phù hợp với người dùng là nhà nghiên cứu RL
 - [x] All mandatory sections completed
 
+<a id="requirement-completeness"></a>
 ## Requirement Completeness
 
 - [x] No [NEEDS CLARIFICATION] markers remain
@@ -22,6 +39,7 @@
 - [x] Scope is clearly bounded — mục Out of Scope chép từ mục "Ngoài" của yêu cầu
 - [x] Dependencies and assumptions identified — phụ thuộc con 1/con 2 ghi ở Assumptions, đánh dấu CHƯA KIỂM
 
+<a id="feature-readiness"></a>
 ## Feature Readiness
 
 - [x] All functional requirements have clear acceptance criteria
@@ -29,6 +47,7 @@
 - [x] Feature meets measurable outcomes defined in Success Criteria
 - [x] No implementation details leak into specification
 
+<a id="notes"></a>
 ## Notes
 
 - Hai câu hỏi mở §8 của yêu cầu (tiêu chí "tốt hơn random"; tần suất ghi activation) đã được tự chốt ở `## Clarifications`; không có quyết định mở rộng phạm vi nên không có `[NEEDS CLARIFICATION]`.

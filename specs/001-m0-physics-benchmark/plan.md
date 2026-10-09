@@ -11,16 +11,32 @@ version: "1.0.0"
 
 # Implementation Plan: M0 — Thiết lập môi trường & Benchmark vật lý
 
+- [Summary](#summary)
+- [Technical Context](#technical-context)
+- [Constitution Check](#constitution-check)
+- [Kiến trúc & tách trách nhiệm](#kien-truc-tach-trach-nhiem)
+  - [Quyết định thiết kế](#quyet-dinh-thiet-ke)
+- [Project Structure](#project-structure)
+  - [Documentation (this feature)](#documentation-this-feature)
+  - [Source Code (repository root)](#source-code-repository-root)
+- [Lệnh build / test (cho task khung dựng đúng một lần)](#lenh-build-test-cho-task-khung-dung-dung-mot-lan)
+- [Truy vết yêu cầu → thiết kế](#truy-vet-yeu-cau-thiet-ke)
+- [Rủi ro & việc CHƯA KIỂM](#rui-ro-viec-chua-kiem)
+- [Complexity Tracking](#complexity-tracking)
+
+
 **Branch**: `001-m0-physics-benchmark` | **Date**: 2026-10-09 | **Spec**: [spec.md](spec.md)
 
 **Input**: `specs/001-m0-physics-benchmark/spec.md` (bản hiện tại, gồm INV-004 thêm ở bước plan)
 
+<a id="summary"></a>
 ## Summary
 
 M0 dựng nền tảng tối thiểu của MMA-AI-LAB và chứng minh bằng đo thật rằng mô hình cơ–xương **MyoElbow 6 cơ** (gói `myo-sim`) chạy headless trên MuJoCo, chỉ điều khiển bằng kích hoạt cơ. Kết quả là bốn script CLI (`check_env`, `smoke_test`, `benchmark`, `m0_report`) ghi bản ghi JSON theo hợp đồng ở `contracts/`, một bộ test pytest, README dựng lại môi trường, và `uv.lock` khoá sau khi smoke test đạt. Không PPO, không toàn thân, không MMA (FR-019).
 
 Cách tiếp cận kỹ thuật (xem `research.md`): Python 3.11 qua `uv`; `mujoco` + `myo-sim==0.2.3` (không cài `myosuite` ở M0); lỗi vật lý bắt bằng bộ đếm `mjData.warning`; benchmark lặp 7 lần × 100 000 bước, hai kịch bản và hai bước thời gian; RAM đỉnh bằng `resource.getrusage`; GPU bằng `torch` (extra `gpu`) + `nvidia-smi`.
 
+<a id="technical-context"></a>
 ## Technical Context
 
 **Language/Version**: Python 3.11 (ghim `.python-version`; `requires-python = ">=3.11,<3.13"`)
@@ -41,6 +57,7 @@ Cách tiếp cận kỹ thuật (xem `research.md`): Python 3.11 qua `uv`; `mujo
 
 **Scale/Scope**: 1 mô hình (1 DoF, 6 cơ), 4 script thật + 3 script "chưa triển khai", ≈ 10 mô-đun, ≈ 12 tệp test
 
+<a id="constitution-check"></a>
 ## Constitution Check
 
 *Cổng: phải qua trước Phase 0; kiểm lại sau Phase 1.* Nguồn: `.specify/memory/constitution.md` v1.0.0.
@@ -59,6 +76,7 @@ Cách tiếp cận kỹ thuật (xem `research.md`): Python 3.11 qua `uv`; `mujo
 
 **Kiểm lại sau Phase 1**: Đạt — thiết kế không thêm dependency ngoài danh sách trên; không có vi phạm cần ghi ở Complexity Tracking.
 
+<a id="kien-truc-tach-trach-nhiem"></a>
 ## Kiến trúc & tách trách nhiệm
 
 Bám cấu trúc dự án của yêu cầu gốc (mục IV) nhưng **chỉ tạo mô-đun M0 thực sự dùng** (không tạo tệp rỗng — FR-003). Phụ thuộc một chiều: `scripts → reporting/diagnostics → physics → config`; `physics` không import `reporting`/`diagnostics`.
@@ -76,6 +94,7 @@ Bám cấu trúc dự án của yêu cầu gốc (mục IV) nhưng **chỉ tạo
 | `mma_ai.reporting.runlog` | `run_id`, ghi/đọc JSON an toàn (từ chối NaN/Inf, đường dẫn tuyệt đối riêng) | FR-014, FR-018 |
 | `mma_ai.reporting.acceptance` | Máy trạng thái AC, sinh `acceptance.json`/`.md` | FR-020 |
 
+<a id="quyet-dinh-thiet-ke"></a>
 ### Quyết định thiết kế
 
 - **Ghi `ctrl` duy nhất**: `HeadlessSimulator` chỉ có đường ghi `data.ctrl`; test `test_simulator_never_writes_state` kiểm `qpos`/`qvel` chỉ đổi qua `mj_step` (không teleport — ràng buộc nền của yêu cầu gốc).
@@ -85,8 +104,10 @@ Bám cấu trúc dự án của yêu cầu gốc (mục IV) nhưng **chỉ tạo
 - **Không mock physics**: test dùng mô hình thật (nhanh — 1 DoF); `monkeypatch` chỉ dùng cho hành vi dự phòng (thiếu CUDA, tiêm NaN vào hàm quét) và được gọi tên rõ trong test.
 - **Không tự viết validator an ninh/công cụ kiểm riêng** ngoài hàm kiểm vector kích hoạt theo spec; test assert thẳng trên sản phẩm.
 
+<a id="project-structure"></a>
 ## Project Structure
 
+<a id="documentation-this-feature"></a>
 ### Documentation (this feature)
 
 ```text
@@ -106,6 +127,7 @@ specs/001-m0-physics-benchmark/
 └── tasks.md             # bước /speckit-tasks — KHÔNG tạo ở bước plan
 ```
 
+<a id="source-code-repository-root"></a>
 ### Source Code (repository root)
 
 ```text
@@ -153,6 +175,7 @@ logs/                    # đầu ra chạy (m0/<run_id>/…); bỏ khỏi git t
 
 **Structure Decision**: dự án đơn (single project) theo cấu trúc `src/` của yêu cầu gốc, thu gọn cho M0. Các thư mục `environment/`, `learning/`, `evaluation/`, `visualization/`, `physiology/`, `assets/` của cấu trúc đầy đủ **chưa tạo** vì M0 chưa có mã thật cho chúng; `mma_ai.physics.contact` cũng hoãn tới M6. `.gitignore` bổ sung `logs/` và `checkpoints/` (đã có `.venv/`, `__pycache__/`).
 
+<a id="lenh-build-test-cho-task-khung-dung-dung-mot-lan"></a>
 ## Lệnh build / test (cho task khung dựng đúng một lần)
 
 | Việc | Lệnh |
@@ -167,6 +190,7 @@ logs/                    # đầu ra chạy (m0/<run_id>/…); bỏ khỏi git t
 
 Cổng máy (`gates:`) do bước plan_fix nháp từ tệp này; plan không khai tay trong `.ai/profile.yml`.
 
+<a id="truy-vet-yeu-cau-thiet-ke"></a>
 ## Truy vết yêu cầu → thiết kế
 
 | Yêu cầu | Thực hiện bởi | Bằng chứng/Test |
@@ -185,6 +209,7 @@ Cổng máy (`gates:`) do bước plan_fix nháp từ tệp này; plan không kh
 | FR-017 | `tests/` | `python -m pytest` |
 | INV-002, NFR-REPRO-001 | seed + `trajectory_fingerprint` | `test_determinism` |
 
+<a id="rui-ro-viec-chua-kiem"></a>
 ## Rủi ro & việc CHƯA KIỂM
 
 1. **Torch trên Blackwell (`sm_120`)** — chưa kiểm; task cài GPU phải ghi `arch_list`. Nếu bản torch mặc định thiếu `sm_120`, AC-4 `chua_dat` cho tới khi cài bản có kiến trúc đó. Không đoán số phiên bản.
@@ -193,6 +218,7 @@ Cổng máy (`gates:`) do bước plan_fix nháp từ tệp này; plan không kh
 4. **Hiệu năng WSL2 so với Linux gốc** — số benchmark chỉ có giá trị cho đúng cấu hình đo; báo cáo ghi rõ OS (WSL2 hay không) và không suy thời gian huấn luyện.
 5. **`myosuite` ở M1** — xung đột `gymnasium<1.3` cần quyết định ở plan M1 (research Q2).
 
+<a id="complexity-tracking"></a>
 ## Complexity Tracking
 
 Không có vi phạm hiến chương cần biện minh.

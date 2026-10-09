@@ -11,8 +11,24 @@ version: "1.1.0"
 
 # Nghiên cứu Phase 0 — M1 (2/4): Huấn luyện PPO, checkpoint, hồ sơ tái lập & giao diện quan sát
 
+- [Q1. Tự cài PPO hay dùng thư viện (Stable-Baselines3)? (FR-001…FR-009)](#q1-tu-cai-ppo-hay-dung-thu-vien-stable-baselines3-fr-001fr-009)
+- [Q2. Tham số hoá policy và đảm bảo `u ∈ [0,1]^6` (FR-005, INV-002)](#q2-tham-so-hoa-policy-va-dam-bao-u-016-fr-005-inv-002)
+- [Q3. Chuẩn hoá observation (FR-003)](#q3-chuan-hoa-observation-fr-003)
+- [Q4. Siêu tham số khởi đầu và tốc độ thăm dò (FR-018) — KHÔNG phải benchmark](#q4-sieu-tham-so-khoi-dau-va-toc-do-tham-do-fr-018-khong-phai-benchmark)
+- [Q5. Định dạng checkpoint & ghi an toàn (FR-006…FR-009, INV-004)](#q5-dinh-dang-checkpoint-ghi-an-toan-fr-006fr-009-inv-004)
+- [Q6. Thư mục run, hồ sơ và train tiếp (FR-009, FR-011, FR-012, INV-001)](#q6-thu-muc-run-ho-so-va-train-tiep-fr-009-fr-011-fr-012-inv-001)
+- [Q7. Tất định và dung sai tái lập (FR-001, FR-014, INV-004; KQ-4, AC-4)](#q7-tat-dinh-va-dung-sai-tai-lap-fr-001-fr-014-inv-004-kq-4-ac-4)
+- [Q8. Hình thức giao diện quan sát khi train (FR-020…FR-024, AC-7, C-0009)](#q8-hinh-thuc-giao-dien-quan-sat-khi-train-fr-020fr-024-ac-7-c-0009)
+- [Q9. Đo tài nguyên, thông lượng (FR-012, FR-013, NFR-RES-001)](#q9-do-tai-nguyen-thong-luong-fr-012-fr-013-nfr-res-001)
+- [Q10. Bảo vệ số học & lỗi huấn luyện (FR-007, FR-017, NFR-REL-001)](#q10-bao-ve-so-hoc-loi-huan-luyen-fr-007-fr-017-nfr-rel-001)
+- [Q11. Quy mô tài liệu & stack](#q11-quy-mo-tai-lieu-stack)
+- [Q12. Giả định giao diện với 001/002 (CHƯA KIỂM — cả hai chưa có mã)](#q12-gia-dinh-giao-dien-voi-001002-chua-kiem-ca-hai-chua-co-ma)
+- [Tổng kết](#tong-ket)
+
+
 Mọi mục "ĐÃ ĐO" là kết quả chạy thật ngày 2026-10-09 trên máy phát triển (Linux gốc, 12 luồng CPU, Python 3.11 do `uv` cấp, **chưa có NVIDIA**) trong môi trường ảo tạm: `torch 2.14.1+cpu`, `tensorboard 2.21.0`, `gymnasium 1.4.0`, `numpy 2.4.6`, `mujoco 3.15.0`, `myo-sim 0.2.3`. Mã thăm dò chạy ở thư mục tạm, KHÔNG nằm trong repo. Mục "CHƯA KIỂM" là việc phải xác minh ở bước triển khai — plan không giả định kết quả. Các con số hiệu năng ở đây là thăm dò sơ bộ, KHÔNG dùng để suy ra thời gian huấn luyện (master plan XI.10).
 
+<a id="q1-tu-cai-ppo-hay-dung-thu-vien-stable-baselines3-fr-001fr-009"></a>
 ## Q1. Tự cài PPO hay dùng thư viện (Stable-Baselines3)? (FR-001…FR-009)
 
 - **Quyết định**: **tự cài PPO tối giản trên PyTorch** (mô-đun `ppo.py` + `networks.py` + `normalizer.py`); KHÔNG thêm `stable-baselines3`.
@@ -24,6 +40,7 @@ Mọi mục "ĐÃ ĐO" là kết quả chạy thật ngày 2026-10-09 trên máy
 - **Phương án đã loại**: (A) SB3 + callback + gói lại checkpoint — như trên; (B) CleanRL kiểu một tệp sao chép — không có giấy phép/bảo trì rõ trong repo và vẫn phải sửa tương đương.
 - **Đóng việc CHƯA KIỂM của con 1 (Q1 của 002)**: *tương thích `gymnasium 1.4` với `torch`* — **ĐÃ ĐO**: cài thật `torch==2.14.1+cpu` + `tensorboard==2.21.0` + `gymnasium==1.4.0` + `numpy==2.4.6` + `myo-sim==0.2.3` + `mujoco==3.15.0` + `jsonschema` vào một venv sạch, không xung đột; không cần lùi `gymnasium`. Còn **CHƯA KIỂM**: bản `torch` CUDA có `sm_120` (Blackwell) trên máy đích — giao research Q6 của 001 (máy phát triển không có NVIDIA); dry-run bản mặc định kéo bánh xe CUDA 13 (`nvidia-*-cu13`) — pin cuối chọn sau khi 001 đo `arch_list`.
 
+<a id="q2-tham-so-hoa-policy-va-dam-bao-u-016-fr-005-inv-002"></a>
 ## Q2. Tham số hoá policy và đảm bảo `u ∈ [0,1]^6` (FR-005, INV-002)
 
 - **Quyết định**: actor xuất trung bình của phân phối Gauss **thô** `a ∈ ℝ⁶` với `log_std` là tham số học độc lập với observation; hành động đưa vào môi trường là `u = sigmoid(a)`; `log_prob` tính trên `a`. Hành động xác định (đánh giá, kiểm khứ hồi checkpoint) là `sigmoid(mean)`. Kích hoạt tanh, khởi tạo trực giao, critic cùng cấu trúc xuất 1 giá trị.
@@ -31,12 +48,14 @@ Mọi mục "ĐÃ ĐO" là kết quả chạy thật ngày 2026-10-09 trên máy
 - **Phương án đã loại**: kẹp `clip(a,0,1)` — gradient bằng 0 ngoài [0,1], dồn khối lượng tại biên; phân phối Beta — biên rõ nhưng khó khởi tạo/ổn định hơn cho baseline; tanh-squash có hiệu chỉnh log-det — thêm phức tạp không cần thiết khi chỉ cần miền [0,1].
 - **Lưu ý đã biết**: MuJoCo kẹp ctrl về `[0.001, 1]` (001); môi trường ghi `ctrl_effective`. Không phải việc của feature này.
 
+<a id="q3-chuan-hoa-observation-fr-003"></a>
 ## Q3. Chuẩn hoá observation (FR-003)
 
 - **Quyết định**: ước lượng trung bình/phương sai chạy (gộp song song kiểu Welford) trên observation THÔ của môi trường (đã có cận hữu hạn từ con 1), cập nhật CHỈ khi thu rollout; áp `(x − mean) / sqrt(var + ε)` rồi kẹp `±clip_obs` (mặc định 10) trước actor và critic. Thống kê (`mean`, `var`, `count`) nằm trong checkpoint. Không chuẩn hoá reward (ngoài yêu cầu).
 - **Căn cứ**: nghiên cứu Phase 0 của con 1 (Q4) đã loại chuẩn hoá chạy khỏi môi trường và giao con 2. Cập nhật chỉ lúc thu mẫu giữ cho cùng seed ⇒ cùng thống kê (tất định).
 - **Phương án đã loại**: chuẩn hoá bằng hằng số cố định — môi trường đã làm; BatchNorm — lệ thuộc kích thước batch, phá tính tất định khi suy luận một mẫu.
 
+<a id="q4-sieu-tham-so-khoi-dau-va-toc-do-tham-do-fr-018-khong-phai-benchmark"></a>
 ## Q4. Siêu tham số khởi đầu và tốc độ thăm dò (FR-018) — KHÔNG phải benchmark
 
 - **Quyết định** (khởi đầu, chưa tinh chỉnh; nằm ở `configs/train_elbow.yaml`): `learning_rate 3e-4`, `clip_range 0,2`, `gamma 0,99`, `gae_lambda 0,95`, `entropy_coef 0`, `value_coef 0,5`, `max_grad_norm 0,5`, `n_steps 2048`, `batch_size 64`, `n_epochs 10`, `log_std_init −0,5`, `checkpoint.every_updates 10`, `total_timesteps 100 000` (**giá trị giữ chỗ để chạy được, không phải ngân sách huấn luyện** — master plan XI.10), `rel_tolerance 1e-6`, `head_updates 10`, `torch_threads 1`. Cấu hình smoke `configs/train_elbow_smoke.yaml`: `total_timesteps 4096`, `every_updates 1`.
@@ -44,6 +63,7 @@ Mọi mục "ĐÃ ĐO" là kết quả chạy thật ngày 2026-10-09 trên máy
 - **Số thăm dò (ĐÃ ĐO, sơ bộ, CPU phát triển, 1 luồng torch, mô hình thật)**: một lượt cập nhật (2048 mẫu × 10 epoch × minibatch 64 = 320 bước tối ưu) mất 0,60–0,80 s; thu mẫu gồm suy luận actor + 16 `mj_step`/hành động chạy ≈ 7,35 nghìn bước môi trường/s; checkpoint (actor, tối ưu, RNG) ≈ 1,4 MB; 1000 scalar TensorBoard ghi trong 0,033 s; RSS đỉnh ≈ 591 MB. Đây là cỡ độ lớn để đặt tần số snapshot và kích thước checkpoint, **không** là thời gian huấn luyện; benchmark chính thức do `scripts/benchmark_train.py` đo trên máy đích.
 - **Hệ quả**: một chu kỳ thu mẫu + cập nhật cỡ giây ⇒ snapshot giao diện ghi mỗi ≥ 1 s (kể cả giữa lúc thu mẫu) mới thoả độ trễ 5 s (Q8).
 
+<a id="q5-dinh-dang-checkpoint-ghi-an-toan-fr-006fr-009-inv-004"></a>
 ## Q5. Định dạng checkpoint & ghi an toàn (FR-006…FR-009, INV-004)
 
 - **Quyết định**: mỗi checkpoint là MỘT tệp `torch.save` chứa từ điển các giá trị nguyên thuỷ/tensor: `actor`, `critic` (state_dict), `obs_normalizer`, `optimizer`, `seed`, `rng_state` (numpy `bit_generator.state`, `torch.get_rng_state()`, trạng thái RNG của GPU nếu có, `np_random` của môi trường), `update_idx`, `env_steps`, `model_sha256`, `library_versions`, `config`. Kèm `*.meta.json` theo [checkpoint-meta.schema.json](contracts/checkpoint-meta.schema.json) và con trỏ `checkpoints/latest.json`. Nạp bằng `torch.load(..., weights_only=True)`.
@@ -52,6 +72,7 @@ Mọi mục "ĐÃ ĐO" là kết quả chạy thật ngày 2026-10-09 trên máy
 - **Phương án đã loại**: `pickle` nguyên đối tượng — nạp mã tuỳ ý từ tệp, vi phạm tinh thần an toàn dữ liệu và gãy khi đổi tên lớp; lưu nhiều tệp rời (actor, normalizer…) — mất tính nguyên tử, dễ lệch phiên bản giữa các tệp.
 - **Hash XML**: checkpoint ghi `model_sha256`; train tiếp từ checkpoint có hash khác hash hiện tại ⇒ từ chối (Edge Case), chỉ cho nạp suy luận kèm cảnh báo.
 
+<a id="q6-thu-muc-run-ho-so-va-train-tiep-fr-009-fr-011-fr-012-inv-001"></a>
 ## Q6. Thư mục run, hồ sơ và train tiếp (FR-009, FR-011, FR-012, INV-001)
 
 - **Quyết định**: `runs/<run_id>/` với `run_id = <UTC YYYYMMDDTHHMMSSZ>_<stage>_s<seed>[-n]`; tạo bằng `os.mkdir` loại trừ (lỗi nếu đã có ⇒ thử hậu tố `-2`, `-3`… tới 100 rồi báo lỗi) — không ghi đè (INV-001). Cấu trúc: `manifest.json` · `config.yaml` (cấu hình đã phân giải) · `checkpoints/` · `tb/` · `metrics.jsonl` (một dòng/lượt cập nhật) · `progress.json` · `ui.json`. Hồ sơ [run-manifest.schema.json](contracts/run-manifest.schema.json) ghi lúc bắt đầu (`status: running`) và thay thế nguyên tử lúc kết thúc (`done`/`error`/`interrupted`); đây là tệp của chính run nên không vi phạm INV-001.
@@ -59,6 +80,7 @@ Mọi mục "ĐÃ ĐO" là kết quả chạy thật ngày 2026-10-09 trên máy
 - **Reward metrics** trong hồ sơ: `n_updates`, `n_episodes`, `head_mean_return` (K lượt đầu — đầu vào so sánh tái lập), `first/last_mean_return`, `success_rate` (tỉ lệ episode terminated). Chuỗi đầy đủ ở `metrics.jsonl` và TensorBoard.
 - **Phương án đã loại**: cho phép `--run-id` tự đặt — dễ trùng và ghi đè; ghi checkpoint vào thư mục dùng chung — mất tính cô lập từng run.
 
+<a id="q7-tat-dinh-va-dung-sai-tai-lap-fr-001-fr-014-inv-004-kq-4-ac-4"></a>
 ## Q7. Tất định và dung sai tái lập (FR-001, FR-014, INV-004; KQ-4, AC-4)
 
 - **Quyết định**: một seed gốc → (a) `torch.manual_seed`; (b) `numpy.random.default_rng(seed)` cho xáo minibatch; (c) `env.reset(seed=seed)` lần đầu rồi các lần sau `reset()` (luồng `np_random` của môi trường tiếp nối, tất định); `torch.set_num_threads(torch_threads)` (mặc định 1); `torch.use_deterministic_algorithms(True)` (và `CUBLAS_WORKSPACE_CONFIG=:4096:8` khi CUDA). Dung sai: lệch **tương đối ≤ 1×10⁻⁶** tại mỗi điểm của đường reward trung bình mỗi episode ở K = min(10, số lượt thực chạy) lượt đầu, **chỉ giữa hai run cùng loại thiết bị, cùng phiên bản thư viện, cùng số luồng**. Hồ sơ ghi dung sai, loại thiết bị, số luồng, cờ tất định.
@@ -66,6 +88,7 @@ Mọi mục "ĐÃ ĐO" là kết quả chạy thật ngày 2026-10-09 trên máy
 - **CHƯA KIỂM**: (1) sai khác thực tế GPU↔GPU (thứ tự cộng dồn có thể khác dù `deterministic`) — đo trên máy đích; nếu vượt 1×10⁻⁶ thì nới dung sai GPU bằng cấu hình và ghi số đo; (2) CPU↔GPU **không cam kết** (Tự chốt trong spec); (3) tác động của số luồng torch > 1.
 - **Phương án đã loại**: cam kết trùng từng bit giữa CPU và GPU — không đạt được; cam kết "chỉ cùng hình dạng đường cong" — không kiểm được bằng máy.
 
+<a id="q8-hinh-thuc-giao-dien-quan-sat-khi-train-fr-020fr-024-ac-7-c-0009"></a>
 ## Q8. Hình thức giao diện quan sát khi train (FR-020…FR-024, AC-7, C-0009)
 
 - **Câu hỏi giao cho plan**: TensorBoard + bảng điều khiển web nhẹ, MuJoCo Viewer đọc checkpoint mới nhất, hay cả hai? Phạm vi đã được người dùng xác nhận (Q-0001, C-0010): giao diện thuộc con 2, hình thức do plan quyết định, chỉ-đọc, tiến trình riêng, không kéo chậm vòng train; bảng tóm tắt phương án/lý do/chi phí nằm ở `plan.md` mục "Giao diện quan sát".
@@ -79,28 +102,33 @@ Mọi mục "ĐÃ ĐO" là kết quả chạy thật ngày 2026-10-09 trên máy
 - **Chi phí (ĐO ở triển khai — CHƯA KIỂM)**: trainer tốn một lần ghi tệp JSON nhỏ mỗi ≥ 1 s (≪ 1 ms); tiến trình giao diện tốn CPU của một luồng cho vài yêu cầu HTTP/2 s. `scripts/benchmark_train.py` chạy ≥ 5 lần xen kẽ bật/tắt, cùng seed/cấu hình, so trung vị env steps/s (ngưỡng ≥ 0,90 — NFR-PERF-001) và ghi chênh lệch CPU/RAM/VRAM vào [train-benchmark.schema.json](contracts/train-benchmark.schema.json). Chi phí 3D chỉ đo khi có màn hình, nếu không thì ghi `measured:false` kèm lý do.
 - **Phương án đã loại**: (a) chỉ TensorBoard — thiếu env steps/s, số bước / tổng, trạng thái checkpoint, 6 cơ cạnh nhau trên một màn; vẫn giữ như log chi tiết; (b) Streamlit/Gradio/Flask/Dash — thêm phụ thuộc nặng cho một trang số liệu, thêm bề mặt xung đột phiên bản; (c) giao diện terminal (TUI) — không phải "cổng/URL hoặc cửa sổ", khó xem từ xa qua trình duyệt; (d) cho giao diện điều khiển/dừng train — ngoài yêu cầu ("chỉ ĐỌC"); (e) 3D mặc định bật — trái master plan XI.8.
 
+<a id="q9-do-tai-nguyen-thong-luong-fr-012-fr-013-nfr-res-001"></a>
 ## Q9. Đo tài nguyên, thông lượng (FR-012, FR-013, NFR-RES-001)
 
 - **Quyết định**: tái dùng `mma_ai.diagnostics` của 001 (phiên bản thư viện, `peak_ram_mb` bằng `resource.getrusage`, dò GPU/`nvidia-smi`); bổ sung trong `learning/resources.py`: `cpu_utilization_pct = process_time / (wall × số lõi logic) × 100`, `vram_peak_mb = torch.cuda.max_memory_allocated()/2²⁰` khi có CUDA, `gpu_utilization_pct` = trung bình các mẫu `nvidia-smi --query-gpu=utilization.gpu` lấy mỗi ≥ 5 s (null khi không có). `env_steps_per_second = env_steps / thời gian thu mẫu + cập nhật`; `wall_clock_seconds` đo bằng `time.perf_counter()`. Không thêm `psutil`/`pynvml` (cùng quyết định ở 001).
 - **CHƯA KIỂM**: GPU trên máy đích; `nvidia-smi` không có ở máy phát triển ⇒ các trường GPU ghi `null`, hợp lệ theo schema.
 
+<a id="q10-bao-ve-so-hoc-loi-huan-luyen-fr-007-fr-017-nfr-rel-001"></a>
 ## Q10. Bảo vệ số học & lỗi huấn luyện (FR-007, FR-017, NFR-REL-001)
 
 - **Quyết định**: sau MỖI lượt cập nhật quét hữu hạn loss và mọi tham số; trước MỖI lần ghi checkpoint quét lại mọi tensor. Phát hiện NaN/Inf ⇒ `NonFiniteError` (nêu lượt, đại lượng, số phần tử), hồ sơ `status:error`, `numeric_health` ghi số đếm, mã thoát 1, **không ghi checkpoint mới**, checkpoint hợp lệ trước đó giữ nguyên. `PhysicsInstabilityError` của môi trường (con 1) truyền nguyên văn lên và cũng thành `status:error`. Lỗi ghi đĩa ⇒ `CheckpointIOError`. `KeyboardInterrupt` ⇒ ghi checkpoint hợp lệ cuối nếu có, `status:interrupted`, mã thoát 130.
 - **Căn cứ**: constitution I (bằng chứng) — trạng thái lỗi được ghi bằng máy chứ không bằng lời khai.
 
+<a id="q11-quy-mo-tai-lieu-stack"></a>
 ## Q11. Quy mô tài liệu & stack
 
 - **Quyết định**: vẫn **một bounded context** (mô phỏng và huấn luyện cơ–xương, cùng gói `mma_ai`) như 001/002; nhãn `context:` trong cây tách (`training`, `evaluation`, `visualization`) là nhãn mô-đun trong cùng một gói, không phải dịch vụ riêng ⇒ không tạo `docs/02-strategic/`, `docs/03-tactical/`; không phân quyền ⇒ không `rbac.md` (giao diện chỉ loopback, chỉ đọc — INV-005; ghi ở `contracts/cli.md`). `docs/` hiện chỉ có `00-input/`, không có tệp chiến lược/chiến thuật để đồng bộ. Hợp đồng dây: API Python + CLI + một điểm HTTP đọc-chỉ (`API-TRN-0001`) ⇒ có schema và ví dụ ở `contracts/`.
 - **Stack**: không đổi (`python-mujoco-cli`, `.ai/stack-proposal.yml`); thêm phụ thuộc `torch`, `tensorboard` (extra `rl`) — không có preset kit mới.
 - **Phương án đã loại**: tách gói huấn luyện thành repo/dịch vụ riêng — chưa có lý do.
 
+<a id="q12-gia-dinh-giao-dien-voi-001002-chua-kiem-ca-hai-chua-co-ma"></a>
 ## Q12. Giả định giao diện với 001/002 (CHƯA KIỂM — cả hai chưa có mã)
 
 - Từ 002: `make_env(config_path, split="train")`, `env.reset(seed)` → `info{target_split, target_index, seed, model_sha256}`, `env.step(u)` → `info{reward_dist, reward_effort, end_reason, ctrl_effective}`, `env.model_record()` (SHA-256, `muscle_names`), `observation_space`/`action_space`, bố cục 14 chiều có kích hoạt 6 cơ ở chỉ số 2–7 (`ObservationLayout`). Nếu `ObservationLayout` không công khai lát cắt kích hoạt, task của 003 chỉ thêm accessor đọc-chỉ vào đúng tệp đó (sau task của 002), không sao chép bố cục.
 - Từ 001: `mma_ai.config`, `mma_ai.diagnostics.{environment,memory,gpu,stats}`, `mma_ai.reporting.runlog` (ghi JSON an toàn), stub `scripts/train.py` "chưa triển khai → thoát 3" (003 thay nội dung stub, giữ mã thoát 3 cho stage chưa hỗ trợ).
 - Lệch giao diện khi triển khai ⇒ sửa ở nơi chủ sở hữu (001/002), 003 chỉ thêm accessor đọc-chỉ.
 
+<a id="tong-ket"></a>
 ## Tổng kết
 
 Không còn câu hỏi chưa giải quyết. Việc CHƯA KIỂM giao thành bước triển khai bắt buộc có kết quả ghi lại: (1) `torch` CUDA có `sm_120` trên máy đích (001 Q6); (2) sai khác tái lập GPU↔GPU; (3) độ trễ giao diện ≤ 5 s và chi phí ≤ 10% bằng `benchmark_train.py` trên máy đích; (4) chi phí hiển thị 3D khi có màn hình; (5) giao diện đọc-chỉ của 002 (`ObservationLayout`, `make_env`); (6) siêu tham số khởi đầu có đủ để PPO học hay không — việc của con 3, không phải điều kiện của feature này.

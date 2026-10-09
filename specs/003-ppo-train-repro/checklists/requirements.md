@@ -1,9 +1,25 @@
+---
+id: SPEC-003-ppo-train-repro-requirements
+title: 'Specification Quality Checklist: M1 (2/4) — Huấn luyện PPO, checkpoint, hồ
+  sơ tái lập & giao diện quan sát'
+doc_type: spec
+owner_agent: spec
+status: draft
+updated: '2026-10-09'
+---
 # Specification Quality Checklist: M1 (2/4) — Huấn luyện PPO, checkpoint, hồ sơ tái lập & giao diện quan sát
+
+- [Content Quality](#content-quality)
+- [Requirement Completeness](#requirement-completeness)
+- [Feature Readiness](#feature-readiness)
+- [Notes](#notes)
+
 
 **Purpose**: Validate specification completeness and quality before proceeding to planning
 **Created**: 2026-10-09
 **Feature**: [spec.md](../spec.md)
 
+<a id="content-quality"></a>
 ## Content Quality
 
 - [x] No implementation details (languages, frameworks, APIs) — chỉ nhắc tên công cụ yêu cầu gốc ràng buộc (PPO, TensorBoard, MLP 2×256, `train.py`); không có cấu trúc mã hay thuật toán chi tiết; hình thức giao diện để plan quyết định
@@ -11,6 +27,7 @@
 - [x] Written for non-technical stakeholders — mức phù hợp với người dùng là nhà nghiên cứu RL
 - [x] All mandatory sections completed
 
+<a id="requirement-completeness"></a>
 ## Requirement Completeness
 
 - [x] No [NEEDS CLARIFICATION] markers remain
@@ -22,6 +39,7 @@
 - [x] Scope is clearly bounded — mục Out of Scope chép từ mục "Ngoài" của yêu cầu, mỗi mục một dòng
 - [x] Dependencies and assumptions identified
 
+<a id="feature-readiness"></a>
 ## Feature Readiness
 
 - [x] All functional requirements have clear acceptance criteria
@@ -29,6 +47,7 @@
 - [x] Feature meets measurable outcomes defined in Success Criteria
 - [x] No implementation details leak into specification
 
+<a id="notes"></a>
 ## Notes
 
 - Mỗi User Story có dòng `**Tần suất**` lấy từ bảng "Người dùng và tình huống" (hằng ngày / hằng tuần / hiếm); mỗi NFR có dòng `Ngưỡng:` và `Đo bằng:`.

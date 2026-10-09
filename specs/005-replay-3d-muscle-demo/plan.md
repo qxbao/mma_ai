@@ -11,10 +11,28 @@ version: "1.0.0"
 
 # Implementation Plan: M1 (4/4) — Replay 3D và demo khuỷu tay do cơ điều khiển
 
+- [Summary](#summary)
+- [Technical Context](#technical-context)
+- [Constitution Check](#constitution-check)
+- [Phụ thuộc vào 001, 002 và 003](#phu-thuoc-vao-001-002-va-003)
+- [Kiến trúc & tách trách nhiệm](#kien-truc-tach-trach-nhiem)
+  - [Quyết định thiết kế](#quyet-dinh-thiet-ke)
+- [Project Structure](#project-structure)
+  - [Documentation (this feature)](#documentation-this-feature)
+  - [Source Code (repository root) — chỉ phần 005 thêm vào cây của 001–004](#source-code-repository-root-chi-phan-005-them-vao-cay-cua-001004)
+- [Lệnh build / test (cho task khung dựng đúng một lần)](#lenh-build-test-cho-task-khung-dung-dung-mot-lan)
+- [Truy vết yêu cầu → thiết kế](#truy-vet-yeu-cau-thiet-ke)
+- [Rủi ro & việc CHƯA KIỂM](#rui-ro-viec-chua-kiem)
+- [Quyết định ở bước tasks](#quyet-dinh-o-buoc-tasks)
+- [Phản biện plan_lint](#phan-bien-plan-lint)
+- [Complexity Tracking](#complexity-tracking)
+
+
 **Branch**: `005-replay-3d-muscle-demo` (tên thư mục feature; không tạo nhánh git) | **Date**: 2026-10-09 | **Spec**: [spec.md](spec.md)
 
 **Input**: `specs/005-replay-3d-muscle-demo/spec.md` (bản hiện tại, REQ-0104; không có `[NEEDS CLARIFICATION]`; Q-0001 thuộc `003-ppo-train-repro` — đã áp vào Clarifications như ranh giới, không đổi phạm vi con 4)
 
+<a id="summary"></a>
 ## Summary
 
 Feature dựng **lớp hiển thị** cho M1: lệnh `python scripts/replay.py` có hai chế độ loại trừ nhau — `--episode <path>` **phát lại** một episode đã lưu trong MuJoCo Viewer (AC-1), và `--checkpoint <path>` **demo**: nạp policy của con 2 (chỉ đọc), chạy trọn một episode trên môi trường của con 1 rồi phát nó bằng đúng đường phát của replay, hiển thị mục tiêu và **6 activation có tên cơ** theo từng khung (AC-2). Có **định dạng episode** tự đủ (seed, hash XML, tên cơ, mục tiêu, nguồn) để con 3 hoặc người dùng đọc; có **chế độ `--headless`** kiểm dữ liệu và in tóm tắt máy đọc được (AC-3); **lệch hash XML** thì dừng, không phát sai ngầm (AC-4); **đường dẫn/tệp không dùng được** thì mã thoát khác 0 (AC-5).
@@ -30,13 +48,14 @@ Cách tiếp cận (chi tiết và số đo ở [research.md](research.md)):
 - **Không màn hình = kiểm dữ liệu, không xuất khung** (Q8): ĐÃ ĐO EGL và OSMesa không khởi tạo được, GLFW cần `DISPLAY`; `Xvfb` không có. Hứa xuất khung khi không có màn hình là hứa điều không kiểm được.
 - **Không thêm phụ thuộc, không thêm extra** (Q10): `mujoco.viewer`/`glfw` đi kèm `mujoco`; đường `--episode` không cần `torch`. Phạm vi CHỈ M1: không giao diện web, không quay video, không đối thủ/arena, không M2–M9, không giao diện quan sát training (đã thuộc con 2).
 
+<a id="technical-context"></a>
 ## Technical Context
 
 **Language/Version**: Python 3.11 (ghim `.python-version` và `requires-python = ">=3.11,<3.13"` của 001)
 
 **Primary Dependencies**: kế thừa 001–003 (`mujoco` 3.15.0 — gồm `mujoco.viewer` và `glfw`; `myo-sim==0.2.3`; `gymnasium>=1.4,<1.5`; `numpy`; `pyyaml`; extra `rl`: `torch` — chỉ cho `--checkpoint`; extra `dev`: `pytest`, `jsonschema`). **Mới: không có.** `pyproject.toml` không đổi (research Q10). **Không** Open3D/PyVista/Plotly, **không** `imageio`/`ffmpeg` (không quay video)
 
-**Storage**: tệp — cấu hình `configs/replay.yaml`; episode do người dùng chỉ định (khuyến nghị `runs/<run_id>/replays/*.episode.json`); không CSDL
+**Storage**: tệp — cấu hình mặc định đóng gói `src/mma_ai/visualization/replay.yaml` (tệp khác qua `--config`); episode do người dùng chỉ định (khuyến nghị `runs/<run_id>/replays/*.episode.json`); không CSDL
 
 **Testing**: `pytest` (`python -m pytest`); test hợp đồng bằng `jsonschema` (draft 2020-12); bộ lập nhịp bằng đồng hồ giả; HUD/thứ tự khung bằng `RecordingSink`; đường demo dùng mô hình MuJoCo thật và policy kịch bản qua giao diện `act_deterministic`; **một** test rẽ nhánh theo `display_available()` cho viewer thật (research Q9) — không `skip`/`xfail`; mọi test khác chạy với `DISPLAY` bỏ đặt
 
@@ -50,6 +69,7 @@ Cách tiếp cận (chi tiết và số đo ở [research.md](research.md)):
 
 **Scale/Scope**: 1 mô hình (1 DoF, 6 cơ); episode ≤ 100 hành động ≈ 4 s mô phỏng (≈ 38 KB); 12 tệp mô-đun mới trong `visualization/`; 1 script; 19 tệp test; 1 tệp cấu hình
 
+<a id="constitution-check"></a>
 ## Constitution Check
 
 *Cổng: phải qua trước Phase 0; kiểm lại sau Phase 1.* Nguồn: `.specify/memory/constitution.md` v1.0.0.
@@ -70,6 +90,7 @@ Cách tiếp cận (chi tiết và số đo ở [research.md](research.md)):
 
 **Quy mô tài liệu & kiến trúc**: vẫn **một bounded context** (mô phỏng và huấn luyện cơ–xương, gói `mma_ai`) như 001–004 ⇒ KHÔNG ghi `docs/02-strategic/context-map.md`, `docs/03-tactical/*` hay `docs/01-intent/overview.md`; **không có phân quyền** (lệnh dòng lệnh cục bộ, không vai/khoá/token) ⇒ không `rbac.md`. Hợp đồng dây (một CLI + ba khuôn JSON) có schema và ví dụ ở `contracts/`. Stack không đổi (`python-mujoco-cli`); `.ai/stack-proposal.yml` chỉ thêm một dòng căn cứ.
 
+<a id="phu-thuoc-vao-001-002-va-003"></a>
 ## Phụ thuộc vào 001, 002 và 003
 
 001–003 mới có spec + plan, **chưa có mã**. 005 dựa vào giao diện theo hợp đồng đã công bố của chúng (giả định CHƯA KIỂM — research Q11):
@@ -84,6 +105,7 @@ Cách tiếp cận (chi tiết và số đo ở [research.md](research.md)):
 
 **Quy tắc thứ tự** (cho bước tasks): mọi task của 005 chạm mã đứng SAU task tương ứng của 001–003 (`depends_on`); task accessor `read_state()` ở `single_agent.py` của 002 đứng sau task `single_agent.py` của 002 (và cùng task với `target_index` nếu 004 chưa giao) và TRƯỚC `recorder`; `scripts/replay.py` và `test_unimplemented_cli` mỗi tệp một task chủ. Lệch giao diện khi triển khai ⇒ sửa ở nơi chủ sở hữu, 005 không sao chép.
 
+<a id="kien-truc-tach-trach-nhiem"></a>
 ## Kiến trúc & tách trách nhiệm
 
 Phụ thuộc một chiều: `visualization → learning.checkpoint (003, chỉ nạp, nhập lười) → environment (002) → physics (001) → config`. `visualization` không import `learning.trainer`/`learning.ppo`. Chỉ `viewer.py` nhập `mujoco.viewer`, chỉ `display.py` nhập `glfw`; cả hai nhập lười nên `--headless` không đụng đồ hoạ. Mô-đun mới:
@@ -104,6 +126,7 @@ Phụ thuộc một chiều: `visualization → learning.checkpoint (003, chỉ 
 | `visualization/errors` | `ReplayConfigError`, `EpisodeNotFound`, `EpisodeInvalid`, `EpisodeWriteError`, `CheckpointUnusable`, `ModelMismatch`, `DisplayUnavailable`, `DemoUnstable` | FR-013 |
 | `scripts/replay.py` | CLI mỏng gọi `run_replay`, xả đầu ra rồi `os._exit` khi viewer đã mở | FR-014 |
 
+<a id="quyet-dinh-thiet-ke"></a>
 ### Quyết định thiết kế
 
 - **Demo = chạy trọn rồi phát**: `record_episode` hoàn tất (≪ 1 s, ĐÃ ĐO 0,011 s cho 100 hành động vật lý thuần; chi phí suy luận policy CHƯA KIỂM) rồi `play` phát chính `Episode` đó — một đường phát duy nhất cho replay và demo; cái thấy khi demo ≡ tệp lưu; đóng cửa sổ giữa chừng không làm cụt dữ liệu (Edge Case của spec được thoả bằng thiết kế).
@@ -112,8 +135,10 @@ Phụ thuộc một chiều: `visualization → learning.checkpoint (003, chỉ 
 - **Hành động**: demo chỉ qua `policy.act_deterministic(obs_raw)` → kiểm hữu hạn và `[0,1]^6` ngay trước `env.step`; vi phạm ⇒ episode `abnormal`, không gọi `step` với giá trị sai. Không có đường ghi lực, góc khớp hay toạ độ tay; `recorder` không ghi vào `MjData` (INV-002).
 - **Không mock vật lý**: test dùng mô hình thật; `RecordingSink` chỉ thay màn hình; `monkeypatch` chỉ để tiêm lỗi ghi đĩa, chặn `os._exit` và đồng hồ giả, được gọi tên rõ. Không tự viết trình kiểm an ninh riêng ngoài `jsonschema` và các kiểm tra theo spec; test assert thẳng trên sản phẩm.
 
+<a id="project-structure"></a>
 ## Project Structure
 
+<a id="documentation-this-feature"></a>
 ### Documentation (this feature)
 
 ```text
@@ -134,19 +159,20 @@ specs/005-replay-3d-muscle-demo/
 └── tasks.md             # bước /speckit-tasks — KHÔNG tạo ở bước plan
 ```
 
+<a id="source-code-repository-root-chi-phan-005-them-vao-cay-cua-001004"></a>
 ### Source Code (repository root) — chỉ phần 005 thêm vào cây của 001–004
 
 ```text
-configs/
-└── replay.yaml              # playback.*, demo.*, hud.*, target_marker.*
 src/mma_ai/
 └── visualization/
     ├── __init__.py
     ├── replay_config.py   episode.py     recorder.py   model_check.py
     ├── summary.py         pacing.py      hud.py        playback.py
     ├── display.py         viewer.py      replay.py     errors.py
+    ├── cli.py             # main(argv): CLI mỏng + os._exit có điều kiện (mã thoát theo contracts/cli.md)
+    └── replay.yaml        # cấu hình mặc định đóng gói (playback.*, demo.*, hud.*, target_marker.*)
 scripts/
-└── replay.py                # thay stub của 001 (mã thoát theo contracts/cli.md)
+└── replay.py                # vỏ 5 dòng gọi mma_ai.visualization.cli.main — CHƯA CÓ CHỦ (khoảng trống năng lực, xem "Quyết định ở bước tasks")
 tests/
 ├── unit/        # test_replay_config, test_episode, test_recorder, test_model_check, test_summary,
 │                # test_pacing, test_hud, test_playback, test_display, test_script_exit
@@ -157,6 +183,7 @@ tests/
 
 **Structure Decision**: dự án đơn (single project), mở rộng cây `src/mma_ai/` của 001–004 bằng một gói con `visualization/` (đúng tên mô-đun kiến trúc `visualization/replay.py` và `scripts/replay.py` của master plan). Không thêm quy tắc `.gitignore` mới (`runs/` đã bỏ khỏi git theo 003; episode ghi vào `runs/…/replays/` theo khuyến nghị).
 
+<a id="lenh-build-test-cho-task-khung-dung-dung-mot-lan"></a>
 ## Lệnh build / test (cho task khung dựng đúng một lần)
 
 | Việc | Lệnh |
@@ -170,6 +197,7 @@ tests/
 
 Cổng máy (`gates:`) do bước plan_fix nháp từ tệp này; plan không khai tay trong `.ai/profile.yml`.
 
+<a id="truy-vet-yeu-cau-thiet-ke"></a>
 ## Truy vết yêu cầu → thiết kế
 
 | Yêu cầu | Thực hiện bởi | Bằng chứng / Test |
@@ -197,6 +225,7 @@ Cổng máy (`gates:`) do bước plan_fix nháp từ tệp này; plan không kh
 | NFR-REL-001 | `episode`, `summary` | `test_episode::test_nonfinite_rejected`, `test_contract_examples_replay::test_no_nonfinite_values`, `test_replay_bad_input::test_nonfinite_values_exit5` |
 | INV-005 (chỉ đọc) | toàn gói | `test_replay_readonly::test_run_files_unchanged_by_replay_and_demo` |
 
+<a id="rui-ro-viec-chua-kiem"></a>
 ## Rủi ro & việc CHƯA KIỂM
 
 1. **001–003 chưa có mã** — 005 dựa vào hợp đồng đã công bố (D-1…D-5); lệch ⇒ sửa ở nơi chủ sở hữu, 005 chỉ thêm accessor đọc-chỉ.
@@ -209,6 +238,16 @@ Cổng máy (`gates:`) do bước plan_fix nháp từ tệp này; plan không kh
 8. **Chi phí suy luận policy trong demo CHƯA KIỂM** (cần `torch` và checkpoint thật); đã đo chỉ phần mô phỏng thuần.
 9. **`test_unimplemented_cli` của 001 hiện đòi `replay.py` thoát 3** — task chủ của 005 cập nhật đúng tệp test đó (bỏ `replay` khỏi danh sách) sau khi `scripts/replay.py` được thay; phải đồng bộ với task tương tự của 003 (`train`) và 004 (`evaluate`) — cùng một tệp, mỗi lần một task chủ theo thứ tự.
 
+<a id="quyet-dinh-o-buoc-tasks"></a>
+## Quyết định ở bước tasks
+
+- **Vai `challenger`: CÓ DÙNG** (task `T522` trong `tasks.md`) — Tự chốt: spec khai INV-001…INV-006, trong đó INV-001/002/003/004/005 là bất biến mà đầu vào người dùng chạm được (hash/cấu trúc episode, hành động policy, tệp hỏng, ngắt giữa chừng, đường dẫn ghi) và đánh sập được bằng property/fuzz không cần màn hình; lỗi "phát sai ngầm" là thứ feature tồn tại để chặn nên đáng thêm một lượt. Cổng review cần nhất trí reviewer + challenger.
+- **Khoảng trống năng lực (capability gap)**: bảng vùng ghi hiệu lực của dự án không phủ `scripts/**` và `configs/**` (đã thử: khai `source_roots` trong `.ai/profile.yml` không làm `ai-sdlc check tasks` chấp nhận hai đường đó, nên đã hoàn tác — không để lại thay đổi cấu hình dự án). Tự chốt: KHÔNG dồn việc sang `builder` bằng cách khai output ngoài vùng (cổng `plan_lint` từ chối) và KHÔNG sửa vùng ghi; thay vào đó đặt MỌI logic ở `src/mma_ai/visualization/` — gồm `cli.py` (`main(argv)`, `os._exit` có điều kiện) và cấu hình mặc định đóng gói `src/mma_ai/visualization/replay.yaml` — và chạy mọi test qua entrypoint `python -m mma_ai.visualization.cli`. Việc CHƯA CÓ CHỦ, ghi rõ để không thành tài liệu chết: (a) vỏ `scripts/replay.py` 5 dòng (`from mma_ai.visualization.cli import main; main()`) — đây là entrypoint `python scripts/replay.py` mà AC-1…AC-5 và `contracts/cli.md` nêu; (b) bỏ `replay` khỏi `tests/integration/test_unimplemented_cli.py` của 001 CÙNG task (a) vì (a) làm test đó sai; (c) một bản sao tuỳ chọn `configs/replay.yaml`. Đề xuất năng lực cần chạy: `ai-sdlc capability propose <dự-án> "vùng ghi cho scripts/** (CLI mỏng) và configs/** (YAML cấu hình) — mở rộng builder hoặc thêm vai"`; khi được duyệt, bước converge thêm task (a)+(b) phụ thuộc `T515` và `T501`. Cho tới lúc đó AC-1…AC-5 được chứng minh qua `python -m mma_ai.visualization.cli` (cùng `run_replay`), CHƯA qua đúng chuỗi `python scripts/replay.py` — trạng thái này được nêu ở `tasks.md` và ma trận truy vết.
+- **Khung dự án**: repo hiện chưa có manifest nên `T501` dựng khung tối thiểu (`pyproject.toml`, `conftest.py`, test khói) và mọi task mã phụ thuộc nó; nếu 001 giao các tệp này trước thì giữ nguyên nội dung của 001 (một chủ một tệp) — không đổi quyết định "005 không thêm phụ thuộc, `pyproject.toml` không đổi".
+- **Phụ thuộc chéo feature**: 001–004 chưa có `tasks.md` nên chưa có id để khai ở `depends_on`; danh sách task cần bổ sung nằm ở mục "Phụ thuộc chéo feature" của `tasks.md`; id của 005 dùng dải `T501`…`T523`.
+- **Cổng E2E**: task `qa` `T521` chạy `uv run python -m pytest -q tests/e2e` trên entrypoint thật (`scripts/replay.py`, subprocess); cổng `e2e` do `plan_fix` nháp từ `tasks.md`, không khai tay trong `.ai/profile.yml`.
+
+<a id="phan-bien-plan-lint"></a>
 ## Phản biện plan_lint
 
 - Chạy viewer trong tiến trình con để bắt cái chết của nó: loại — tăng độ phức tạp (truyền episode, đồng bộ) đổi lấy một ca hiếm chưa quan sát được; `glfw.init()` trong tiến trình đã bắt được ca không có/hỏng màn hình (ĐÃ ĐO), `os._exit` đã giải quyết ca thoát (ĐÃ ĐO).
@@ -217,6 +256,7 @@ Cổng máy (`gates:`) do bước plan_fix nháp từ tệp này; plan không kh
 - Không xuất khung ảnh: ghi rõ trong spec và Out of Scope là do đo được EGL/OSMesa không khả dụng; nếu sau này có máy dựng hình được, thêm là việc của feature khác.
 - Chưa có số đo thật nào về hành vi policy hay FPS trên phần cứng đích: mọi con số trong plan là thiết kế hoặc thăm dò; nghiệm thu dựa vào tóm tắt, mã thoát và test, không dựa vào plan.
 
+<a id="complexity-tracking"></a>
 ## Complexity Tracking
 
 Không có vi phạm hiến chương cần biện minh. Độ phức tạp thêm vào (giao diện `FrameSink`, bước kiểm màn hình trước khi mở viewer, `os._exit` có điều kiện) được biện minh trực tiếp bởi số đo: không có `FrameSink` thì AC-1/AC-2 không kiểm tự động được ở môi trường không màn hình; không có bước kiểm màn hình thì AC-3 chết tiến trình bằng thông báo tiếng Anh (ĐÃ ĐO); không có `os._exit` thì AC-1 ("không lỗi") sai ở 8/9 lần chạy (ĐÃ ĐO). Phương án đơn giản hơn (gọi thẳng viewer, thoát bình thường) không đáp ứng các tiêu chí đó.
