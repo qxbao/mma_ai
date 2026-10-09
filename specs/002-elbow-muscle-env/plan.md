@@ -24,6 +24,8 @@ version: "1.0.0"
 - [Truy vết yêu cầu → thiết kế](#truy-vet-yeu-cau-thiet-ke)
 - [Rủi ro & việc CHƯA KIỂM](#rui-ro-viec-chua-kiem)
 - [Complexity Tracking](#complexity-tracking)
+- [Quyết định ở bước tasks](#quyet-dinh-o-buoc-tasks)
+- [Phản biện plan_lint](#phan-bien-plan-lint)
 
 
 **Branch**: `002-elbow-muscle-env` (tên thư mục feature; không tạo nhánh git) | **Date**: 2026-10-09 | **Spec**: [spec.md](spec.md)
@@ -218,3 +220,19 @@ Cổng máy (`gates:`) do bước plan_fix nháp từ tệp này; plan không kh
 ## Complexity Tracking
 
 Không có vi phạm hiến chương cần biện minh.
+
+<a id="quyet-dinh-o-buoc-tasks"></a>
+## Quyết định ở bước tasks
+
+- **Vai `challenger`: CÓ DÙNG** (task `T219` trong `tasks.md`) — Tự chốt: spec khai INV-001…004; INV-001 (rò rỉ train→test), INV-002 (tất định theo seed), INV-003 (đường điều khiển duy nhất) và INV-004 (observation hợp lệ) là bất biến mà đầu vào người dùng chạm được và đánh sập được bằng property/fuzz không cần màn hình; rò rỉ train→test làm đánh giá ở con 3 vô nghĩa mà không báo lỗi nên đáng thêm một lượt. Cổng review cần nhất trí reviewer + challenger.
+- **Khoảng trống năng lực (capability gap)**: bảng vùng ghi hiệu lực của dự án không phủ `scripts/**`, `configs/**` và `tests/regression/**`. Tự chốt: KHÔNG khai output ngoài vùng và KHÔNG lách vùng ghi; cấu hình mặc định đóng gói ở `src/mma_ai/environment/elbow_env.yaml` (thay `configs/elbow_env.yaml`), logic xác minh cài sạch ở `src/mma_ai/environment/verify_clean_install.py` (thay `scripts/verify_clean_install.py`, entrypoint `python -m mma_ai.environment.verify_clean_install`), test tái lập ở `tests/integration/test_target_determinism.py`. Việc CHƯA CÓ CHỦ: vỏ `scripts/verify_clean_install.py`, bản chép `configs/elbow_env.yaml` và dòng `logs/` trong `.gitignore`. Đề xuất: `ai-sdlc capability propose fighterl "vai builder cần vùng ghi scripts/**, configs/**, tests/regression/** và .gitignore để đặt vỏ CLI, cấu hình mẫu, test tái lập và dòng bỏ logs/ khỏi git cho các feature M1"`.
+- **Tên test đã tách theo story** (cùng nội dung bảng "Truy vết yêu cầu → thiết kế", khác tệp): `test_elbow_env::test_rejects_invalid_actions`, `::test_random_rollout_no_nan_inf`, `::test_physics_instability_raises` → `test_env_rollout.py`; `::test_test_split_never_samples_train`, `::test_reset_info_fields` → `test_env_split.py`; `::test_terminated_on_reach`, `::test_truncated_at_max_actions` → `test_env_episode_end.py`; `tests/regression/test_target_determinism` → `tests/integration/test_target_determinism.py`.
+- **Khung dự án và `pyproject.toml`**: `T201` thêm dependency của 002 và `depends_on` `T501` (task khung của 005, hiện là task duy nhất giữ `pyproject.toml`); khi 001 có `tasks.md`, bước converge/`plan_fix` thêm `depends_on` theo mục "Phụ thuộc chéo feature" của `tasks.md`. Chiều ngược lại: task `pyproject.toml` của 003/004 và task `single_agent.py` của 004/005 phải `depends_on` `T201`/`T207`.
+- **Cổng E2E**: task `qa` `T218` chạy `uv run python -m pytest -q tests/e2e` trên entrypoint thật (tiến trình Python mới + `python -m mma_ai.environment.verify_clean_install`); cổng `e2e` do `plan_fix` nháp từ `tasks.md`, không khai tay trong `.ai/profile.yml`.
+
+<a id="phan-bien-plan-lint"></a>
+## Phản biện plan_lint
+
+- Đặt cấu hình ở thư mục gói thay vì `configs/`: đổi lấy việc không lách vùng ghi, `ElbowEnvConfig.load(path)` vẫn cho ghi đè bằng tệp ngoài nên người dùng không mất khả năng chỉnh; lý do chọn không đổi hợp đồng ra (khoá cấu hình, schema).
+- Chạy cài sạch thật ở e2e thay vì giả lập: tốn thời gian và cần mạng/cache `uv`, nhưng AC-5 là bằng chứng cài thật (hiến chương I); phần logic ghi bản ghi đã có unit test với bộ chạy lệnh tiêm nên lỗi logic không phải chờ cài thật.
+
