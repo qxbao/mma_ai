@@ -1,0 +1,43 @@
+schema_version: "1.0.0"
+stage: elbow
+seed: 42
+env_config: src/mma_ai/environment/elbow_env.yaml
+ppo:
+  learning_rate: 0.0003
+  clip_range: 0.2
+  gamma: 0.99
+  gae_lambda: 0.95
+  entropy_coef: 0.0
+  value_coef: 0.5
+  max_grad_norm: 0.5
+network:
+  actor_hidden: [256, 256]
+  critic_hidden: [256, 256]
+  activation: tanh
+  log_std_init: -0.5
+normalization:
+  normalize_obs: true
+  clip_obs: 10.0
+  epsilon: 0.00000001
+schedule:
+  total_timesteps: 100000
+  n_steps: 2048
+  batch_size: 64
+  n_epochs: 10
+checkpoint:
+  every_updates: 10
+reproducibility:
+  rel_tolerance: 0.000001
+  head_updates: 10
+  torch_threads: 1
+  deterministic_algorithms: true
+paths:
+  runs_dir: runs
+ui:
+  mode: web
+  host: 127.0.0.1
+  port: 0
+  snapshot_interval_s: 1.0
+  poll_interval_ms: 2000
+  history_points: 200
+  view3d: false
