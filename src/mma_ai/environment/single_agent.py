@@ -226,6 +226,7 @@ class ElbowReachEnv(gym.Env[np.ndarray, np.ndarray]):
             if self._np_random is None:
                 super().reset()
             active_seed = int(self.np_random.integers(0, 2**31 - 1))
+            super().reset(seed=active_seed)
 
         # Xác định vai trò split cho episode này
         current_split = self.split
