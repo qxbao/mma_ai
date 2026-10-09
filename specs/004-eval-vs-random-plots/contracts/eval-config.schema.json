@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "eval-config.schema.json",
+  "title": "EvalConfig — cấu hình đánh giá duy nhất (FR-007, FR-018)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "seeds", "episodes", "criterion", "stats", "logs", "charts", "paths"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "seeds": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["episode_base", "random_policy"],
+      "properties": {
+        "episode_base": {"type": "integer", "minimum": 0, "description": "Seed episode thứ k = episode_base + k; cả khoảng MUST không giao seed train của run (INV-001)"},
+        "random_policy": {"type": "integer", "minimum": 0, "description": "Seed bộ sinh hành động của random policy (INV-007); MUST không thuộc seed train"}
+      }
+    },
+    "episodes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repeats", "min_targets"],
+      "properties": {
+        "repeats": {"type": "integer", "minimum": 1, "description": "Số lần lặp mỗi mục tiêu (mặc định 1); >1 thì đơn vị phân tích là mục tiêu (research Q1)"},
+        "min_targets": {"type": "integer", "minimum": 2, "description": "Dưới số này từ chối kết luận (Edge Case)"}
+      }
+    },
+    "criterion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["primary_metric", "confidence_level"],
+      "description": "Tiêu chí khai trước kết quả (INV-006): đọc từ đây trước episode đầu và ghi nguyên vào báo cáo",
+      "properties": {
+        "primary_metric": {"enum": ["success_rate"]},
+        "confidence_level": {"type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1}
+      }
+    },
+    "stats": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["bootstrap_resamples", "bootstrap_seed"],
+      "properties": {
+        "bootstrap_resamples": {"type": "integer", "minimum": 100},
+        "bootstrap_seed": {"type": "integer", "minimum": 0}
+      }
+    },
+    "logs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "tags"],
+      "properties": {
+        "source": {"enum": ["auto", "jsonl", "tensorboard"]},
+        "tags": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["loss_prefix", "reward_prefix", "activation_prefix"],
+          "properties": {
+            "loss_prefix": {"type": "string", "minLength": 1},
+            "reward_prefix": {"type": "string", "minLength": 1},
+            "activation_prefix": {"type": "string", "minLength": 1}
+          }
+        }
+      }
+    },
+    "charts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dpi", "format"],
+      "properties": {
+        "dpi": {"type": "integer", "minimum": 50, "maximum": 600},
+        "format": {"enum": ["png"]}
+      }
+    },
+    "paths": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runs_dir", "env_config_override", "expect_fingerprint_sha256"],
+      "properties": {
+        "runs_dir": {"type": "string", "pattern": "^[^/].*$", "description": "Gốc các run (tương đối); dùng để đi ngược chuỗi run cha"},
+        "env_config_override": {"type": ["string", "null"], "pattern": "^[^/].*\\.yaml$", "description": "null = dùng env_config ghi trong hồ sơ run; khác null chỉ được nếu hash XML mô hình khớp (INV-002)"},
+        "expect_fingerprint_sha256": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$", "description": "Ghim băm tập mục tiêu mong đợi; lệch thì từ chối (research Q5)"}
+      }
+    }
+  }
+}

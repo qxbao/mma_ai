@@ -1,0 +1,183 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "eval-report.schema.json",
+  "title": "EvalReport — báo cáo một lượt đánh giá (FR-004…FR-019, AC-1…AC-5)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "eval_id", "status", "created_utc", "run", "checkpoint", "model", "library_versions", "device", "criterion", "config", "disjointness", "policies", "comparison", "charts", "timing", "limits"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "eval_id": {"type": "string", "pattern": "^[0-9]{8}T[0-9]{6}Z_e[0-9]+(-[0-9]+)?$"},
+    "status": {"enum": ["done", "done_charts_incomplete"], "description": "Chỉ hai trạng thái công bố; lỗi khác không tạo bản ghi (INV-004)"},
+    "created_utc": {"type": "string", "format": "date-time"},
+    "run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["run_id", "run_status", "seed", "train_seeds"],
+      "properties": {
+        "run_id": {"type": "string"},
+        "run_status": {"enum": ["running", "done", "error", "interrupted"], "description": "Trạng thái hồ sơ run lúc đánh giá (Edge Case)"},
+        "seed": {"type": "integer", "minimum": 0},
+        "train_seeds": {"type": "array", "minItems": 1, "items": {"type": "integer", "minimum": 0}, "uniqueItems": true, "description": "Seed run + các run cha"}
+      }
+    },
+    "checkpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256", "update_idx", "env_steps", "model_sha256"],
+      "properties": {
+        "path": {"type": "string", "pattern": "^[^/].*\\.pt$", "description": "Tương đối so với thư mục run"},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$", "description": "Băm nội dung tệp checkpoint (KQ-4)"},
+        "update_idx": {"type": ["integer", "null"], "minimum": 0},
+        "env_steps": {"type": ["integer", "null"], "minimum": 0},
+        "model_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sha256", "muscle_names"],
+      "properties": {
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$", "description": "Hash XML của môi trường đánh giá — bằng checkpoint.model_sha256 và hồ sơ run (INV-002)"},
+        "muscle_names": {"type": "array", "minItems": 6, "maxItems": 6, "items": {"type": "string"}}
+      }
+    },
+    "library_versions": {
+      "type": "object",
+      "additionalProperties": {"type": "string"},
+      "required": ["python", "numpy", "pandas", "matplotlib", "torch", "gymnasium", "mujoco"],
+      "description": "Kèm phiên bản thư viện lúc lưu checkpoint trong checkpoint_saved_with khi khác"
+    },
+    "device": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "name", "checkpoint_saved_with"],
+      "properties": {
+        "kind": {"enum": ["cpu", "cuda"]},
+        "name": {"type": ["string", "null"]},
+        "checkpoint_saved_with": {"type": ["object", "null"], "additionalProperties": {"type": "string"}, "description": "Phiên bản thư viện ghi trong checkpoint khi khác phiên bản hiện tại; null khi giống"}
+      }
+    },
+    "criterion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["primary_metric", "confidence_level", "rule", "declared_before_run"],
+      "properties": {
+        "primary_metric": {"enum": ["success_rate"]},
+        "confidence_level": {"type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1},
+        "rule": {"const": "better_iff_ci_lower_bound_of_difference_gt_0"},
+        "declared_before_run": {"const": true}
+      }
+    },
+    "config": {"type": "object", "description": "Nguyên văn cấu hình đánh giá đã dùng, hợp eval-config.schema.json (kiểm riêng)"},
+    "disjointness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["checked", "passed", "train_target_provenance", "target_fingerprint_sha256", "n_train_targets", "n_eval_targets", "min_cross_distance_m", "min_required_m", "eval_seed_range", "random_policy_seed", "train_seeds"],
+      "properties": {
+        "checked": {"const": true},
+        "passed": {"const": true, "description": "false không bao giờ được công bố: vi phạm làm lệnh dừng trước episode đầu (INV-001)"},
+        "train_target_provenance": {"enum": ["manifest_fingerprint", "rebuilt_from_config"]},
+        "target_fingerprint_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "n_train_targets": {"type": "integer", "minimum": 1},
+        "n_eval_targets": {"type": "integer", "minimum": 1},
+        "min_cross_distance_m": {"type": "number", "exclusiveMinimum": 0},
+        "min_required_m": {"type": "number", "exclusiveMinimum": 0},
+        "eval_seed_range": {"type": "array", "prefixItems": [{"type": "integer", "minimum": 0}, {"type": "integer", "minimum": 0}], "minItems": 2, "maxItems": 2, "description": "[đầu, cuối) của seed episode"},
+        "random_policy_seed": {"type": "integer", "minimum": 0},
+        "train_seeds": {"type": "array", "minItems": 1, "items": {"type": "integer", "minimum": 0}}
+      }
+    },
+    "policies": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["learned", "random"],
+      "properties": {
+        "learned": {"$ref": "#/$defs/policy_result"},
+        "random": {"$ref": "#/$defs/policy_result"}
+      }
+    },
+    "comparison": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["metric", "difference", "ci_low", "ci_high", "confidence_level", "better", "ci_method", "approximate", "n_units_each", "note"],
+      "properties": {
+        "metric": {"enum": ["success_rate"]},
+        "difference": {"type": "number", "minimum": -1, "maximum": 1, "description": "learned − random"},
+        "ci_low": {"type": "number", "minimum": -1, "maximum": 1},
+        "ci_high": {"type": "number", "minimum": -1, "maximum": 1},
+        "confidence_level": {"type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1},
+        "better": {"type": "boolean", "description": "true khi và chỉ khi ci_low > 0 (INV-006)"},
+        "ci_method": {"const": "newcombe_wilson_hybrid"},
+        "approximate": {"type": "boolean", "description": "true khi repeats > 1 (đơn vị phân tích là mục tiêu, k không nguyên)"},
+        "n_units_each": {"type": "integer", "minimum": 2},
+        "note": {"type": ["string", "null"]}
+      }
+    },
+    "charts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "files", "points_plotted", "points_dropped", "reason", "log_source"],
+      "properties": {
+        "status": {"enum": ["complete", "incomplete"]},
+        "files": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["loss", "reward", "activation"],
+          "properties": {
+            "loss": {"type": ["string", "null"], "pattern": "^[^/].*\\.png$"},
+            "reward": {"type": ["string", "null"], "pattern": "^[^/].*\\.png$"},
+            "activation": {"type": ["string", "null"], "pattern": "^[^/].*\\.png$"}
+          },
+          "description": "null cho biểu đồ không tạo được (FR-011), kèm reason"
+        },
+        "points_plotted": {"type": "object", "additionalProperties": false, "required": ["loss", "reward", "activation"], "properties": {"loss": {"type": "integer", "minimum": 0}, "reward": {"type": "integer", "minimum": 0}, "activation": {"type": "integer", "minimum": 0}}},
+        "points_dropped": {"type": "integer", "minimum": 0, "description": "Điểm không hữu hạn bị bỏ (FR-012)"},
+        "reason": {"type": ["string", "null"], "description": "null khi status = complete"},
+        "log_source": {"enum": ["jsonl", "tensorboard", null]}
+      }
+    },
+    "timing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["wall_clock_seconds", "episodes_per_second"],
+      "properties": {
+        "wall_clock_seconds": {"type": "number", "minimum": 0, "description": "Do máy đo, không dự báo (FR-019)"},
+        "episodes_per_second": {"type": ["number", "null"], "minimum": 0}
+      }
+    },
+    "limits": {"type": "array", "minItems": 1, "items": {"type": "string"}, "description": "Giới hạn của kết luận: số đơn vị, độ rộng khoảng tin cậy, khẳng định không có (FR-019)"}
+  },
+  "$defs": {
+    "stat": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "ci_low", "ci_high", "n", "reason"],
+      "properties": {
+        "value": {"type": ["number", "null"]},
+        "ci_low": {"type": ["number", "null"]},
+        "ci_high": {"type": ["number", "null"]},
+        "n": {"type": "integer", "minimum": 0},
+        "reason": {"type": ["string", "null"], "description": "Lý do null tường minh (FR-017); null khi có số"}
+      }
+    },
+    "policy_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "n_episodes", "success_rate", "final_distance_m", "mean_return", "effort", "activation_per_muscle", "abnormal_rate", "n_abnormal", "nan_count", "inf_count"],
+      "properties": {
+        "kind": {"enum": ["learned", "random"]},
+        "n_episodes": {"type": "integer", "minimum": 1},
+        "success_rate": {"$ref": "#/$defs/stat"},
+        "final_distance_m": {"$ref": "#/$defs/stat"},
+        "mean_return": {"$ref": "#/$defs/stat"},
+        "effort": {"$ref": "#/$defs/stat", "description": "Trung bình theo bước của mức kích hoạt trung bình 6 cơ, rồi trung bình theo episode"},
+        "activation_per_muscle": {"type": "array", "minItems": 6, "maxItems": 6, "items": {"type": ["number", "null"], "minimum": 0, "maximum": 1}},
+        "abnormal_rate": {"$ref": "#/$defs/stat"},
+        "n_abnormal": {"type": "integer", "minimum": 0},
+        "nan_count": {"type": "integer", "minimum": 0},
+        "inf_count": {"type": "integer", "minimum": 0}
+      }
+    }
+  }
+}
