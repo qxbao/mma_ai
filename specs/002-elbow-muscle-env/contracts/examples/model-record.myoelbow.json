@@ -1,0 +1,49 @@
+{
+  "schema_version": "1.0.0",
+  "source": "myo_sim/models/legacy/elbow/myoelbow_1dof6muscles.xml",
+  "sha256": "384dcb555561287fe39d960aba6496db8b825bebd21df3873bb07920a886066f",
+  "n_muscles": 6,
+  "n_non_muscle_actuators": 0,
+  "muscle_names": [
+    "TRIlong",
+    "TRIlat",
+    "TRImed",
+    "BIClong",
+    "BICshort",
+    "BRA"
+  ],
+  "joint_ranges_rad": [
+    [
+      0.0,
+      2.26893
+    ]
+  ],
+  "ctrl_range": [
+    [
+      0.001,
+      1.0
+    ],
+    [
+      0.001,
+      1.0
+    ],
+    [
+      0.001,
+      1.0
+    ],
+    [
+      0.001,
+      1.0
+    ],
+    [
+      0.001,
+      1.0
+    ],
+    [
+      0.001,
+      1.0
+    ]
+  ],
+  "physics_timestep_s": 0.0025,
+  "fingertip_site": "wrist"
+}

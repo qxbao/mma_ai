@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "created_utc": "2026-10-09T10:00:00Z",
+  "seed": 42,
+  "env_steps_per_run": 8192,
+  "repeats": 5,
+  "ui_off": {"env_steps_per_second": [1500.0, 1490.0, 1510.0, 1505.0, 1495.0], "median": 1500.0},
+  "ui_on": {"env_steps_per_second": [1480.0, 1470.0, 1490.0, 1485.0, 1475.0], "median": 1480.0},
+  "ratio_median": 0.9867,
+  "threshold": 0.9,
+  "passed": true,
+  "ui_cost": {"cpu_utilization_pct_delta": 0.8, "ram_peak_mb_delta": 35.0, "vram_peak_mb_delta": null},
+  "view3d": {"measured": false, "reason": "không có màn hình (DISPLAY chưa đặt)"}
+}

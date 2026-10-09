@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "train-benchmark.schema.json",
+  "title": "TrainBenchmark — chi phí của giao diện quan sát (FR-023, NFR-PERF-001)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "created_utc", "seed", "env_steps_per_run", "repeats", "ui_off", "ui_on", "ratio_median", "threshold", "passed", "ui_cost", "view3d"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "created_utc": {"type": "string", "format": "date-time"},
+    "seed": {"type": "integer", "minimum": 0},
+    "env_steps_per_run": {"type": "integer", "minimum": 1},
+    "repeats": {"type": "integer", "minimum": 5, "description": "≥ 5 lần lặp xen kẽ bật/tắt (như NFR-PERF-001 của 001)"},
+    "ui_off": {"$ref": "#/$defs/series"},
+    "ui_on": {"$ref": "#/$defs/series"},
+    "ratio_median": {"type": "number", "exclusiveMinimum": 0, "description": "median(ui_on) / median(ui_off) của env steps/s"},
+    "threshold": {"const": 0.9},
+    "passed": {"type": "boolean", "description": "= ratio_median >= threshold; do script tính, không khai tay"},
+    "ui_cost": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cpu_utilization_pct_delta", "ram_peak_mb_delta", "vram_peak_mb_delta"],
+      "properties": {
+        "cpu_utilization_pct_delta": {"type": ["number", "null"]},
+        "ram_peak_mb_delta": {"type": ["number", "null"]},
+        "vram_peak_mb_delta": {"type": ["number", "null"]}
+      }
+    },
+    "view3d": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["measured", "reason"],
+      "properties": {
+        "measured": {"type": "boolean"},
+        "reason": {"type": ["string", "null"], "description": "Lý do không đo được (ví dụ không có màn hình)"}
+      }
+    }
+  },
+  "$defs": {
+    "series": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["env_steps_per_second", "median"],
+      "properties": {
+        "env_steps_per_second": {"type": "array", "minItems": 5, "items": {"type": "number", "minimum": 0}},
+        "median": {"type": "number", "minimum": 0}
+      }
+    }
+  }
+}

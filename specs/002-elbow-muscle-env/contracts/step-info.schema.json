@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "step-info.schema.json",
+  "title": "StepInfo — dict info do step() trả về (FR-004, FR-008, FR-009)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["distance_m", "reached", "reward_dist", "reward_effort", "ctrl_requested", "ctrl_effective", "qvel_clipped", "n_actions", "terminated", "truncated", "end_reason"],
+  "properties": {
+    "distance_m": {"type": "number", "minimum": 0},
+    "reached": {"type": "boolean"},
+    "reward_dist": {"type": "number"},
+    "reward_effort": {"type": "number"},
+    "ctrl_requested": {"type": "array", "minItems": 6, "maxItems": 6, "items": {"type": "number", "minimum": 0, "maximum": 1}},
+    "ctrl_effective": {"type": "array", "minItems": 6, "maxItems": 6, "items": {"type": "number", "minimum": 0, "maximum": 1}, "description": "Sau khi MuJoCo kẹp về ctrlrange của mô hình"},
+    "qvel_clipped": {"type": "boolean"},
+    "n_actions": {"type": "integer", "minimum": 1},
+    "terminated": {"type": "boolean"},
+    "truncated": {"type": "boolean"},
+    "end_reason": {"type": ["string", "null"], "enum": ["reached", "max_actions", null], "description": "null khi episode chưa kết thúc (tường minh, không phải 'thiếu')"}
+  }
+}

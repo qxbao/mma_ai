@@ -1,0 +1,12 @@
+{
+  "seed": 42,
+  "target_split": "test",
+  "target_index": 1,
+  "target_position_m": [
+    -0.200619,
+    -0.174231,
+    1.089857
+  ],
+  "initial_distance_m": 0.358766,
+  "model_sha256": "384dcb555561287fe39d960aba6496db8b825bebd21df3873bb07920a886066f"
+}

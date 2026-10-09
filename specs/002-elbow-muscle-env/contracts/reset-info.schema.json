@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "reset-info.schema.json",
+  "title": "ResetInfo — dict info do reset() trả về (FR-012, FR-013)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["seed", "target_split", "target_index", "target_position_m", "initial_distance_m", "model_sha256"],
+  "properties": {
+    "seed": {"type": "integer", "minimum": 0, "description": "Seed thực dùng; reset(seed=None) vẫn điền một seed đã rút (không bao giờ null)"},
+    "target_split": {"enum": ["train", "test"]},
+    "target_index": {"type": "integer", "minimum": 0},
+    "target_position_m": {"type": "array", "prefixItems": [{"type": "number"}, {"type": "number"}, {"type": "number"}], "minItems": 3, "maxItems": 3},
+    "initial_distance_m": {"type": "number", "minimum": 0},
+    "model_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

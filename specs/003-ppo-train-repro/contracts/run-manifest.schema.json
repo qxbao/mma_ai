@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "run-manifest.schema.json",
+  "title": "RunManifest — hồ sơ thí nghiệm của một run (FR-011..FR-014, AC-3)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "run_id", "stage", "status", "seed", "resumed_from", "started_utc", "finished_utc", "config", "library_versions", "model", "device", "checkpoints", "reward_metrics", "throughput", "resources", "numeric_health", "reproducibility", "ui", "error"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "run_id": {"type": "string", "pattern": "^[0-9]{8}T[0-9]{6}Z_[a-z]+_s[0-9]+(-[0-9]+)?$"},
+    "stage": {"const": "elbow"},
+    "status": {"enum": ["running", "done", "error", "interrupted"]},
+    "seed": {"type": "integer", "minimum": 0},
+    "resumed_from": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["run_id", "checkpoint", "checkpoint_sha256"],
+      "properties": {
+        "run_id": {"type": "string"},
+        "checkpoint": {"type": "string", "pattern": "^[^/].*\\.pt$"},
+        "checkpoint_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "started_utc": {"type": "string", "format": "date-time"},
+    "finished_utc": {"type": ["string", "null"], "format": "date-time"},
+    "config": {"type": "object", "description": "Nguyên văn cấu hình đã dùng, hợp train-config.schema.json (kiểm riêng)"},
+    "library_versions": {
+      "type": "object",
+      "additionalProperties": {"type": "string"},
+      "required": ["python", "torch", "numpy", "gymnasium", "mujoco", "myo-sim", "tensorboard"]
+    },
+    "model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sha256", "source", "muscle_names"],
+      "properties": {
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$", "description": "Hash XML — bằng model_record()['sha256'] của môi trường"},
+        "source": {"type": "string", "pattern": "^[^/].*\\.xml$"},
+        "muscle_names": {"type": "array", "minItems": 6, "maxItems": 6, "items": {"type": "string"}}
+      }
+    },
+    "device": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "name"],
+      "properties": {
+        "kind": {"enum": ["cpu", "cuda"]},
+        "name": {"type": ["string", "null"]}
+      }
+    },
+    "checkpoints": {"type": "array", "items": {"$ref": "checkpoint-meta.schema.json"}},
+    "reward_metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["n_updates", "n_episodes", "head_updates", "head_mean_return", "first_mean_return", "last_mean_return", "success_rate"],
+      "properties": {
+        "n_updates": {"type": "integer", "minimum": 0},
+        "n_episodes": {"type": "integer", "minimum": 0},
+        "head_updates": {"type": "integer", "minimum": 0, "description": "K = min(head_updates cấu hình, n_updates)"},
+        "head_mean_return": {"type": "array", "items": {"type": "number"}, "description": "Reward trung bình mỗi episode của K lượt cập nhật đầu — đầu vào so sánh tái lập (AC-4)"},
+        "first_mean_return": {"type": ["number", "null"]},
+        "last_mean_return": {"type": ["number", "null"]},
+        "success_rate": {"type": ["number", "null"], "minimum": 0, "maximum": 1, "description": "Tỉ lệ episode kết thúc terminated"}
+      }
+    },
+    "throughput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["env_steps", "env_steps_per_second", "wall_clock_seconds"],
+      "properties": {
+        "env_steps": {"type": "integer", "minimum": 0},
+        "env_steps_per_second": {"type": ["number", "null"], "minimum": 0},
+        "wall_clock_seconds": {"type": ["number", "null"], "minimum": 0}
+      }
+    },
+    "resources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cpu_model", "cpu_logical_cores", "cpu_utilization_pct", "ram_peak_mb", "gpu_name", "gpu_utilization_pct", "vram_peak_mb"],
+      "properties": {
+        "cpu_model": {"type": ["string", "null"]},
+        "cpu_logical_cores": {"type": "integer", "minimum": 1},
+        "cpu_utilization_pct": {"type": ["number", "null"], "minimum": 0},
+        "ram_peak_mb": {"type": ["number", "null"], "minimum": 0},
+        "gpu_name": {"type": ["string", "null"]},
+        "gpu_utilization_pct": {"type": ["number", "null"], "minimum": 0, "maximum": 100, "description": "Trung bình các mẫu nvidia-smi; null khi không có GPU/nvidia-smi"},
+        "vram_peak_mb": {"type": ["number", "null"], "minimum": 0}
+      }
+    },
+    "numeric_health": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["nan_count", "inf_count"],
+      "properties": {
+        "nan_count": {"type": "integer", "minimum": 0},
+        "inf_count": {"type": "integer", "minimum": 0}
+      }
+    },
+    "reproducibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rel_tolerance", "head_updates", "device_kind", "torch_threads", "deterministic_algorithms"],
+      "properties": {
+        "rel_tolerance": {"type": "number", "exclusiveMinimum": 0},
+        "head_updates": {"type": "integer", "minimum": 1},
+        "device_kind": {"enum": ["cpu", "cuda"]},
+        "torch_threads": {"type": "integer", "minimum": 1},
+        "deterministic_algorithms": {"type": "boolean"}
+      }
+    },
+    "ui": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "url", "view3d"],
+      "properties": {
+        "mode": {"enum": ["web", "none"]},
+        "url": {"type": ["string", "null"]},
+        "view3d": {"type": "boolean"}
+      }
+    },
+    "error": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["kind", "message", "update_idx"],
+      "properties": {
+        "kind": {"enum": ["non_finite", "env_instability", "checkpoint_io", "other"]},
+        "message": {"type": "string", "minLength": 1},
+        "update_idx": {"type": ["integer", "null"], "minimum": 0}
+      }
+    }
+  }
+}

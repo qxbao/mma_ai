@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "env-config.schema.json",
+  "title": "ElbowEnvConfig — dạng dữ liệu của configs/elbow_env.yaml (FR-014)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "physics_timestep_s", "substeps_per_action", "fingertip_site", "target_split", "reward", "tolerance_m", "max_actions", "obs", "targets"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "physics_timestep_s": {"type": "number", "exclusiveMinimum": 0},
+    "substeps_per_action": {"type": "integer", "minimum": 1},
+    "fingertip_site": {"type": "string", "minLength": 1},
+    "target_split": {"enum": ["train", "test"]},
+    "reward": {
+      "type": "object", "additionalProperties": false,
+      "required": ["w_dist", "w_effort", "d_ref_m"],
+      "properties": {
+        "w_dist": {"type": "number", "minimum": 0},
+        "w_effort": {"type": "number", "minimum": 0, "description": "0 tắt thành phần phạt kích hoạt"},
+        "d_ref_m": {"type": "number", "exclusiveMinimum": 0}
+      }
+    },
+    "tolerance_m": {"type": "number", "exclusiveMinimum": 0},
+    "max_actions": {"type": "integer", "minimum": 1},
+    "obs": {
+      "type": "object", "additionalProperties": false,
+      "required": ["qvel_scale_rad_s"],
+      "properties": {"qvel_scale_rad_s": {"type": "number", "exclusiveMinimum": 0}}
+    },
+    "targets": {
+      "type": "object", "additionalProperties": false,
+      "required": ["n_train", "n_test", "min_separation_m", "split_block_m", "angle_margin_rad", "default_seed"],
+      "properties": {
+        "n_train": {"type": "integer", "minimum": 1},
+        "n_test": {"type": "integer", "minimum": 1},
+        "min_separation_m": {"type": "number", "exclusiveMinimum": 0},
+        "split_block_m": {"type": "number", "exclusiveMinimum": 0, "description": "Phải lớn hơn 1,1 × min_separation_m, nếu không EnvConfigError/TargetConfigError (INV-001)"},
+        "angle_margin_rad": {"type": "number", "minimum": 0},
+        "default_seed": {"type": "integer", "minimum": 0}
+      }
+    }
+  }
+}

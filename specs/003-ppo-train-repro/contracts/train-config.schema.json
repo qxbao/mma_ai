@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "train-config.schema.json",
+  "title": "TrainConfig — cấu hình huấn luyện (FR-002, FR-004, FR-006, FR-014, FR-018)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "stage", "seed", "env_config", "ppo", "network", "normalization", "schedule", "checkpoint", "reproducibility", "paths", "ui"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "stage": {"const": "elbow"},
+    "seed": {"type": "integer", "minimum": 0},
+    "env_config": {"type": "string", "pattern": "^[^/].*\\.yaml$", "description": "Đường dẫn tương đối tới cấu hình môi trường của con 1"},
+    "ppo": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["learning_rate", "clip_range", "gamma", "gae_lambda", "entropy_coef", "value_coef", "max_grad_norm"],
+      "properties": {
+        "learning_rate": {"type": "number", "exclusiveMinimum": 0},
+        "clip_range": {"type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1},
+        "gamma": {"type": "number", "exclusiveMinimum": 0, "maximum": 1},
+        "gae_lambda": {"type": "number", "exclusiveMinimum": 0, "maximum": 1},
+        "entropy_coef": {"type": "number", "minimum": 0},
+        "value_coef": {"type": "number", "minimum": 0},
+        "max_grad_norm": {"type": "number", "exclusiveMinimum": 0, "description": "Ngưỡng gradient clipping (FR-004)"}
+      }
+    },
+    "network": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["actor_hidden", "critic_hidden", "activation", "log_std_init"],
+      "properties": {
+        "actor_hidden": {"type": "array", "minItems": 1, "items": {"type": "integer", "minimum": 1}, "description": "Mặc định [256, 256] (AC-6)"},
+        "critic_hidden": {"type": "array", "minItems": 1, "items": {"type": "integer", "minimum": 1}, "description": "Mặc định [256, 256] (AC-6)"},
+        "activation": {"enum": ["tanh"]},
+        "log_std_init": {"type": "number"}
+      }
+    },
+    "normalization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["normalize_obs", "clip_obs", "epsilon"],
+      "properties": {
+        "normalize_obs": {"type": "boolean"},
+        "clip_obs": {"type": "number", "exclusiveMinimum": 0},
+        "epsilon": {"type": "number", "exclusiveMinimum": 0}
+      }
+    },
+    "schedule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["total_timesteps", "n_steps", "batch_size", "n_epochs"],
+      "properties": {
+        "total_timesteps": {"type": "integer", "minimum": 1},
+        "n_steps": {"type": "integer", "minimum": 1},
+        "batch_size": {"type": "integer", "minimum": 1},
+        "n_epochs": {"type": "integer", "minimum": 1}
+      }
+    },
+    "checkpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["every_updates"],
+      "properties": {
+        "every_updates": {"type": "integer", "minimum": 1, "description": "Mặc định khởi đầu 10 lượt cập nhật"}
+      }
+    },
+    "reproducibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rel_tolerance", "head_updates", "torch_threads", "deterministic_algorithms"],
+      "properties": {
+        "rel_tolerance": {"type": "number", "exclusiveMinimum": 0},
+        "head_updates": {"type": "integer", "minimum": 1, "description": "K tối đa: so K = min(head_updates, số lượt thực chạy) lượt đầu"},
+        "torch_threads": {"type": "integer", "minimum": 1},
+        "deterministic_algorithms": {"type": "boolean"}
+      }
+    },
+    "paths": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runs_dir"],
+      "properties": {
+        "runs_dir": {"type": "string", "pattern": "^[^/].*$", "description": "Tương đối so với gốc dự án; không đường dẫn tuyệt đối riêng của máy"}
+      }
+    },
+    "ui": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "host", "port", "snapshot_interval_s", "poll_interval_ms", "history_points", "view3d"],
+      "properties": {
+        "mode": {"enum": ["web", "none"]},
+        "host": {"enum": ["127.0.0.1", "::1", "localhost"], "description": "Chỉ địa chỉ loopback (INV-005: giao diện chỉ đọc, chỉ cục bộ)"},
+        "port": {"type": "integer", "minimum": 0, "maximum": 65535, "description": "0 = tự chọn cổng trống"},
+        "snapshot_interval_s": {"type": "number", "exclusiveMinimum": 0},
+        "poll_interval_ms": {"type": "integer", "minimum": 250},
+        "history_points": {"type": "integer", "minimum": 10},
+        "view3d": {"type": "boolean", "description": "Mặc định false"}
+      }
+    }
+  }
+}

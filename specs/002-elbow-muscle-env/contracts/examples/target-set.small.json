@@ -1,0 +1,110 @@
+{
+  "schema_version": "1.0.0",
+  "master_seed": 42,
+  "model_sha256": "384dcb555561287fe39d960aba6496db8b825bebd21df3873bb07920a886066f",
+  "config": {
+    "n_train": 6,
+    "n_test": 2,
+    "min_separation_m": 0.02,
+    "split_block_m": 0.05,
+    "angle_margin_rad": 0.05,
+    "fingertip_site": "wrist"
+  },
+  "arc": {
+    "usable_length_m": 0.570951,
+    "n_blocks": 11,
+    "train_blocks": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      8,
+      9,
+      10
+    ],
+    "test_blocks": [
+      0,
+      6,
+      7
+    ]
+  },
+  "train": [
+    {
+      "index": 0,
+      "angle_rad": 0.473247,
+      "position_m": [
+        -0.215578,
+        -0.035497,
+        0.872322
+      ]
+    },
+    {
+      "index": 1,
+      "angle_rad": 0.702177,
+      "position_m": [
+        -0.211844,
+        -0.084904,
+        0.906395
+      ]
+    },
+    {
+      "index": 2,
+      "angle_rad": 0.750687,
+      "position_m": [
+        -0.211056,
+        -0.094292,
+        0.915013
+      ]
+    },
+    {
+      "index": 3,
+      "angle_rad": 1.105361,
+      "position_m": [
+        -0.205567,
+        -0.148624,
+        0.990139
+      ]
+    },
+    {
+      "index": 4,
+      "angle_rad": 1.69935,
+      "position_m": [
+        -0.198814,
+        -0.17184,
+        1.142304
+      ]
+    },
+    {
+      "index": 5,
+      "angle_rad": 2.087167,
+      "position_m": [
+        -0.196998,
+        -0.138102,
+        1.237963
+      ]
+    }
+  ],
+  "test": [
+    {
+      "index": 0,
+      "angle_rad": 0.194515,
+      "position_m": [
+        -0.219943,
+        0.033097,
+        0.847327
+      ]
+    },
+    {
+      "index": 1,
+      "angle_rad": 1.499455,
+      "position_m": [
+        -0.200619,
+        -0.174231,
+        1.089857
+      ]
+    }
+  ],
+  "min_cross_distance_m": 0.052532,
+  "fingerprint_sha256": "5945b92995003e57fe1222329d1ce8c3b830e41ff99bdf3575e5b71bc92db09c"
+}

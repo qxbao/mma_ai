@@ -1,0 +1,27 @@
+{
+  "distance_m": 0.330838,
+  "reached": false,
+  "reward_dist": -0.661676,
+  "reward_effort": -0.005,
+  "ctrl_requested": [
+    0.0,
+    0.0,
+    0.0,
+    1.0,
+    1.0,
+    1.0
+  ],
+  "ctrl_effective": [
+    0.001,
+    0.001,
+    0.001,
+    1.0,
+    1.0,
+    1.0
+  ],
+  "qvel_clipped": false,
+  "n_actions": 1,
+  "terminated": false,
+  "truncated": false,
+  "end_reason": null
+}

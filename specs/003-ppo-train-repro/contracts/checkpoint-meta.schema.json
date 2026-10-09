@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "checkpoint-meta.schema.json",
+  "title": "CheckpointMeta — mô tả một checkpoint (FR-006, FR-007, INV-004)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "path", "kind", "update_idx", "env_steps", "sha256", "created_utc", "model_sha256", "components", "library_versions", "finite"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "path": {"type": "string", "pattern": "^[^/].*\\.pt$", "description": "Tương đối so với thư mục run"},
+    "kind": {"enum": ["periodic", "final"]},
+    "update_idx": {"type": "integer", "minimum": 0},
+    "env_steps": {"type": "integer", "minimum": 0},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$", "description": "Băm tệp checkpoint"},
+    "created_utc": {"type": "string", "format": "date-time"},
+    "model_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$", "description": "Hash XML mô hình lúc lưu"},
+    "components": {
+      "type": "array",
+      "minItems": 6,
+      "uniqueItems": true,
+      "items": {"enum": ["actor", "critic", "obs_normalizer", "optimizer", "seed", "rng_state"]},
+      "description": "Đủ 6 thành phần (INV-004)"
+    },
+    "library_versions": {"type": "object", "additionalProperties": {"type": "string"}, "required": ["torch", "numpy"]},
+    "finite": {"const": true, "description": "Đã quét: 0 NaN/Inf trong mọi tensor trước khi ghi (FR-007)"}
+  }
+}

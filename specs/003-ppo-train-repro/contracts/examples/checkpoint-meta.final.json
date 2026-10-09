@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "path": "checkpoints/ckpt_u000002_final.pt",
+  "kind": "final",
+  "update_idx": 2,
+  "env_steps": 4096,
+  "sha256": "0000000000000000000000000000000000000000000000000000000000000001",
+  "created_utc": "2026-10-09T08:15:30Z",
+  "model_sha256": "384dcb555561287fe39d960aba6496db8b825bebd21df3873bb07920a886066f",
+  "components": ["actor", "critic", "obs_normalizer", "optimizer", "seed", "rng_state"],
+  "library_versions": {"torch": "2.14.1", "numpy": "2.4.6"},
+  "finite": true
+}

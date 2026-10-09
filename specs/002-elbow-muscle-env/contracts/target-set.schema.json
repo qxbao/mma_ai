@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "target-set.schema.json",
+  "title": "TargetSetPair — hai tập mục tiêu train/test sinh từ một seed (FR-010, FR-011, INV-001, INV-002)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "master_seed", "model_sha256", "config", "arc", "train", "test", "min_cross_distance_m", "fingerprint_sha256"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "master_seed": {"type": "integer", "minimum": 0},
+    "model_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "config": {
+      "type": "object", "additionalProperties": false,
+      "required": ["n_train", "n_test", "min_separation_m", "split_block_m", "angle_margin_rad", "fingertip_site"],
+      "properties": {
+        "n_train": {"type": "integer", "minimum": 1},
+        "n_test": {"type": "integer", "minimum": 1},
+        "min_separation_m": {"type": "number", "exclusiveMinimum": 0},
+        "split_block_m": {"type": "number", "exclusiveMinimum": 0},
+        "angle_margin_rad": {"type": "number", "minimum": 0},
+        "fingertip_site": {"type": "string", "minLength": 1}
+      }
+    },
+    "arc": {
+      "type": "object", "additionalProperties": false,
+      "required": ["usable_length_m", "n_blocks", "train_blocks", "test_blocks"],
+      "properties": {
+        "usable_length_m": {"type": "number", "exclusiveMinimum": 0},
+        "n_blocks": {"type": "integer", "minimum": 2},
+        "train_blocks": {"type": "array", "minItems": 1, "items": {"type": "integer", "minimum": 0}, "uniqueItems": true},
+        "test_blocks": {"type": "array", "minItems": 1, "items": {"type": "integer", "minimum": 0}, "uniqueItems": true}
+      }
+    },
+    "train": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/target"}},
+    "test": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/target"}},
+    "min_cross_distance_m": {"type": "number", "exclusiveMinimum": 0, "description": "Khoảng cách Euclid 3D nhỏ nhất đo được giữa mọi cặp (train, test); MUST ≥ config.min_separation_m"},
+    "fingerprint_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$", "description": "SHA-256 của train+test chuẩn hoá (khoá sắp xếp) — so hai lần sinh cùng seed (NFR-REPRO-001)"}
+  },
+  "$defs": {
+    "target": {
+      "type": "object", "additionalProperties": false,
+      "required": ["index", "angle_rad", "position_m"],
+      "properties": {
+        "index": {"type": "integer", "minimum": 0},
+        "angle_rad": {"type": "number"},
+        "position_m": {"type": "array", "prefixItems": [{"type": "number"}, {"type": "number"}, {"type": "number"}], "minItems": 3, "maxItems": 3}
+      }
+    }
+  }
+}

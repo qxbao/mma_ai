@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "model-record.schema.json",
+  "title": "ModelRecord — hồ sơ mô hình (FR-001, FR-013, INV-003)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "source", "sha256", "n_muscles", "n_non_muscle_actuators", "muscle_names", "joint_ranges_rad", "ctrl_range", "physics_timestep_s", "fingertip_site"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "source": {"type": "string", "description": "Đường dẫn trong gói myo-sim; không bao giờ tuyệt đối (INV-003 của 001)", "pattern": "^[^/].*\\.xml$"},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "n_muscles": {"const": 6},
+    "n_non_muscle_actuators": {"const": 0},
+    "muscle_names": {"type": "array", "minItems": 6, "maxItems": 6, "items": {"type": "string"}, "description": "Thứ tự = chỉ số trong vector kích thích"},
+    "joint_ranges_rad": {"type": "array", "minItems": 1, "items": {"type": "array", "prefixItems": [{"type": "number"}, {"type": "number"}], "minItems": 2, "maxItems": 2}},
+    "ctrl_range": {"type": "array", "minItems": 6, "maxItems": 6, "items": {"type": "array", "prefixItems": [{"type": "number"}, {"type": "number"}], "minItems": 2, "maxItems": 2}},
+    "physics_timestep_s": {"type": "number", "exclusiveMinimum": 0},
+    "fingertip_site": {"type": "string", "minLength": 1}
+  }
+}
