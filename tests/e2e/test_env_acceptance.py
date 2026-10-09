@@ -47,7 +47,7 @@ print(json.dumps({"n_muscles": env.unwrapped.model_info.n_muscles, "sha256": inf
 
 
 def test_ac_2_random_rollout_clean() -> None:
-    """AC-2: mười rollout headless không có NaN/Inf hay observation sai cận."""
+    """AC-2, NFR-REL-001, NFR-HEADLESS-001: rollout headless không có NaN/Inf."""
     result = _run_entrypoint(
         """
 import json
@@ -81,7 +81,7 @@ print(json.dumps({"episodes": 10, "steps": steps}))
 
 
 def test_ac_3_same_seed_disjoint_sets() -> None:
-    """AC-3: hai tiến trình độc lập sinh cùng dữ liệu và train/test rời nhau."""
+    """AC-3, NFR-REPRO-001: hai tiến trình sinh dữ liệu giống nhau và rời nhau."""
     script = """
 import json
 import gymnasium
@@ -127,7 +127,7 @@ print(json.dumps({"actuators": model.nu, "all_muscle": all(is_muscle)}))
 
 
 def test_ac_5_clean_install() -> None:
-    """AC-5: CLI thật đồng bộ lockfile trong môi trường ảo sạch và kiểm thử lại."""
+    """AC-5, NFR-INST-001: CLI đồng bộ lockfile trong môi trường ảo sạch."""
     environment = os.environ.copy()
     environment.pop("DISPLAY", None)
     environment.pop("WAYLAND_DISPLAY", None)
