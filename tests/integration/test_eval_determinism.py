@@ -53,6 +53,16 @@ def test_determinism_contract_independent_assertion() -> None:
         f"Số lần bootstrap mặc định phải là 10000 nhưng nhận {cfg.stats.bootstrap_resamples}"
     )
 
+    # Xác minh tính đồng bộ của hạt giống ngẫu nhiên khi ghi đè episode_base
+    # (004 INV-007, 004 NFR-REPRO-001)
+    cfg_override = EvalConfig.load(overrides={"seeds.episode_base": 2000})
+    assert cfg_override.seeds.episode_base == 2000, "episode_base phải nhận giá trị ghi đè 2000"
+    assert cfg_override.seeds.random_policy == 2000, (
+        f"004 INV-007: Khi ghi đè seeds.episode_base (qua cờ --eval-seed), "
+        f"seeds.random_policy phải đồng bộ với episode_base (2000), "
+        f"nhưng nhận {cfg_override.seeds.random_policy}"
+    )
+
     # 2. 004 INV-007: Khẳng định tính tất định độc lập của RandomPolicy với cùng seed
     pol1 = RandomPolicy(seed=12345, act_dim=6)
     pol2 = RandomPolicy(seed=12345, act_dim=6)
