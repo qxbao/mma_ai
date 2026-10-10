@@ -1,0 +1,50 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "run-20261010-641635",
+  "task_id": "T523",
+  "round": 2,
+  "sha_reviewed": "f9b5b9ae6def9b157a99c9e368a068fbc693ae73",
+  "verdict": "REQUEST_CHANGES",
+  "findings": [
+    {
+      "id": "F-001",
+      "severity": "CRITICAL",
+      "file": "src/mma_ai/visualization/cli.py",
+      "line": 0,
+      "claim": "Entrypoint thật `python -m mma_ai.visualization.cli` của feature 005 không còn trong cây tích hợp f9b5b9a: commit 84007a0 (spec 006) xoá 32 tệp — src/mma_ai/visualization/cli.py, replay.py, episode.schema.json, toàn bộ src/mma_ai/evaluation/{cli,runner,metrics,report,charts}.py và các test 005 (tests/e2e/test_replay_acceptance.py, tests/challenge/test_replay_invariants.py, tests/integration/test_demo_cli.py, test_replay_*.py) cùng evidence/reviews/T522.challenge — rồi merge f9b5b9a lấy nguyên cây đó (git diff 84007a0 f9b5b9a rỗng; git diff --name-status 9ecf076 f9b5b9a: 32 D).",
+      "failure_scenario": "Người dùng chạy `python -m mma_ai.visualization.cli --episode x.json --headless` hoặc `--checkpoint ... --save-episode` trên nhánh tích hợp ⇒ ModuleNotFoundError: No module named mma_ai.visualization.cli (ls src/mma_ai/visualization không có cli.py/replay.py); AC-1…AC-5 và FR-001/010/011/012/013 không còn đường chạy. Bằng chứng xanh trước đó (evidence/gates/T523.json, sha 2c85389) thuộc cây khác, không áp cho SHA này. Sửa: dựng lại các tệp bị xoá từ 9ecf076 (hoặc d2d49c5) trên nhánh tích hợp rồi chạy lại cổng; phần spec 006 chỉ nên thêm specs/006-*, docs/00-survey/*, không xoá mã/test của 001–005."
+    },
+    {
+      "id": "F-002",
+      "severity": "MINOR",
+      "file": "src/mma_ai/visualization/episode.py",
+      "line": 721,
+      "claim": "F-002 cũ (TOCTOU INV-005) CHƯA SỬA ở SHA đang chấm: bản sửa liên kết nguyên tử của d2d49c5 bị 84007a0 hoàn tác — episode.py quay về phiên bản cũ, không còn os.link/_REAL_OS_REPLACE/Draft202012Validator, chỉ còn `os.replace(temp_path, dest_path)` (dòng 721) không kiểm đích; tests/unit/test_episode.py mất 154 dòng gồm test của bản sửa.",
+      "failure_scenario": "write_episode ghi tới đường dẫn đã tồn tại (hoặc xuất hiện sau lần kiểm) ⇒ os.replace ghi đè im lặng tệp người dùng, vi phạm INV-005. Hiện chỉ MINOR vì CLI không còn đường tới hàm này (xem F-001); sẽ thành lỗi sản phẩm ngay khi F-001 được khôi phục, nên khôi phục cùng d2d49c5."
+    },
+    {
+      "id": "F-003",
+      "severity": "MINOR",
+      "file": "tests/integration/test_demo_cli.py",
+      "line": 85,
+      "claim": "F-001 cũ (importorskip) CHƯA SỬA: 9ecf076 chủ động khôi phục `pytest.importorskip(\"torch\")` trong _create_test_checkpoint, trái luật không skip/xfail của tasks.md (dòng 44); cổng chạy `uv run --isolated --with pytest` không cài extra rl nên AC-2 bị SKIP. Tệp này lại bị xoá ở f9b5b9a (F-001).",
+      "failure_scenario": "Cổng ngoài không cài torch ⇒ test_demo_cli SKIP, AC-2 (demo từ checkpoint) không có bằng chứng chạy ngoài dù báo cáo ghi xanh. Cần khai torch vào nhóm dependency chạy của cổng thay vì skip."
+    },
+    {
+      "id": "F-004",
+      "severity": "CRITICAL",
+      "file": "specs/005-replay-3d-muscle-demo/checklists/acceptance.md",
+      "line": 0,
+      "claim": "F-004 cũ CHƯA SỬA: checklist chấp nhận của feature 005 vẫn không tồn tại (thư mục checklists/ rỗng ở gốc dự án; git ls-tree f9b5b9a không có tệp nào dưới specs/005-replay-3d-muscle-demo/checklists), trong khi 001–004 đều có acceptance.md.",
+      "failure_scenario": "Cổng trace_fit (gate_runner.py:774-787) coi AC-1…AC-5 chưa có dòng [x] ⇒ cấm APPROVE; luật reviewer đòi đối chiếu checklist do qa sinh. Cần vai qa/spec sinh acceptance.md cho 005 rồi tích [x] theo bằng chứng cổng; reviewer không ghi được specs/** và không tự tích."
+    },
+    {
+      "id": "F-005",
+      "severity": "MINOR",
+      "file": "specs/005-replay-3d-muscle-demo/tasks.md",
+      "line": 0,
+      "claim": "84007a0 còn sửa 128 dòng tasks.md/acceptance.md của 002–005 (các tệp được bản đồ máy giữ), tức đảo bản xem [x]/[ ] mà không liên quan spec 006.",
+      "failure_scenario": "Bản xem tiến độ trong cây tích hợp lệch với trạng thái thật của run; không chặn merge riêng, nhưng cần hoàn lại cùng việc khôi phục ở F-001."
+    }
+  ]
+}
