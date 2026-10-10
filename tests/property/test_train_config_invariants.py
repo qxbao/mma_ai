@@ -43,5 +43,6 @@ def teardown_module() -> None:
     import sys
 
     sys.modules.pop("mma_ai.learning.train_config", None)
+    sys.modules.pop("mma_ai.learning.checkpoint", None)
     sys.modules.pop("mma_ai.learning.errors", None)
     sys.modules.pop("mma_ai.learning", None)
