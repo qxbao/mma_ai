@@ -20,6 +20,8 @@ Truy vết các yêu cầu kỹ thuật và hợp đồng API:
 from __future__ import annotations
 
 import json
+import os
+import stat
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -291,6 +293,17 @@ def test_checkpoint_xml_hash_mismatch_exit_4(
     assert "mã băm xml" in err.lower() or "không tương thích" in err.lower()
 
 
+def test_checkpoint_empty_model_hash_exit_4(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """005 AC-4, INV-001: Checkpoint không khai mã băm XML (chuỗi rỗng) thoát mã 4."""
+    ckpt_path = _mock_checkpoint_setup(monkeypatch, tmp_path, model_sha256="")
+    code = run_replay(["--checkpoint", str(ckpt_path), "--headless"])
+    assert code == 4
+    err = capsys.readouterr().err
+    assert "model_sha256 rỗng" in err.lower() or "không chứa thông tin mã băm" in err.lower()
+
+
 # ==============================================================================
 # NHÓM 4: KIỂM THỬ LỆCH MÔ HÌNH (MÃ THOÁT 6)
 # ==============================================================================
@@ -389,6 +402,57 @@ def test_save_episode_refuses_overwrite_exit_8(
     assert code == 8
     err = capsys.readouterr().err
     assert "đã tồn tại" in err.lower() or "từ chối ghi đè" in err.lower()
+
+
+def test_save_episode_dangling_symlink_refused_exit_8(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """005 AC-5, INV-005: Đích --save-episode là symlink treo bị từ chối với mã 8."""
+    ckpt_path = _mock_checkpoint_setup(monkeypatch, tmp_path)
+    dangling_link = tmp_path / "dangling_link.episode.json"
+    dangling_link.symlink_to(tmp_path / "non_existent_target.json")
+
+    code = run_replay(
+        [
+            "--checkpoint",
+            str(ckpt_path),
+            "--headless",
+            "--save-episode",
+            str(dangling_link),
+        ]
+    )
+    assert code == 8
+    assert dangling_link.is_symlink()
+    assert os.readlink(dangling_link) == str(tmp_path / "non_existent_target.json")
+    err = capsys.readouterr().err
+    assert "đã tồn tại" in err.lower() or "symlink" in err.lower()
+
+
+def test_save_episode_untraversable_ancestor_exit_8(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """005 AC-5, INV-004, INV-005: Tổ tiên của --save-episode không duyệt được thoát mã 8."""
+    if os.geteuid() == 0:
+        pytest.skip("Người dùng root bỏ qua phân quyền thư mục")
+    ckpt_path = _mock_checkpoint_setup(monkeypatch, tmp_path)
+    locked_dir = tmp_path / "locked_dir"
+    locked_dir.mkdir()
+    dest = locked_dir / "sub" / "ep.json"
+    locked_dir.chmod(0)
+    try:
+        code = run_replay(
+            [
+                "--checkpoint",
+                str(ckpt_path),
+                "--headless",
+                "--save-episode",
+                str(dest),
+            ]
+        )
+    finally:
+        locked_dir.chmod(stat.S_IRWXU)
+    assert code == 8
+    assert list(locked_dir.iterdir()) == []
 
 
 # ==============================================================================

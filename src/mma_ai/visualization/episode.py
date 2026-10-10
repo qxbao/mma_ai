@@ -502,8 +502,13 @@ def write_episode(episode: Episode | dict[str, Any], path: str | Path) -> Path:
     - Dọn sạch tệp tạm thời nếu gặp bất kỳ lỗi hoặc ngắt nào (INV-004).
     """
     dest_path = Path(path)
-    if dest_path.exists() or dest_path.is_symlink():
-        raise EpisodeWriteError(f"Tệp đích đã tồn tại, từ chối ghi đè: {dest_path}")
+    try:
+        if dest_path.exists() or dest_path.is_symlink():
+            raise EpisodeWriteError(f"Tệp đích đã tồn tại, từ chối ghi đè: {dest_path}")
+    except OSError as err:
+        if isinstance(err, EpisodeWriteError):
+            raise
+        raise EpisodeWriteError(f"Không thể truy cập đường dẫn đích '{dest_path}': {err}") from err
 
     if hasattr(episode, "to_dict"):
         raw_dict = episode.to_dict()

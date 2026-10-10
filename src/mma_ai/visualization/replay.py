@@ -356,7 +356,16 @@ def run_replay(args: Sequence[str] | argparse.Namespace | None = None) -> int:
         else:
             # Chế độ 2.2: Nạp checkpoint cho phiên demo
             ckpt_path = Path(str(parsed_args.checkpoint))
-            if not ckpt_path.exists():
+            try:
+                ckpt_exists = ckpt_path.exists()
+            except OSError as err:
+                sys.stderr.write(
+                    f"Lỗi không thể truy cập tệp checkpoint tại '{ckpt_path}': {err}\n"
+                )
+                sys.stderr.flush()
+                return 4
+
+            if not ckpt_exists:
                 sys.stderr.write(
                     f"Lỗi điểm kiểm tra không tồn tại: Tệp checkpoint tại '{ckpt_path}' "
                     "không tồn tại trên hệ thống ổ đĩa.\n"
@@ -387,9 +396,18 @@ def run_replay(args: Sequence[str] | argparse.Namespace | None = None) -> int:
                 sys.stderr.flush()
                 return 4
 
-            # Kiểm tra mã băm XML mô hình lưu trong checkpoint
+            # Kiểm tra mã băm XML mô hình lưu trong checkpoint (INV-001, AC-4, F-005)
             ckpt_model_sha = getattr(loaded_ckpt, "model_sha256", "")
-            if ckpt_model_sha and ckpt_model_sha != current_model_sha256:
+            if not ckpt_model_sha:
+                sys.stderr.write(
+                    f"Lỗi checkpoint không tương thích: Checkpoint tại '{ckpt_path}' "
+                    "không chứa thông tin mã băm XML mô hình (model_sha256 rỗng/thiếu), "
+                    "không thể xác minh tính tương thích theo bất biến INV-001.\n"
+                )
+                sys.stderr.flush()
+                return 4
+
+            if ckpt_model_sha != current_model_sha256:
                 sys.stderr.write(
                     f"Lỗi checkpoint không tương thích: Mã băm XML mô hình của checkpoint "
                     f"'{ckpt_model_sha}' khác với mô hình hiện tại '{current_model_sha256}'.\n"
@@ -485,26 +503,44 @@ def run_replay(args: Sequence[str] | argparse.Namespace | None = None) -> int:
         # BƯỚC 6: LƯU TỆP EPISODE NGUYÊN TỬ NẾU CÓ CỜ --SAVE-EPISODE (MÃ THOÁT 8)
         # ==============================================================================
         if parsed_args.save_episode is not None:
-            save_path_obj = Path(str(parsed_args.save_episode))
-            if save_path_obj.exists():
-                sys.stderr.write(
-                    f"Lỗi ghi tệp episode: Tệp đích '{save_path_obj}' đã tồn tại trên đĩa. "
-                    "Theo bất biến INV-005, hệ thống từ chối ghi đè lên tệp có sẵn.\n"
-                )
-                sys.stderr.flush()
-                return 8
-
             from mma_ai.visualization.episode import write_episode
 
             try:
+                save_path_obj = Path(str(parsed_args.save_episode))
+                is_existing_or_link = False
+                try:
+                    is_existing_or_link = save_path_obj.exists() or save_path_obj.is_symlink()
+                except OSError as err:
+                    sys.stderr.write(
+                        f"Lỗi không thể truy cập đường dẫn lưu episode '{save_path_obj}': {err}\n"
+                    )
+                    sys.stderr.flush()
+                    return 8
+
+                if is_existing_or_link:
+                    sys.stderr.write(
+                        f"Lỗi ghi tệp episode: Tệp đích '{save_path_obj}' đã tồn tại trên đĩa "
+                        "(hoặc là liên kết symlink). Theo bất biến INV-005, hệ thống từ chối "
+                        "ghi đè lên tệp có sẵn.\n"
+                    )
+                    sys.stderr.flush()
+                    return 8
+
                 save_path_obj.parent.mkdir(parents=True, exist_ok=True)
                 write_episode(episode, save_path_obj)
             except EpisodeWriteError as err:
                 sys.stderr.write(f"Lỗi không thể ghi tệp episode ra ổ đĩa: {err}\n")
                 sys.stderr.flush()
                 return 8
+            except (OSError, PermissionError) as err:
+                sys.stderr.write(
+                    f"Lỗi hệ thống tập tin khi ghi tệp episode ra "
+                    f"'{parsed_args.save_episode}': {err}\n"
+                )
+                sys.stderr.flush()
+                return 8
             except Exception as err:
-                sys.stderr.write(f"Lỗi ghi tệp episode ra '{save_path_obj}': {err}\n")
+                sys.stderr.write(f"Lỗi ghi tệp episode ra '{parsed_args.save_episode}': {err}\n")
                 sys.stderr.flush()
                 return 8
 
