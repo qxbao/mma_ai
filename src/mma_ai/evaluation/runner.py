@@ -41,6 +41,7 @@ from mma_ai.evaluation.errors import (
     CheckpointUnusable,
     EvalConfigError,
     EvalError,
+    EvalWriteError,
     LogMissing,
     TrainSetUnknown,
 )
@@ -358,17 +359,26 @@ def evaluate_checkpoint(
     seed_base = eval_cfg.seeds.episode_base
 
     eval_base_dir = Path(out_dir) if out_dir is not None else run_dir / "eval"
-    existing_ids = (
-        [p.name for p in eval_base_dir.iterdir() if p.is_dir()]
-        if eval_base_dir.is_dir()
-        else []
-    )
+    try:
+        existing_ids = (
+            [p.name for p in eval_base_dir.iterdir() if p.is_dir()]
+            if eval_base_dir.is_dir()
+            else []
+        )
+    except OSError:
+        existing_ids = []
     eval_id = generate_eval_id(episode_base=seed_base, existing_ids=existing_ids)
     tmp_dir = eval_base_dir / f".tmp-{eval_id}"
     final_eval_dir = eval_base_dir / eval_id
 
-    # Khởi tạo thư mục tạm trước khi thực hiện các tác vụ tạo tệp
-    tmp_dir.mkdir(parents=True, exist_ok=True)
+    # Khởi tạo thư mục tạm trước khi thực hiện các tác vụ tạo tệp (INV-004, FR-013)
+    try:
+        eval_base_dir.mkdir(parents=True, exist_ok=True)
+        tmp_dir.mkdir(parents=True, exist_ok=True)
+    except OSError as err:
+        raise EvalWriteError(
+            f"Không thể khởi tạo thư mục kết quả đánh giá tại '{eval_base_dir}': {err}"
+        ) from err
 
     try:
         # Thực hiện các tập phim đánh giá cho cả hai chính sách
