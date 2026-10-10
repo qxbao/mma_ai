@@ -122,14 +122,29 @@ class Trainer:
         resume_checkpoint: LoadedCheckpoint | str | Path,
     ) -> None:
         """Khôi phục trạng thái bộ chuẩn hoá, mạng nơ-ron, optimizer và RNG từ checkpoint."""
+        model_sha = getattr(self.env, "model_sha256", None)
+        if model_sha is None and hasattr(self.env, "model_record"):
+            model_sha = self.env.model_record().get("sha256")
+
         if isinstance(resume_checkpoint, (str, Path)):
             ckpt_path = Path(resume_checkpoint)
-            loaded = load_checkpoint(ckpt_path, for_training=True, expected_cfg=self.cfg)
+            loaded = load_checkpoint(
+                ckpt_path,
+                for_training=True,
+                expected_cfg=self.cfg,
+                expected_model_sha256=model_sha,
+            )
             ckpt_rel_path = f"checkpoints/{ckpt_path.name}"
             ckpt_sha256 = loaded.raw_data.get("sha256", "0" * 64)
             resumed_run_id = loaded.raw_data.get("run_id", "parent_run")
         else:
             loaded = resume_checkpoint
+            if model_sha and loaded.model_sha256 != model_sha:
+                raise CheckpointError(
+                    f"Từ chối huấn luyện tiếp do sai khác mã băm XML: "
+                    f"checkpoint có '{loaded.model_sha256}', "
+                    f"mô hình hiện tại có '{model_sha}'."
+                )
             raw_path = loaded.raw_data.get("path", "checkpoints/checkpoint.pt")
             ckpt_rel_path = str(raw_path).lstrip("/")
             ckpt_sha256 = str(loaded.raw_data.get("sha256", "0" * 64))

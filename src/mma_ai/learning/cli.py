@@ -248,7 +248,15 @@ def main(argv: Sequence[str] | None = None) -> int:
         sys.stderr.flush()
         return 2
 
-    # 3. Kiểm tra tính hợp lệ của checkpoint nếu có cờ --resume trước khi tạo run (FR-009, mã 4)
+    # 3. Khởi tạo môi trường mô phỏng cánh tay khuỷu ở tập huấn luyện (INV-003)
+    try:
+        env = make_env(split="train")
+    except Exception as env_err:
+        sys.stderr.write(f"Lỗi khởi tạo môi trường mô phỏng: {env_err}\n")
+        sys.stderr.flush()
+        return 1
+
+    # 4. Kiểm tra tính hợp lệ của checkpoint nếu có cờ --resume trước khi tạo run (FR-009, mã 4)
     if args.resume is not None:
         resume_target = Path(args.resume)
         if not resume_target.exists():
@@ -263,9 +271,19 @@ def main(argv: Sequence[str] | None = None) -> int:
             from mma_ai.learning.checkpoint import load_checkpoint as resolved_load_checkpoint
 
             active_load_checkpoint = resolved_load_checkpoint
+
+        expected_model_sha = getattr(env, "model_sha256", None)
+        if expected_model_sha is None and hasattr(env, "model_record"):
+            expected_model_sha = env.model_record().get("sha256")
+
         try:
-            # Xác nhận tính toàn vẹn và khớp cấu hình trước khi khởi chạy
-            active_load_checkpoint(resume_target, for_training=True, expected_cfg=cfg)
+            # Xác nhận tính toàn vẹn, khớp cấu hình và khớp mã băm XML trước khi khởi chạy
+            active_load_checkpoint(
+                resume_target,
+                for_training=True,
+                expected_cfg=cfg,
+                expected_model_sha256=expected_model_sha,
+            )
         except CheckpointError as ckpt_err:
             sys.stderr.write(f"Lỗi điểm kiểm tra (checkpoint error): {ckpt_err}\n")
             sys.stderr.flush()
@@ -275,7 +293,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             sys.stderr.flush()
             return 4
 
-    # 4. Tạo thư mục lượt chạy mới (run directory) loại trừ (FR-011, INV-001)
+    # 5. Tạo thư mục lượt chạy mới (run directory) loại trừ (FR-011, INV-001)
     try:
         run_dir = create_run_dir(
             runs_dir=cfg.paths.runs_dir,
@@ -288,14 +306,6 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 1
     except Exception as dir_err:
         sys.stderr.write(f"Không thể tạo thư mục lượt chạy: {dir_err}\n")
-        sys.stderr.flush()
-        return 1
-
-    # 5. Khởi tạo môi trường mô phỏng cánh tay khuỷu ở tập huấn luyện (INV-003)
-    try:
-        env = make_env(split="train")
-    except Exception as env_err:
-        sys.stderr.write(f"Lỗi khởi tạo môi trường mô phỏng: {env_err}\n")
         sys.stderr.flush()
         return 1
 
