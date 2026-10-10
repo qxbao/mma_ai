@@ -28,20 +28,18 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import sys
 from pathlib import Path
+from types import ModuleType, SimpleNamespace
 from typing import Any
 
 import pytest
 from eval_fixtures import hash_tree, make_run_dir, run_cli
 
+from mma_ai.evaluation import runner
 from mma_ai.evaluation.cli import main
-from mma_ai.evaluation.errors import (
-    EvalConfigError,
-    EvalError,
-    EvalWriteError,
-    TrainSetUnknown,
-)
-from mma_ai.evaluation.report import publish_report, save_evaluation_result
+from mma_ai.evaluation.errors import EvalWriteError
+from mma_ai.evaluation.eval_config import EvalConfig
 from mma_ai.evaluation.runner import evaluate_checkpoint
 
 
@@ -53,24 +51,92 @@ def _eval_deps() -> tuple[Any, Any, Any]:
     return pd, mpl, torch
 
 
-def test_independent_assertion_storage_contract() -> None:
-    """Khẳng định độc lập trên base chứng minh hợp đồng lưu trữ tồn tại (INV-004, INV-005, FR-013).
+def test_regress_tdd_red_unwritable_eval_dir_maps_to_exit7(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """INV-004: lỗi tạo eval/ phải thành EvalWriteError và mã thoát 7, không cần extra tùy chọn."""
+    checkpoint_path = tmp_path / "checkpoint.pt"
+    checkpoint_path.write_bytes(b"checkpoint")
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    env_config = run_dir / "env.yaml"
+    env_config.write_text("targets: {}\n", encoding="utf-8")
+    manifest_file = run_dir / "manifest.json"
+    manifest_file.write_text(
+        json.dumps({"config": {"env_config": str(env_config)}, "model": {"sha256": "model-sha"}}),
+        encoding="utf-8",
+    )
 
-    Bảo đảm bộ kiểm thử không bị bỏ qua toàn bộ khi thiếu các phụ thuộc tùy chọn.
-    Xác minh sự hiện diện của các hàm, lớp ngoại lệ và tiện ích quản lý lưu trữ kết quả.
-    """
-    assert callable(evaluate_checkpoint), "Hàm evaluate_checkpoint phải tồn tại và có thể gọi."
-    assert issubclass(EvalWriteError, EvalError), "EvalWriteError phải kế thừa EvalError."
-    assert EvalWriteError.exit_code == 7, "Mã thoát của EvalWriteError phải là 7."
-    assert issubclass(EvalConfigError, EvalError), "EvalConfigError phải kế thừa EvalError."
-    assert EvalConfigError.exit_code == 2, "Mã thoát của EvalConfigError phải là 2."
-    assert issubclass(TrainSetUnknown, EvalError), "TrainSetUnknown phải kế thừa EvalError."
-    assert TrainSetUnknown.exit_code == 5, "Mã thoát của TrainSetUnknown phải là 5."
-    assert callable(publish_report), "Hàm publish_report phải tồn tại."
-    assert callable(save_evaluation_result), "Hàm save_evaluation_result phải tồn tại."
-    assert callable(hash_tree), "Tiện ích hash_tree phải tồn tại trong eval_fixtures."
-    assert callable(run_cli), "Tiện ích run_cli phải tồn tại trong eval_fixtures."
-    assert callable(make_run_dir), "Tiện ích make_run_dir phải tồn tại trong eval_fixtures."
+    fake_checkpoint = SimpleNamespace(
+        model_sha256="model-sha",
+        update_idx=0,
+        env_steps=0,
+        library_versions={},
+    )
+    checkpoint_module = ModuleType("mma_ai.learning.checkpoint")
+
+    def _load_checkpoint(*_args: object, **_kwargs: object) -> SimpleNamespace:
+        return fake_checkpoint
+
+    setattr(checkpoint_module, "load_checkpoint", _load_checkpoint)
+    monkeypatch.setitem(sys.modules, "mma_ai.learning.checkpoint", checkpoint_module)
+    monkeypatch.setattr(runner, "_resolve_checkpoint_file", lambda _checkpoint: checkpoint_path)
+    monkeypatch.setattr(
+        runner,
+        "_find_run_directory_and_manifest",
+        lambda *_args: (run_dir, manifest_file),
+    )
+    monkeypatch.setattr(
+        runner,
+        "load_muscle_model",
+        lambda _name: SimpleNamespace(
+            model=object(),
+            info=SimpleNamespace(
+                sha256="model-sha",
+                muscle_names=("m1", "m2", "m3", "m4", "m5", "m6"),
+            ),
+        ),
+    )
+    monkeypatch.setattr(runner, "LearnedPolicy", lambda _checkpoint: object())
+    monkeypatch.setattr(
+        runner,
+        "check_disjoint",
+        lambda **_kwargs: SimpleNamespace(n_eval_targets=2),
+    )
+    monkeypatch.setattr(
+        runner,
+        "ElbowEnvConfig",
+        SimpleNamespace(
+            load=lambda _path: SimpleNamespace(targets=SimpleNamespace(default_seed=1))
+        ),
+    )
+    monkeypatch.setattr(
+        runner,
+        "TargetGenerator",
+        lambda **_kwargs: SimpleNamespace(generate=lambda *, seed: object()),
+    )
+    monkeypatch.setattr(runner, "ElbowReachEnv", lambda **_kwargs: object())
+    monkeypatch.setattr(runner, "RandomPolicy", lambda **_kwargs: object())
+
+    eval_root = run_dir / "eval"
+    original_mkdir = Path.mkdir
+
+    def _deny_eval_root(
+        path: Path,
+        mode: int = 0o777,
+        parents: bool = False,
+        exist_ok: bool = False,
+    ) -> None:
+        if path == eval_root:
+            raise OSError(30, "Read-only file system", str(path))
+        original_mkdir(path, mode=mode, parents=parents, exist_ok=exist_ok)
+
+    monkeypatch.setattr(Path, "mkdir", _deny_eval_root)
+
+    with pytest.raises(EvalWriteError) as caught:
+        evaluate_checkpoint(checkpoint_path, cfg=EvalConfig.load())
+
+    assert runner.get_exit_code(caught.value) == 7
 
 
 def test_report_names_seed_and_checkpoint_hash(tmp_path: Path) -> None:
