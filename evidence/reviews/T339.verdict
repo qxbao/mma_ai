@@ -1,0 +1,58 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "run-20261010-641635",
+  "task_id": "T339",
+  "round": 1,
+  "sha_reviewed": "0c1a289e6c9420d728f21c1295e472cba86306de",
+  "verdict": "REQUEST_CHANGES",
+  "findings": [
+    {
+      "id": "F-001",
+      "severity": "CRITICAL",
+      "file": "src/mma_ai/learning/checkpoint.py",
+      "line": 240,
+      "claim": "INV-004/FR-009/NFR-REPRO: save_checkpoint không lưu trạng thái RNG numpy thật của PPOAgent. Trainer.run truyền ckpt_ctx không có khoá 'rng_state' (trainer.py:426-433) nên nhánh ở dòng 240-244 ghi np.random.default_rng(seed).bit_generator.state (trạng thái seed gốc), và _restore_from_checkpoint nạp đúng trạng thái đó vào agent._rng.",
+      "failure_scenario": "Người dùng huấn luyện, dừng, rồi resume từ checkpoint: chuỗi xáo minibatch quay lại đầu chuỗi seed gốc, nên 'chạy liền 3 lượt cập nhật' ≠ 'chạy 2, lưu, nạp, chạy thêm 1' (log_std/trọng số lệch). Resume tái lập sai mà không báo lỗi. Challenger T338 F-001 có test xfail tests/challenge/test_train_invariants.py::test_inv004_resume_continues_same_trajectory_as_uninterrupted; đã đối chiếu mã: ctx của Trainer đúng như mô tả."
+    },
+    {
+      "id": "F-002",
+      "severity": "CRITICAL",
+      "file": "src/mma_ai/learning/checkpoint.py",
+      "line": 407,
+      "claim": "INV-004/FR-008: sha256 ghi trong *.meta.json và latest.json không bao giờ được đối chiếu khi load_checkpoint (chỉ gọi torch.load rồi kiểm khoá); lật bit trong dữ liệu tensor của tệp .pt nạp thành công với trọng số khác gốc.",
+      "failure_scenario": "Checkpoint bị hỏng im lặng (đĩa/copy lỗi, lật bit): load_checkpoint(latest.json) trả LoadedCheckpoint với actor/critic khác bản đã lưu dù con trỏ còn sha256 cũ; đánh giá (spec 004) và replay (spec 005) dùng policy sai mà không CheckpointError. Challenger đo 11/60 ca lật bit nạp thành công; test xfail test_inv004_load_verifies_sha256_recorded_in_pointer và test_inv004_random_bitflip_never_loads_silently_different. Đã đối chiếu mã: dòng 503 chỉ TÍNH sha mới, không so với sha lưu."
+    },
+    {
+      "id": "F-003",
+      "severity": "MINOR",
+      "file": "src/mma_ai/learning",
+      "line": 0,
+      "claim": "sizing-budget: mã sản phẩm của phạm vi gộp là +4935 dòng trên 23 tệp src (>600, OVERSIZED); không phải một slice duy nhất mà là phạm vi gộp toàn run (T2xx..T3xx), nên không đánh dấu CRITICAL; từng task đã qua cổng ownership riêng.",
+      "failure_scenario": "Review gộp một lần không thể đọc sâu 4935 dòng; rủi ro phần không đọc kỹ. Giảm nhẹ: từng task có cổng riêng + challenger T338 duyệt bất biến; kỳ vọng các vòng review theo task."
+    },
+    {
+      "id": "F-004",
+      "severity": "MINOR",
+      "file": "src/mma_ai/learning/checkpoint.py",
+      "line": 428,
+      "claim": "INV-004: load_checkpoint không quét NaN/Inf trong trọng số/optimizer/normalizer khi nạp (challenger F-002); lỗi lộ muộn và sai loại.",
+      "failure_scenario": "Tệp có NaN nạp thành công ở biên load; đường train tiếp bắt qua _reject_nonfinite nên tác động giới hạn, nhưng var normalizer/optimizer NaN không bị chặn."
+    },
+    {
+      "id": "F-005",
+      "severity": "MINOR",
+      "file": "src/mma_ai/learning/checkpoint.py",
+      "line": 309,
+      "claim": "INV-004/FR-006: khối ghi chỉ bắt OSError; torch.save ném RuntimeError khi đĩa đầy nên tệp .tmp nửa vời không được dọn và lỗi lộ thô (challenger F-004).",
+      "failure_scenario": "Đĩa đầy giữa lúc lưu: còn ckpt_u000001.pt.tmp dở dang; bản đích và latest.json không bị đụng, CLI báo lỗi không xác định thay vì lỗi I/O."
+    },
+    {
+      "id": "F-006",
+      "severity": "OPTIONAL",
+      "file": "src/mma_ai/monitoring/dashboard.py",
+      "line": 531,
+      "claim": "run_dir/html_content là thuộc tính lớp của _DashboardHandler dùng chung nên serve() thứ hai trong cùng tiến trình ghi đè máy chủ thứ nhất (challenger F-006); cũng create_run_dir không kiểm stage có dấu phân cách đường dẫn (run_dir.py:29, challenger F-005) — chỉ chạm được qua API.",
+      "failure_scenario": "CLI chỉ chạy một máy chủ mỗi tiến trình và ép stage='elbow' nên người dùng thật không gặp; chỉ lộ khi gọi thư viện trực tiếp."
+    }
+  ]
+}
