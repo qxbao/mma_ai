@@ -511,6 +511,18 @@ def run_replay(args: Sequence[str] | argparse.Namespace | None = None) -> int:
         # ==============================================================================
         # BƯỚC 7: XUẤT TÓM TẮT HOẶC MỞ CỬA SỔ MUJOCO VIEWER (MÃ THOÁT 0)
         # ==============================================================================
+        duration_sim_s = 0.0
+        if len(episode.frames) > 1:
+            duration_sim_s = float(episode.frames[-1].t_s - episode.frames[0].t_s)
+
+        if duration_sim_s < 1.0:
+            sys.stderr.write(
+                f"Thông báo: Thời lượng mô phỏng của episode ngắn "
+                f"({duration_sim_s:.3f} s < 1.0 s). Gợi ý: Dùng cờ '--speed 0.1' để làm chậm "
+                "hoặc '--loop' để lặp lại cho quan sát trực quan.\n"
+            )
+            sys.stderr.flush()
+
         if parsed_args.headless:
             # 7.1 Chế độ không màn hình (--headless)
             if parsed_args.speed is not None or parsed_args.loop:
@@ -553,18 +565,6 @@ def run_replay(args: Sequence[str] | argparse.Namespace | None = None) -> int:
             from mma_ai.visualization.pacing import Pacer
             from mma_ai.visualization.playback import play
             from mma_ai.visualization.viewer import ViewerSink
-
-            duration_sim_s = 0.0
-            if len(episode.frames) > 1:
-                duration_sim_s = float(episode.frames[-1].t_s - episode.frames[0].t_s)
-
-            if duration_sim_s < 1.0:
-                sys.stderr.write(
-                    f"Thông báo: Thời lượng mô phỏng của episode ngắn "
-                    f"({duration_sim_s:.3f} s < 1.0 s). Gợi ý: Dùng cờ '--speed 0.1' để làm chậm "
-                    "hoặc '--loop' để lặp lại cho quan sát trực quan.\n"
-                )
-                sys.stderr.flush()
 
             viewer_model = loaded_model.model
             viewer_data = mujoco.MjData(viewer_model)
