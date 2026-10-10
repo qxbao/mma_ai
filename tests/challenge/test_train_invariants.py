@@ -4,11 +4,11 @@ Mỗi test nhắm một bất biến của sản phẩm qua đầu vào mà ngư
 Ca đỏ (finding) mang `xfail` KHÔNG strict với mã F-NNN trong `reason`; ca xanh là vector
 đã thử mà không lách được (ghi vào `disproved_hypotheses`).
 
-- INV-001: mỗi lần chạy có thư mục riêng; thư mục run cũ không bị ghi đè/sửa.
-- INV-002: hành động đưa vào môi trường luôn nằm trong [0,1]^6.
-- INV-003: huấn luyện chỉ dùng mục tiêu thuộc tập train.
-- INV-004: checkpoint khứ hồi đủ trạng thái, không NaN/Inf, ghi nguyên tử.
-- INV-005: giao diện quan sát chỉ đọc, không làm dừng train.
+- INV-001 (AC-3): mỗi lần chạy có thư mục riêng; thư mục run cũ không bị ghi đè/sửa.
+- INV-002 (AC-1): hành động đưa vào môi trường luôn nằm trong [0,1]^6.
+- INV-003 (AC-1): huấn luyện chỉ dùng mục tiêu thuộc tập train.
+- INV-004 (AC-2): checkpoint khứ hồi đủ trạng thái, không NaN/Inf, ghi nguyên tử.
+- INV-005 (AC-7): giao diện quan sát chỉ đọc, không làm dừng train.
 """
 
 # ruff: noqa: E402
@@ -197,7 +197,7 @@ def _inject(
 def test_inv004_failure_at_each_save_step_keeps_dir_consistent(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, target: str, nth: int, mode: str
 ) -> None:
-    """Ngắt/ghi lỗi tại từng bước save_checkpoint: không tệp nửa vời, latest.json lành."""
+    """Ngắt/ghi lỗi tại từng bước save_checkpoint (AC-2): không tệp nửa vời, latest.json lành."""
     agent = _agent()
     run_dir = _run_layout(tmp_path)
     _save(agent, run_dir, 1)
@@ -534,6 +534,7 @@ def _model_with_constant_mean(value: float, log_std: float = -0.5) -> ActorCriti
 def test_inv002_extreme_raw_output_stays_inside_unit_cube(
     value: float, deterministic: bool
 ) -> None:
+    """Đầu ra thô cực đoan (AC-1): hành động luôn nằm trong [0,1]^6."""
     model = _model_with_constant_mean(value)
     obs = torch.randn(32, OBS_DIM)
     action, _, _ = model.act(obs, deterministic=deterministic)
@@ -666,6 +667,7 @@ def test_inv003_wrapped_env_without_split_attr_still_stops_on_foreign_target(
 
 
 def test_inv003_real_env_test_split_rejected_and_train_split_reports_train(tmp_path: Path) -> None:
+    """Môi trường thật (AC-1): split test bị từ chối, split train luôn báo train."""
     from mma_ai.environment.single_agent import make_env
 
     with pytest.raises(TrainError):
@@ -720,6 +722,7 @@ def _freeze_clock(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_inv001_same_second_same_seed_never_overwrites_prepopulated_runs_dir(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Cùng giây, cùng seed (AC-3): không ghi đè run cũ."""
     _freeze_clock(monkeypatch)
     root = tmp_path / "runs"
     first = create_run_dir(root, "elbow", 42)
@@ -1102,7 +1105,7 @@ def test_inv005_load_policy_for_viewer_is_read_only(tmp_path: Path) -> None:
 
 
 def test_inv005_killing_ui_process_mid_train_does_not_stop_training(tmp_path: Path) -> None:
-    """Giết giao diện (SIGKILL) ngay khi có ui.json: train vẫn xong, lưu checkpoint cuối."""
+    """Giết giao diện (SIGKILL) ngay khi có ui.json (AC-7): train vẫn xong, lưu checkpoint cuối."""
     config = _write_smoke_yaml(tmp_path, mode="web")
     proc = subprocess.Popen(
         [sys.executable, "-m", "mma_ai.learning.cli", "--config", str(config), "--ui", "web"],
