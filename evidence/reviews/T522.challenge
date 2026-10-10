@@ -2,62 +2,17 @@
   "schema_version": "1.0.0",
   "run_id": "run-20261010-641635",
   "task_id": "T522",
-  "round": 1,
-  "sha_reviewed": "d356fbfcc79969c2f62c42f49022952b0ccb49e9",
-  "verdict": "REQUEST_CHANGES",
+  "round": 2,
+  "sha_reviewed": "4f819ac1460629b1dc14a564abf2e7a5ef89e089",
+  "verdict": "APPROVE",
   "findings": [
-    {
-      "id": "F-001",
-      "severity": "CRITICAL",
-      "file": "src/mma_ai/visualization/episode.py",
-      "line": 572,
-      "claim": "INV-003/FR-009/NFR-REL-001: validate_episode_dict chỉ kiểm ĐỘ DÀI của qpos/qvel/fingertip_position_m và không kiểm kiểu phần tử, đồng thời không kiểm kiểu của frames[*].reward, target.tolerance_m, outcome.final_distance_m. _check_finite_numbers (R7) chỉ chặn kiểu int/float nên chuỗi số lọt qua; Frame.from_dict/TargetRecord.from_dict/OutcomeRecord.from_dict sau đó gọi float(...) và biến 'NaN'/'inf'/'1e999' thành NaN/Infinity THẬT trong đối tượng Episode đã được coi là hợp lệ.",
-      "failure_scenario": "Episode hợp lệ, đặt frames[1].qpos[0]='NaN' (hoặc qvel, fingertip, reward, target.tolerance_m, outcome.final_distance_m; giá trị 'nan','inf','-inf','Infinity','-Infinity','1e999'): `replay.py --episode e.json --headless` thoát mã 0 (với outcome.final_distance_m thì mã 1 do crash muộn) thay vì mã 5; read_episode trả Episode có qpos[0]=NaN. Đường viewer đưa NaN vào qpos của MjData ⇒ đúng loại 'phát sai ngầm' mà INV-003 cấm. Test: test_inv003_non_finite_numeric_string_rejected_exit5 (42 ca = 6 đường dẫn x 7 giá trị), test_inv003_read_episode_never_yields_non_finite, test_inv003_fuzz_accepted_episode_is_always_finite (xfail không strict, F-001). Hằng JSON trần NaN/Infinity/1e999 ĐÃ bị chặn đúng (test_inv003_bare_non_finite_literals_rejected xanh).",
-      "parked": false
-    },
-    {
-      "id": "F-002",
-      "severity": "MINOR",
-      "file": "src/mma_ai/visualization/episode.py",
-      "line": 400,
-      "claim": "INV-003/FR-009: validator yếu hơn contracts/episode.schema.json — không kiểm created_utc (nhận cả null/số/dict), target.split (ngoài enum train|test|null, nhận cả số/dict), target.index (nhận chuỗi/âm/list), target.tolerance_m <= 0, outcome.final_distance_m < 0, phần tử bool/chuỗi số trong qpos/qvel/fingertip. Episode sai khuôn vẫn được nhận ở bước đọc; target.index='x' chỉ nổ muộn với mã 1 (lỗi không lường trước) thay vì mã 5.",
-      "failure_scenario": "target.index='x' ⇒ replay --episode --headless thoát mã 1; target.split=123, target.index=-5, created_utc=null, tolerance_m=-0.05, final_distance_m=-1.0 ⇒ mã 0 trong khi schema từ chối. Fuzz có seed (600 đột biến một-trường, seed 20261010): có đột biến được read_episode nhận mà Draft202012Validator(episode.schema.json) bác (created_utc=None/True/1.5/-1, target.index='train', ...). Test: test_inv003_schema_enum_and_range_violations_exit5 (10 ca), test_inv003_fuzz_accepted_episode_conforms_to_schema (xfail không strict, F-002). Tác động giới hạn: số không hữu hạn đã tách riêng ở F-001.",
-      "parked": false
-    },
     {
       "id": "F-003",
       "severity": "MINOR",
       "file": "src/mma_ai/visualization/episode.py",
-      "line": 721,
-      "claim": "INV-005: write_episode kiểm dest_path.exists() ở dòng 687 nhưng hoán đổi bằng os.replace ở dòng 721; os.replace luôn ghi đè nên tệp đích xuất hiện GIỮA hai bước (tiến trình replay thứ hai cùng --save-episode, hay người dùng tạo tệp) bị ghi đè êm — vi phạm 'không ghi đè tệp đã tồn tại'. Cửa sổ hẹp, cần hai bên ghi đồng thời.",
-      "failure_scenario": "Bọc os.replace để tạo dest='TIEN-TRINH-KHAC-VUA-GHI' ngay trước khi hoán đổi (mô phỏng tiến trình thứ hai thắng cuộc đua): write_episode trả thành công và nội dung tệp bị thay bằng episode mới, mất dữ liệu của bên kia, không ném EpisodeWriteError/mã 8. Khắc phục gợi ý: tạo đích bằng os.link(tmp, dest) (thất bại nếu tồn tại) hoặc open(dest, 'x'). Test: test_inv005_file_created_between_check_and_replace_is_not_overwritten (xfail không strict, F-003).",
-      "parked": false
-    },
-    {
-      "id": "F-004",
-      "severity": "MINOR",
-      "file": "src/mma_ai/visualization/replay.py",
-      "line": 489,
-      "claim": "INV-005: kiểm tồn tại dùng Path.exists() (theo symlink) nên đích --save-episode là symlink TREO (dangling) bị coi là chưa tồn tại; os.replace thay chính mục symlink bằng tệp thường, mất liên kết do người dùng đặt và không báo mã 8. Cùng gốc ở write_episode (episode.py:687). Tệp đích của symlink không bị tạo/ghi đè.",
-      "failure_scenario": "ln -s /đường/không/tồn/tại link.episode.json; replay --checkpoint C --headless --save-episode link.episode.json ⇒ mã 0, link.episode.json thành tệp thường (symlink biến mất); write_episode(ep, link) tương tự không ném EpisodeWriteError. Symlink trỏ tới tệp CÓ thật và các loại đích khác (tệp, thư mục, symlink-tới-thư-mục, FIFO, hardlink tới checkpoint, chính checkpoint qua '..') ĐÃ bị từ chối mã 8 và không đổi gì. Test: test_inv005_dangling_symlink_destination_not_replaced, test_inv005_write_episode_dangling_symlink_not_replaced (xfail không strict, F-004).",
-      "parked": false
-    },
-    {
-      "id": "F-005",
-      "severity": "MINOR",
-      "file": "src/mma_ai/visualization/replay.py",
-      "line": 392,
-      "claim": "INV-001/AC-4: kiểm lệch hash XML của checkpoint chạy dưới điều kiện `if ckpt_model_sha and ...`; checkpoint có model_sha256 rỗng (save_checkpoint ghi '' khi ctx thiếu khoá, checkpoint.py:194-201) bỏ qua hoàn toàn kiểm tra, demo chạy trên mô hình hiện tại không dừng và không cảnh báo — 'không có đường nào phát lệch mô hình mà không cảnh báo'. Checkpoint do trainer chuẩn luôn có hash nên chỉ chạm được với checkpoint cũ/viết tay.",
-      "failure_scenario": "load_checkpoint trả model_sha256='' ⇒ `replay --checkpoint C --headless` thoát mã 0, tóm tắt có warnings=[] và model_check.match=true dù không có bằng chứng checkpoint huấn luyện trên mô hình này. Checkpoint khai hash KHÁC ⇒ mã 4 đúng (test_inv001_checkpoint_with_wrong_hash_exit4 xanh). Test dùng mô-đun checkpoint giả (môi trường cổng không có torch). Test: test_inv001_checkpoint_without_model_hash_not_accepted_silently (xfail không strict, F-005).",
-      "parked": false
-    },
-    {
-      "id": "F-006",
-      "severity": "MINOR",
-      "file": "src/mma_ai/visualization/replay.py",
-      "line": 489,
-      "claim": "INV-004/AC-5 + contracts/cli.md (mã 8 = không ghi được episode, gồm thiếu quyền): save_path_obj.exists() nằm NGOÀI khối try của bước ghi; khi thư mục tổ tiên của đích không duyệt được (mode 000), Path.exists() ném PermissionError và rơi vào `except Exception` ngoài cùng ⇒ mã 1 'lỗi không lường trước' thay vì mã 8. Không treo, không để lại tệp (INV-004 giữ), chỉ sai mã thoát theo hợp đồng.",
-      "failure_scenario": "mkdir locked && chmod 000 locked; replay --checkpoint C --headless --save-episode locked/sub/ep.json ⇒ stderr 'Lỗi không lường trước ... [Errno 13] Permission denied', mã 1; mong đợi mã 8. Thư mục cha chỉ-đọc (0o555), cha là tệp thường, ký tự NUL trong đường dẫn ĐÃ cho mã 8 và không để lại gì. Test: test_inv005_untraversable_ancestor_exit8 (xfail không strict, F-006; tự bỏ qua khi chạy bằng root).",
+      "line": 548,
+      "claim": "INV-005: write_episode vẫn kiểm exists()/is_symlink() rồi mới os.replace (episode.py:545-548); diff sửa chỉ thêm một lần kiểm lại ngay trước os.replace ('thu hẹp cửa sổ') nên cửa sổ TOCTOU còn nguyên — os.replace luôn ghi đè tệp đích xuất hiện sau lần kiểm cuối. Vá triệu chứng, chưa sửa gốc (cần os.link(tmp, dest) hoặc open(dest, 'x')). Vẫn MINOR: cần hai bên ghi đồng thời, cửa sổ rất hẹp.",
+      "failure_scenario": "Bọc os.replace để tạo dest='TIEN-TRINH-KHAC-VUA-GHI' ngay trước khi hoán đổi (mô phỏng tiến trình thứ hai thắng cuộc đua sau lần kiểm cuối): write_episode trả thành công, nội dung bị thay bằng episode mới, không ném EpisodeWriteError/mã 8. Test: test_inv005_file_created_between_check_and_replace_is_not_overwritten (xfail không strict, F-003; `--runxfail` vẫn đỏ ở vòng 2).",
       "parked": false
     }
   ]

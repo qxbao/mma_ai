@@ -287,11 +287,6 @@ def test_inv003_baseline_episode_is_accepted(cli: Callable[..., Result], tmp_pat
     strict_json(res.out)
 
 
-@pytest.mark.xfail(
-    strict=False,
-    reason="F-001: validate_episode_dict không kiểm kiểu phần tử qpos/qvel/fingertip/reward/"
-    "tolerance_m/final_distance_m; chuỗi 'NaN'/'inf' qua R7 rồi float() thành NaN/Inf",
-)
 @pytest.mark.parametrize("value", _NON_FINITE_STRINGS)
 @pytest.mark.parametrize("path", _UNCHECKED_NUMERIC_PATHS, ids=lambda p: ".".join(map(str, p)))
 def test_inv003_non_finite_numeric_string_rejected_exit5(
@@ -303,10 +298,6 @@ def test_inv003_non_finite_numeric_string_rejected_exit5(
     assert res.code == 5, (res.code, res.err[:200])
 
 
-@pytest.mark.xfail(
-    strict=False,
-    reason="F-001: Episode đọc từ tệp chứa NaN/Inf thật (qua chuỗi số) dù luật R7 cấm",
-)
 def test_inv003_read_episode_never_yields_non_finite(tmp_path: Path) -> None:
     """INV-003 (NFR-REL-001): đã `read_episode` thành công thì không còn số không hữu hạn."""
     leaks: list[str] = []
@@ -472,10 +463,6 @@ def _fuzz_cases(n: int) -> list[tuple[dict[str, Any], tuple[str | int, ...], Any
     return cases
 
 
-@pytest.mark.xfail(
-    strict=False,
-    reason="F-001: đột biến một-trường tạo Episode chứa số không hữu hạn mà read_episode vẫn nhận",
-)
 def test_inv003_fuzz_accepted_episode_is_always_finite(tmp_path: Path) -> None:
     """INV-003 (property): đột biến ngẫu nhiên có seed — nếu được nhận thì mọi số hữu hạn."""
     leaks: list[str] = []
@@ -490,11 +477,6 @@ def test_inv003_fuzz_accepted_episode_is_always_finite(tmp_path: Path) -> None:
     assert not leaks, leaks[:10]
 
 
-@pytest.mark.xfail(
-    strict=False,
-    reason="F-002: read_episode nhận episode sai khuôn episode.schema.json "
-    "(split ngoài enum, index âm/sai kiểu, tolerance<=0, final_distance<0, bool thay số...)",
-)
 def test_inv003_fuzz_accepted_episode_conforms_to_schema(tmp_path: Path) -> None:
     """INV-003 (property, FR-009): episode được nhận phải hợp lệ theo episode.schema.json."""
     schema = json.loads((_CONTRACTS / "episode.schema.json").read_text(encoding="utf-8"))
@@ -512,11 +494,6 @@ def test_inv003_fuzz_accepted_episode_conforms_to_schema(tmp_path: Path) -> None
     assert not nonconforming, sorted(set(nonconforming))[:12]
 
 
-@pytest.mark.xfail(
-    strict=False,
-    reason="F-002: target.index kiểu sai được nhận ở bước đọc rồi crash muộn bằng mã 1 "
-    "thay vì mã 5 (episode không dùng được)",
-)
 @pytest.mark.parametrize(
     ("path", "value"),
     [
@@ -746,11 +723,6 @@ def test_inv001_viewer_path_shows_persistent_warning_when_hash_mismatch_allowed(
         reset_viewer_opened()
 
 
-@pytest.mark.xfail(
-    strict=False,
-    reason="F-005: checkpoint không khai model_sha256 (chuỗi rỗng) bỏ qua kiểm lệch hash XML "
-    "ở bước demo ⇒ demo chạy trên mô hình hiện tại mà không dừng/cảnh báo",
-)
 def test_inv001_checkpoint_without_model_hash_not_accepted_silently(
     cli: Callable[..., Result], fake_checkpoint: Callable[..., Path]
 ) -> None:
@@ -1074,11 +1046,6 @@ def test_inv005_existing_destination_exit8_untouched(
     assert ckpt.read_bytes() == ckpt_bytes
 
 
-@pytest.mark.xfail(
-    strict=False,
-    reason="F-004: đích là symlink treo — Path.exists() False nên bị thay êm bằng tệp thường "
-    "(mất liên kết người dùng đặt), không mã 8",
-)
 def test_inv005_dangling_symlink_destination_not_replaced(
     cli: Callable[..., Result], fake_checkpoint: Callable[..., Path], tmp_path: Path
 ) -> None:
@@ -1092,10 +1059,6 @@ def test_inv005_dangling_symlink_destination_not_replaced(
     assert os.readlink(link) == str(tmp_path / "khong-ton-tai.json")
 
 
-@pytest.mark.xfail(
-    strict=False,
-    reason="F-004: write_episode (API-VIS-0003) thay êm symlink treo vì chỉ kiểm exists()",
-)
 def test_inv005_write_episode_dangling_symlink_not_replaced(tmp_path: Path) -> None:
     """INV-005: API ghi trực tiếp cũng phải từ chối đích là symlink treo."""
     link = tmp_path / "l.json"
@@ -1171,11 +1134,6 @@ def test_inv005_unwritable_destination_exit8_no_stray_files(
     assert listing(tmp_path) == before
 
 
-@pytest.mark.xfail(
-    strict=False,
-    reason="F-006: Path.exists() ném PermissionError khi thư mục tổ tiên không duyệt được; "
-    "nằm ngoài khối try của bước ghi ⇒ rơi vào mã 1 thay vì mã 8 theo hợp đồng (thiếu quyền)",
-)
 def test_inv005_untraversable_ancestor_exit8(
     cli: Callable[..., Result], fake_checkpoint: Callable[..., Path], tmp_path: Path
 ) -> None:
@@ -1241,3 +1199,50 @@ def test_inv005_demo_never_modifies_checkpoint_or_run_dir(
     assert out.is_file()
     ep: Episode = read_episode(out)
     assert not non_finite_leaves(ep.to_dict())
+
+
+# --- Vòng 2: vector mới do diff sửa mở ra (validator chặt hơn, kiểm symlink, kiểm hash) ---
+
+_ROUND2_BAD_NUMERIC: list[Any] = [
+    True,
+    False,
+    "1.0",
+    "0x10",
+    " 1",
+    "١",
+    [1.0],
+    {"v": 1.0},
+    10**400,
+    -(10**400),
+]
+
+
+@pytest.mark.parametrize("value", _ROUND2_BAD_NUMERIC, ids=repr)
+@pytest.mark.parametrize("path", _UNCHECKED_NUMERIC_PATHS, ids=lambda p: ".".join(map(str, p)))
+def test_inv003_round2_non_number_elements_never_yield_non_finite_or_crash(
+    cli: Callable[..., Result], tmp_path: Path, path: tuple[str | int, ...], value: Any
+) -> None:
+    """INV-003 (AC-1, FR-009): phần tử không phải số ⇒ mã 5, hoặc mã 0 với Episode hữu hạn."""
+    p = write_json(tmp_path / "bad.json", put(make_episode(), path, value))
+    res = cli("--episode", p, "--headless")
+    assert res.code in (0, 5), (res.code, res.err[:200])
+    if res.code == 0:
+        ep = read_episode(p)
+        assert not non_finite_leaves(ep.to_dict())
+
+
+@pytest.mark.parametrize("name", ["dangling", "loop", "to_dir"])
+def test_inv005_round2_symlink_kinds_as_save_destination_refused(tmp_path: Path, name: str) -> None:
+    """INV-005 (AC-1): mọi loại symlink làm đích write_episode bị từ chối, liên kết còn nguyên."""
+    link = tmp_path / "l.json"
+    if name == "dangling":
+        link.symlink_to(tmp_path / "khong-co")
+    elif name == "loop":
+        link.symlink_to(link.name)
+    else:
+        (tmp_path / "d").mkdir()
+        link.symlink_to(tmp_path / "d")
+    with pytest.raises(EpisodeWriteError):
+        write_episode(make_episode(), link)
+    assert link.is_symlink()
+    assert not [q for q in tmp_path.iterdir() if ".tmp." in q.name]
