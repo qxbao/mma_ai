@@ -22,6 +22,10 @@ rl = [
     "torch",
     "tensorboard",
 ]
+eval = [
+    "pandas",
+    "matplotlib",
+]
 dev = [
     "pytest",
     "jsonschema",
@@ -33,6 +37,7 @@ artifacts = [
     "src/mma_ai/visualization/*.yaml",
     "src/mma_ai/environment/*.yaml",
     "src/mma_ai/learning/*.yaml",
+    "src/mma_ai/evaluation/*.yaml",
 ]
 
 [tool.hatch.build.targets.sdist]
