@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import importlib.util
 import warnings
 from pathlib import Path
 from typing import Any
@@ -11,9 +10,45 @@ import numpy as np
 import pytest
 
 
-def test_regress_tdd_red_checkpoint_module_is_present() -> None:
-    """FR-006: mô-đun checkpoint phải được đóng gói trong mma_ai.learning."""
-    assert importlib.util.find_spec("mma_ai.learning.checkpoint") is not None
+def test_checkpoint_contract_independent_assertion(tmp_path: Path) -> None:
+    """FR-006, FR-008, INV-004: Khẳng định độc lập hợp đồng và hành vi mới (F-001..F-005)."""
+    import hashlib
+    import inspect
+
+    import mma_ai.learning.checkpoint as ckpt_mod
+    from mma_ai.learning.errors import NonFiniteError
+
+    # 1. Hợp đồng thành phần bắt buộc (FR-006, INV-004)
+    assert set(ckpt_mod.REQUIRED_COMPONENTS) == {
+        "actor",
+        "critic",
+        "obs_normalizer",
+        "optimizer",
+        "seed",
+        "rng_state",
+    }
+
+    # 2. Hợp đồng đối chiếu SHA-256 trên chữ ký load_checkpoint (FR-008, F-002)
+    sig = inspect.signature(ckpt_mod.load_checkpoint)
+    assert "expected_checkpoint_sha256" in sig.parameters, (
+        "load_checkpoint thiếu tham số hợp đồng expected_checkpoint_sha256 (F-002)"
+    )
+
+    # 3. Tính toán SHA-256 độc lập cho tệp dữ liệu (FR-008)
+    dummy_file = tmp_path / "dummy_payload.bin"
+    payload = b"mma_checkpoint_integrity_test_payload"
+    dummy_file.write_bytes(payload)
+    computed_sha = ckpt_mod._compute_sha256(dummy_file)
+    assert computed_sha == hashlib.sha256(payload).hexdigest()
+
+    # 4. Quét tính hữu hạn từ chối NaN/Inf trên cấu trúc dữ liệu thuần (F-004, INV-004)
+    with pytest.raises(NonFiniteError):
+        ckpt_mod._scan_finite({"loss": float("nan")})
+    with pytest.raises(NonFiniteError):
+        ckpt_mod._scan_finite({"var": [1.0, float("inf")]})
+
+    # Cấu trúc hợp lệ không ném lỗi
+    ckpt_mod._scan_finite({"loss": 0.5, "weights": [0.1, -0.2]})
 
 
 def _torch() -> Any:

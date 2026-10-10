@@ -12,18 +12,23 @@ import hashlib
 import json
 import math
 import os
+import sys
 import warnings
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Mapping, cast
+from typing import TYPE_CHECKING, Any, Mapping, cast
 
 import numpy as np
-import torch
-from torch import Tensor
+
+if TYPE_CHECKING:
+    from torch import Tensor
+
+    from mma_ai.learning.networks import ActorCritic
+else:
+    Tensor = Any
 
 from mma_ai.learning.errors import CheckpointError, CheckpointIOError, NonFiniteError
-from mma_ai.learning.networks import ActorCritic
 from mma_ai.learning.normalizer import RunningNorm
 from mma_ai.learning.train_config import TrainConfig
 
@@ -100,6 +105,8 @@ class Policy:
 
     def act_deterministic(self, obs_raw: np.ndarray | Tensor) -> np.ndarray:
         """Tính toán hành động tất định u in (0, 1)^6 từ quan sát thô (raw observation)."""
+        import torch
+
         if isinstance(obs_raw, torch.Tensor):
             obs_array = obs_raw.detach().cpu().numpy()
         else:
@@ -123,14 +130,20 @@ class Policy:
 
 def _scan_finite(data: Any, path: str = "checkpoint") -> None:
     """Quét đệ quy phát hiện NaN hoặc vô cực (infinity) trong mọi tensor hoặc mảng số."""
-    if isinstance(data, torch.Tensor):
-        if not bool(torch.isfinite(data).all()):
-            nan_count = int(torch.isnan(data).sum())
-            inf_count = int(torch.isinf(data).sum())
-            raise NonFiniteError(
-                f"Phát hiện tensor không hữu hạn tại '{path}': {nan_count} NaN, {inf_count} Inf."
-            )
-    elif isinstance(data, np.ndarray):
+    if "torch" in sys.modules:
+        import torch
+
+        if isinstance(data, torch.Tensor):
+            if not bool(torch.isfinite(data).all()):
+                nan_count = int(torch.isnan(data).sum())
+                inf_count = int(torch.isinf(data).sum())
+                raise NonFiniteError(
+                    f"Phát hiện tensor không hữu hạn tại '{path}': "
+                    f"{nan_count} NaN, {inf_count} Inf."
+                )
+            return
+
+    if isinstance(data, np.ndarray):
         if not bool(np.isfinite(data).all()):
             nan_count = int(np.isnan(data).sum())
             inf_count = int(np.isinf(data).sum())
@@ -138,8 +151,8 @@ def _scan_finite(data: Any, path: str = "checkpoint") -> None:
                 f"Phát hiện mảng numpy không hữu hạn tại '{path}': "
                 f"{nan_count} NaN, {inf_count} Inf."
             )
-    elif isinstance(data, float):
-        if not math.isfinite(data):
+    elif isinstance(data, (float, int)):
+        if isinstance(data, float) and not math.isfinite(data):
             raise NonFiniteError(f"Phát hiện giá trị thực không hữu hạn tại '{path}': {data}.")
     elif isinstance(data, Mapping):
         for key, value in data.items():
@@ -165,6 +178,8 @@ def save_checkpoint(
     ctx: Any = None,
 ) -> CheckpointMeta:
     """Lưu điểm kiểm tra an toàn theo cơ chế nguyên tử (atomic) và quét hữu hạn (FR-006, FR-007)."""
+    import torch
+
     if kind not in ("periodic", "final"):
         raise CheckpointError(
             f"Loại checkpoint không hợp lệ: '{kind}', kỳ vọng 'periodic' hoặc 'final'."
@@ -403,6 +418,8 @@ def load_checkpoint(
     expected_checkpoint_sha256: str | None = None,
 ) -> LoadedCheckpoint:
     """Nạp điểm kiểm tra với weights_only=True và kiểm tra tính toàn vẹn (FR-008, FR-009)."""
+    import torch
+
     target_path = Path(path)
     expected_sha256: str | None = expected_checkpoint_sha256
 
@@ -583,6 +600,10 @@ def load_checkpoint(
 
 def load_policy(path: str | Path, cfg: TrainConfig | None = None) -> Policy:
     """Nạp chính sách chỉ-đọc sẵn sàng cho suy luận tất định (FR-008, API-003)."""
+    import torch
+
+    from mma_ai.learning.networks import ActorCritic
+
     loaded = load_checkpoint(path, for_training=False)
 
     actor_sd = loaded.actor_state_dict
