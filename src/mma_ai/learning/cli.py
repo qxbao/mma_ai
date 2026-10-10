@@ -19,6 +19,7 @@ import argparse
 import json
 import subprocess
 import sys
+import threading
 import time
 from collections.abc import Sequence
 from pathlib import Path
@@ -173,6 +174,26 @@ def _spawn_ui_process(
         )
         sys.stderr.flush()
         return None, ui_url
+
+    # Chuyển tiếp luồng stderr từ tiến trình giao diện và View3D sang stderr của CLI
+    def _relay_stderr(proc: subprocess.Popen[Any]) -> None:
+        if proc.stderr is None:
+            return
+        try:
+            for line in iter(proc.stderr.readline, ""):
+                if line:
+                    sys.stderr.write(line)
+                    sys.stderr.flush()
+        except Exception:
+            pass
+
+    stderr_relay_thread = threading.Thread(
+        target=_relay_stderr,
+        args=(ui_proc,),
+        daemon=True,
+        name="UIStderrRelay",
+    )
+    stderr_relay_thread.start()
 
     # Chờ tối đa 2.0 giây để tệp ui.json xuất hiện hoặc phát hiện tiến trình dừng sớm
     ui_json_file = run_dir_path / "ui.json"
