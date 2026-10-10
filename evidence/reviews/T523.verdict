@@ -4,7 +4,7 @@
   "task_id": "T523",
   "round": 1,
   "sha_reviewed": "1ee323cc6056821e62d752192e828a42174e07a6",
-  "verdict": "APPROVE",
+  "verdict": "REQUEST_CHANGES",
   "findings": [
     {
       "id": "F-001",
@@ -12,7 +12,7 @@
       "file": "tests/integration/test_demo_cli.py",
       "line": 85,
       "claim": "Trợ giúp _create_test_checkpoint gọi pytest.importorskip(\"torch\"), trái luật 'không skip/xfail' của tasks.md (dòng 44); cổng chạy `uv run --isolated --with pytest` không cài extra `rl` nên AC-2 bị SKIP trong bằng chứng cổng ngoài.",
-      "failure_scenario": "evidence/gates/logs/T521/e2e.log ghi '16 passed, 1 skipped'; chạy hẹp `pytest tests/e2e/test_replay_acceptance.py -rs` trong môi trường cổng cho '4 passed, 1 skipped' với SKIPPED tests/integration/test_demo_cli.py:85 (test_ac_2_demo_from_checkpoint). Cùng lý do, mọi test của test_demo_cli.py/test_replay_readonly.py cần checkpoint (FR-002/003, INV-002 qua CLI, NFR-REPRO-001) đều không được cổng chứng minh. Reviewer đã chạy lại hẹp với `--extra rl`: test_replay_acceptance + test_demo_cli + test_replay_readonly = 13 passed, 0 skipped ⇒ mã đúng, thiếu chỉ là bằng chứng cổng. Không chặn vì sản phẩm không vi phạm AC; cần khai `torch` vào môi trường cổng (extra rl) hoặc bỏ importorskip để thiếu torch thành lỗi đỏ."
+      "failure_scenario": "evidence/gates/logs/T521/e2e.log ghi '16 passed, 1 skipped'; chạy hẹp `pytest tests/e2e/test_replay_acceptance.py -rs` trong môi trường cổng cho '4 passed, 1 skipped' với SKIPPED tests/integration/test_demo_cli.py:85 (test_ac_2_demo_from_checkpoint). Cùng lý do, mọi test của test_demo_cli.py/test_replay_readonly.py cần checkpoint (FR-002/003, INV-002 qua CLI, NFR-REPRO-001) đều không được cổng chứng minh. Reviewer đã chạy lại hẹp với `--extra rl`: test_replay_acceptance + test_demo_cli + test_replay_readonly = 13 passed, 0 skipped ⇒ mã đúng, thiếu chỉ là bằng chứng cổng. Cần khai `torch` vào môi trường cổng (extra rl) hoặc bỏ importorskip để thiếu torch thành lỗi đỏ."
     },
     {
       "id": "F-002",
@@ -32,11 +32,11 @@
     },
     {
       "id": "F-004",
-      "severity": "OPTIONAL",
+      "severity": "CRITICAL",
       "file": "specs/005-replay-3d-muscle-demo/checklists/acceptance.md",
       "line": 0,
-      "claim": "Không có checklist chấp nhận do qa sinh (specs/005-replay-3d-muscle-demo/ không có thư mục checklists/), nên không đối chiếu được dòng THIẾU/AC-không-test-entrypoint theo checklist.",
-      "failure_scenario": "Reviewer buộc phải tự dựng ma trận AC↔test từ spec.md và tests/e2e/test_replay_acceptance.py (đủ AC-1…AC-5 mức entrypoint subprocess); nếu checklist có thêm yêu cầu bằng chứng ảnh/trace thì không thể phát hiện. Spec không đòi ảnh chụp cho feature CLI/viewer này nên không nâng mức."
+      "claim": "Checklist chấp nhận của feature 005 không tồn tại (thư mục specs/005-replay-3d-muscle-demo/checklists/ rỗng ở gốc dự án, trong khi 001–003 đều có acceptance.md) nên AC-1…AC-5 không có dòng [x] theo bằng chứng của task; cổng trace_fit (runtime/gate/shell/gate_runner.py:774-787) cấm APPROVE khi AC chưa tích và luật reviewer đòi đối chiếu checklist do qa sinh.",
+      "failure_scenario": "trace_fit đỏ 'AC của yêu cầu chưa có dòng [x] ... AC-1, AC-2, AC-3, AC-4, AC-5' vì unticked_acs đọc checklist rỗng ⇒ mọi AC đều mở. Reviewer không được ghi tệp này (specs/** cấm ghi) nên không thể tự tích; vai qa phải sinh checklists/acceptance.md ánh xạ AC-1…AC-5 → test entrypoint tests/e2e/test_replay_acceptance.py (test_ac_1…test_ac_5) rồi tích [x] theo evidence cổng. AC-2 chỉ tích trung thực được khi cổng chạy có torch (xem F-001) vì trong môi trường cổng test_ac_2 bị SKIP. Sản phẩm không vi phạm AC trên đầu vào thực (đã chạy lại hẹp), nên đây là thiếu bằng chứng nghiệm thu, không phải lỗi hành vi."
     }
   ]
 }
