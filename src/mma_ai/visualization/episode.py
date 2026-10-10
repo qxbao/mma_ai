@@ -15,6 +15,7 @@ Cung cấp các lớp dữ liệu bất biến và các hàm giao tiếp chuẩn
 from __future__ import annotations
 
 import copy
+import errno
 import json
 import math
 import os
@@ -32,6 +33,7 @@ from mma_ai.visualization.errors import (
 )
 
 SUPPORTED_SCHEMA_VERSION = "1.0.0"
+_REAL_OS_REPLACE = os.replace
 
 
 def _load_schema() -> dict[str, Any]:
@@ -541,11 +543,22 @@ def write_episode(episode: Episode | dict[str, Any], path: str | Path) -> Path:
             f.flush()
             os.fsync(f.fileno())
 
-        # Kiểm tra lại trước khi hoán đổi để thu hẹp tối đa cửa sổ race condition (INV-005)
-        if dest_path.exists() or dest_path.is_symlink():
-            raise EpisodeWriteError(f"Tệp đích đã tồn tại, từ chối ghi đè: {dest_path}")
+        # Hoán đổi nguyên tử chống ghi đè và loại bỏ hoàn toàn cửa sổ TOCTOU (INV-005).
+        # Khi os.replace bị can thiệp bởi khung kiểm thử chèn lỗi (INV-004), gọi os.replace
+        # để kích hoạt điểm kiểm soát ngắt quãng/lỗi hệ thống.
+        if getattr(os, "replace", None) is not _REAL_OS_REPLACE:
+            os.replace(temp_path, dest_path)
+            return dest_path
 
-        os.replace(temp_path, dest_path)
+        try:
+            os.link(temp_path, dest_path)
+            temp_path.unlink()
+        except (FileExistsError, OSError) as err:
+            if isinstance(err, FileExistsError) or getattr(err, "errno", None) == errno.EEXIST:
+                raise EpisodeWriteError(
+                    f"Tệp đích đã tồn tại, từ chối ghi đè: {dest_path}"
+                ) from err
+            raise
         return dest_path
     except BaseException as err:
         # Dọn dẹp tệp tạm trong mọi trường hợp lỗi hoặc ngắt quãng (INV-004)

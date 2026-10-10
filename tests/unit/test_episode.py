@@ -20,6 +20,7 @@ Truy vết các yêu cầu kỹ thuật và bất biến:
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any, cast
 
@@ -569,4 +570,33 @@ def test_regress_f003_race_condition_file_created_between_check_and_write_not_ov
     with pytest.raises(EpisodeWriteError):
         write_episode(ep, dangling_link)
     assert dangling_link.is_symlink()
+
+
+def test_inv005_toctou_file_created_between_check_and_swap_not_overwritten(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, valid_episode_data: dict[str, Any]
+) -> None:
+    """INV-005 (AC-1, FR-008): Kiểm tra hồi quy F-002 TOCTOU — tệp tạo ra không bị ghi đè.
+
+    Mô phỏng tiến trình khác tạo tệp đích ngay sau lần kiểm tra và trước bước hoàn tất.
+    Hàm write_episode phải ném EpisodeWriteError, không ghi đè, bảo toàn nội dung tệp
+    của tiến trình khác và không để lại tệp tạm sót lại (INV-004).
+    """
+    dest = tmp_path / "racing_ep.json"
+    ep = Episode.from_dict(valid_episode_data)
+
+    # Giả lập kịch bản tranh chấp: tiến trình khác tạo tệp đích ngay trước thao tác liên kết
+    real_link = os.link
+
+    def racing_link(src: Any, dst: Any) -> None:
+        Path(dst).write_text("TIEN-TRINH-KHAC-VUA-GHI", encoding="utf-8")
+        real_link(src, dst)
+
+    monkeypatch.setattr(os, "link", racing_link)
+
+    with pytest.raises(EpisodeWriteError, match="đã tồn tại"):
+        write_episode(ep, dest)
+
+    assert dest.read_text(encoding="utf-8") == "TIEN-TRINH-KHAC-VUA-GHI"
+    assert list(tmp_path.glob("*.tmp*")) == []
+
 
