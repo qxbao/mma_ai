@@ -86,5 +86,6 @@ module = [
     "tensorboard.*",
     "packaging.*",
     "pandas.*",
+    "matplotlib.*",
 ]
 ignore_missing_imports = true
