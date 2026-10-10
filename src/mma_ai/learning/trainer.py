@@ -6,6 +6,7 @@ Hiện thực lớp Trainer điều phối vòng lặp thu mẫu (rollout) -> GA
 
 from __future__ import annotations
 
+import copy
 import time
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -423,6 +424,11 @@ class Trainer:
 
                 # Lưu điểm kiểm tra định kỳ (periodic checkpoint)
                 if update_idx % self.cfg.checkpoint.every_updates == 0:
+                    agent_rng_state = (
+                        copy.deepcopy(self.agent._rng.bit_generator.state)
+                        if hasattr(self.agent, "_rng") and hasattr(self.agent._rng, "bit_generator")
+                        else None
+                    )
                     ckpt_ctx = {
                         "update_idx": update_idx,
                         "env_steps": env_steps,
@@ -430,6 +436,9 @@ class Trainer:
                         "seed": self.cfg.seed,
                         "config": self.cfg,
                         "obs_normalizer": self.normalizer,
+                        "rng_state": {
+                            "numpy": agent_rng_state,
+                        },
                     }
                     periodic_meta = save_checkpoint(
                         self.agent, self.run_dir, kind="periodic", ctx=ckpt_ctx
@@ -439,6 +448,11 @@ class Trainer:
                 progress_writer.write(_build_snapshot_payload("running"), final=False)
 
             # LUÔN lưu điểm kiểm tra cuối cùng (final checkpoint) khi kết thúc
+            final_agent_rng = (
+                copy.deepcopy(self.agent._rng.bit_generator.state)
+                if hasattr(self.agent, "_rng") and hasattr(self.agent._rng, "bit_generator")
+                else None
+            )
             final_ctx = {
                 "update_idx": update_idx,
                 "env_steps": env_steps,
@@ -446,6 +460,9 @@ class Trainer:
                 "seed": self.cfg.seed,
                 "config": self.cfg,
                 "obs_normalizer": self.normalizer,
+                "rng_state": {
+                    "numpy": final_agent_rng,
+                },
             }
             final_meta = save_checkpoint(self.agent, self.run_dir, kind="final", ctx=final_ctx)
             saved_checkpoints.append(final_meta)

@@ -31,6 +31,7 @@ class _DummyAgent:
         self.cfg = TrainConfig.load()
         self.model = ActorCritic(obs_dim=obs_dim, act_dim=act_dim, cfg=self.cfg)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=1e-3)
+        self._rng = np.random.default_rng(self.cfg.seed)
 
     def state_dict(self) -> dict[str, Any]:
         return {
@@ -293,3 +294,117 @@ def test_version_mismatch_warns(tmp_path: Path) -> None:
         load_checkpoint(tmp_path / meta.path)
         assert len(recorded_warnings) >= 1
         assert any("phiên bản" in str(w.message).lower() for w in recorded_warnings)
+
+
+def test_checkpoint_stores_and_restores_agent_numpy_rng_state(tmp_path: Path) -> None:
+    """INV-004, FR-009, NFR-REPRO-001 (F-001): save_checkpoint lưu _rng thực của agent."""
+    _torch()
+    import copy
+
+    from mma_ai.learning.checkpoint import load_checkpoint, save_checkpoint
+
+    agent = _DummyAgent()
+    agent._rng.standard_normal(size=(10, 5))
+    expected_rng_state = copy.deepcopy(agent._rng.bit_generator.state)
+
+    ctx = _dummy_context()
+    meta = save_checkpoint(agent, tmp_path, kind="periodic", ctx=ctx)
+
+    loaded = load_checkpoint(tmp_path / meta.path)
+    assert "numpy" in loaded.rng_state
+    assert loaded.rng_state["numpy"] == expected_rng_state
+
+
+def test_load_checkpoint_verifies_sha256_pointer_and_meta(tmp_path: Path) -> None:
+    """INV-004, FR-008 (F-002): đối chiếu sha256 khi load qua latest.json và tệp .pt."""
+    _torch()
+    from mma_ai.learning.checkpoint import load_checkpoint, save_checkpoint
+    from mma_ai.learning.errors import CheckpointError
+
+    agent = _DummyAgent()
+    ctx = _dummy_context()
+    meta = save_checkpoint(agent, tmp_path, kind="periodic", ctx=ctx)
+
+    pt_file = tmp_path / meta.path
+    latest_file = tmp_path / "checkpoints" / "latest.json"
+
+    blob = bytearray(pt_file.read_bytes())
+    blob[-1] ^= 0x01
+    pt_file.write_bytes(bytes(blob))
+
+    with pytest.raises(CheckpointError) as exc_latest:
+        load_checkpoint(latest_file)
+    assert any(
+        kw in str(exc_latest.value).lower()
+        for kw in ("sha256", "hỏng", "khớp", "sai khác")
+    )
+
+    with pytest.raises(CheckpointError) as exc_pt:
+        load_checkpoint(pt_file)
+    assert any(
+        kw in str(exc_pt.value).lower()
+        for kw in ("sha256", "hỏng", "khớp", "sai khác")
+    )
+
+
+def test_load_checkpoint_rejects_nonfinite_weights(tmp_path: Path) -> None:
+    """INV-004 (F-004): load_checkpoint từ chối NaN/Inf trong trọng số bằng CheckpointError."""
+    torch = _torch()
+    import json
+
+    from mma_ai.learning.checkpoint import _compute_sha256, load_checkpoint, save_checkpoint
+    from mma_ai.learning.errors import CheckpointError
+
+    agent = _DummyAgent()
+    ctx = _dummy_context()
+    meta = save_checkpoint(agent, tmp_path, kind="periodic", ctx=ctx)
+
+    ckpt_path = tmp_path / meta.path
+    data = torch.load(ckpt_path, weights_only=True)
+    actor_sd = dict(data["actor"])
+    first_key = next(iter(actor_sd.keys()))
+    actor_sd[first_key] = actor_sd[first_key].clone()
+    actor_sd[first_key][0, 0] = float("nan")
+    data["actor"] = actor_sd
+
+    torch.save(data, ckpt_path)
+    new_sha = _compute_sha256(ckpt_path)
+    meta_file = tmp_path / "checkpoints" / f"{ckpt_path.stem}.meta.json"
+    meta_info = json.loads(meta_file.read_text(encoding="utf-8"))
+    meta_info["sha256"] = new_sha
+    meta_file.write_text(json.dumps(meta_info), encoding="utf-8")
+
+    with pytest.raises(CheckpointError) as exc:
+        load_checkpoint(ckpt_path)
+    assert any(
+        kw in str(exc.value).lower()
+        for kw in ("không hữu hạn", "nan", "inf")
+    )
+
+
+def test_atomic_write_runtime_error_cleans_tmp_and_raises_io_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """INV-004, FR-006 (F-005): RuntimeError khi torch.save dọn tệp tạm và ném CheckpointIOError."""
+    torch = _torch()
+    from mma_ai.learning.checkpoint import save_checkpoint
+    from mma_ai.learning.errors import CheckpointIOError
+
+    agent = _DummyAgent()
+    ctx = _dummy_context()
+
+    real_save = torch.save
+
+    def failing_save(obj: Any, f: Any, *args: Any, **kwargs: Any) -> None:
+        real_save({"partial": torch.zeros(4)}, f)
+        raise RuntimeError("PytorchStreamWriter failed writing file data/0: file write failed")
+
+    monkeypatch.setattr(torch, "save", failing_save)
+
+    with pytest.raises(CheckpointIOError):
+        save_checkpoint(agent, tmp_path, kind="periodic", ctx=ctx)
+
+    checkpoints_dir = tmp_path / "checkpoints"
+    leftovers = list(checkpoints_dir.glob("*.tmp"))
+    assert len(leftovers) == 0, f"Còn lại tệp tạm sau khi ghi lỗi: {leftovers}"
+

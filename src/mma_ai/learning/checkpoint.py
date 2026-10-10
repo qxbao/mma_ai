@@ -7,6 +7,7 @@ Chỉ nhập các mô-đun networks và normalizer, không nhập ppo hay traine
 
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 import math
@@ -235,19 +236,39 @@ def save_checkpoint(
             "count": 0,
         }
 
-    # Thu thập trạng thái sinh số ngẫu nhiên (RNG state)
+    # Thu thập trạng thái sinh số ngẫu nhiên (RNG state) (INV-004, FR-009)
     torch_rng = torch.get_rng_state()
-    numpy_state = (
-        np.random.default_rng(seed).bit_generator.state
-        if isinstance(ctx, Mapping) and "rng_state" not in ctx
-        else ctx.get("rng_state", {}) if isinstance(ctx, Mapping) else {}
-    )
+    numpy_state = None
+    if isinstance(ctx, Mapping) and "rng_state" in ctx:
+        ctx_rng = ctx["rng_state"]
+        if isinstance(ctx_rng, Mapping) and "numpy" in ctx_rng:
+            numpy_state = ctx_rng["numpy"]
+        elif isinstance(ctx_rng, Mapping) and "bit_generator" in ctx_rng:
+            numpy_state = ctx_rng
+        elif ctx_rng is not None:
+            numpy_state = ctx_rng
+
+    if numpy_state is None:
+        agent_rng = getattr(agent, "_rng", getattr(agent, "rng", None))
+        if agent_rng is not None and hasattr(agent_rng, "bit_generator"):
+            numpy_state = copy.deepcopy(agent_rng.bit_generator.state)
+
+    if numpy_state is None:
+        numpy_state = np.random.default_rng(seed).bit_generator.state
+
     rng_state_dict: dict[str, Any] = {
         "torch_cpu": torch_rng,
         "numpy": numpy_state,
     }
     if torch.cuda.is_available():
         rng_state_dict["torch_cuda"] = torch.cuda.get_rng_state()
+
+    if isinstance(ctx, Mapping) and "env_np_random" in ctx:
+        rng_state_dict["env_np_random"] = ctx["env_np_random"]
+    elif isinstance(ctx, Mapping) and "env" in ctx:
+        env_obj = ctx["env"]
+        if hasattr(env_obj, "np_random") and hasattr(env_obj.np_random, "bit_generator"):
+            rng_state_dict["env_np_random"] = copy.deepcopy(env_obj.np_random.bit_generator.state)
 
     library_versions = {
         "torch": str(torch.__version__),
@@ -306,7 +327,7 @@ def save_checkpoint(
             os.fsync(f.fileno())
 
         os.replace(tmp_pt_path, target_pt_path)
-    except (OSError, IOError) as err:
+    except (OSError, IOError, RuntimeError) as err:
         if tmp_pt_path.exists():
             try:
                 tmp_pt_path.unlink()
@@ -343,7 +364,7 @@ def save_checkpoint(
             f.flush()
             os.fsync(f.fileno())
         os.replace(tmp_meta_path, target_meta_path)
-    except (OSError, IOError) as err:
+    except (OSError, IOError, RuntimeError) as err:
         if tmp_meta_path.exists():
             try:
                 tmp_meta_path.unlink()
@@ -362,7 +383,7 @@ def save_checkpoint(
             f.flush()
             os.fsync(f.fileno())
         os.replace(tmp_latest_path, latest_path)
-    except (OSError, IOError) as err:
+    except (OSError, IOError, RuntimeError) as err:
         if tmp_latest_path.exists():
             try:
                 tmp_latest_path.unlink()
@@ -379,28 +400,60 @@ def load_checkpoint(
     expected_model_sha256: str | None = None,
     expected_cfg: Any = None,
     expected_obs_dim: int | None = None,
+    expected_checkpoint_sha256: str | None = None,
 ) -> LoadedCheckpoint:
     """Nạp điểm kiểm tra với weights_only=True và kiểm tra tính toàn vẹn (FR-008, FR-009)."""
     target_path = Path(path)
+    expected_sha256: str | None = expected_checkpoint_sha256
 
-    # Nếu truyền vào là con trỏ latest.json, phân giải đường dẫn tới checkpoint tương ứng
-    if target_path.name == "latest.json":
+    # Nếu truyền vào là latest.json hoặc file JSON, phân giải đường dẫn tương ứng
+    if target_path.name == "latest.json" or target_path.suffix == ".json":
         if not target_path.exists():
             raise CheckpointError(f"Tệp con trỏ '{target_path}' không tồn tại.")
         try:
-            latest_info = json.loads(target_path.read_text(encoding="utf-8"))
-            rel_pt = latest_info["path"]
+            info = json.loads(target_path.read_text(encoding="utf-8"))
+            if (
+                not isinstance(info, Mapping)
+                or "path" not in info
+                or not isinstance(info["path"], str)
+            ):
+                raise CheckpointError(
+                    f"Tệp con trỏ '{target_path}' không chứa trường 'path' hợp lệ."
+                )
+            if expected_sha256 is None and "sha256" in info:
+                expected_sha256 = str(info["sha256"])
+            rel_pt = info["path"]
             # Thư mục gốc run_dir nằm ở cha của checkpoints/
             run_root = target_path.parent.parent
             resolved_pt = run_root / rel_pt
             if not resolved_pt.exists():
                 resolved_pt = target_path.parent / Path(rel_pt).name
             target_path = resolved_pt
+        except CheckpointError:
+            raise
         except Exception as err:
             raise CheckpointError(f"Không thể đọc thông tin từ '{target_path}': {err}") from err
+    else:
+        # Nếu nạp trực tiếp qua tệp .pt, tìm tệp *.meta.json để đối chiếu sha256
+        meta_candidate = target_path.with_name(f"{target_path.stem}.meta.json")
+        if meta_candidate.exists() and expected_sha256 is None:
+            try:
+                meta_info = json.loads(meta_candidate.read_text(encoding="utf-8"))
+                if isinstance(meta_info, Mapping) and "sha256" in meta_info:
+                    expected_sha256 = str(meta_info["sha256"])
+            except Exception:
+                pass
 
     if not target_path.exists():
         raise CheckpointError(f"Tệp checkpoint '{target_path}' không tồn tại.")
+
+    # Đối chiếu mã băm sha256 với siêu dữ liệu nếu có (INV-004, FR-008)
+    actual_sha256 = _compute_sha256(target_path)
+    if expected_sha256 is not None and actual_sha256 != expected_sha256:
+        raise CheckpointError(
+            f"Tệp checkpoint '{target_path.name}' bị hỏng hoặc sai khác mã băm SHA-256: "
+            f"tính được {actual_sha256}, kỳ vọng {expected_sha256}."
+        )
 
     # Nạp bằng torch.load với weights_only=True để ngăn ngừa thực thi mã độc hại
     try:
@@ -419,6 +472,14 @@ def load_checkpoint(
         raise CheckpointError(
             f"Checkpoint thiếu các thành phần bắt buộc: {', '.join(missing_components)}."
         )
+
+    # Quét tính hữu hạn của toàn bộ dữ liệu đã nạp (INV-004, FR-008)
+    try:
+        _scan_finite(data, path="checkpoint")
+    except NonFiniteError as err:
+        raise CheckpointError(
+            f"Dữ liệu checkpoint tại '{target_path}' chứa giá trị không hữu hạn (NaN/Inf): {err}"
+        ) from err
 
     actor_sd = cast(dict[str, Tensor], dict(data["actor"]))
     critic_sd = cast(dict[str, Tensor], dict(data["critic"]))
@@ -500,7 +561,7 @@ def load_checkpoint(
 
     raw = dict(data)
     raw["path"] = f"checkpoints/{target_path.name}"
-    raw["sha256"] = _compute_sha256(target_path)
+    raw["sha256"] = actual_sha256
     raw["run_id"] = target_path.parent.parent.name
 
     return LoadedCheckpoint(
