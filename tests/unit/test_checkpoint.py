@@ -16,6 +16,7 @@ def test_checkpoint_contract_independent_assertion(tmp_path: Path) -> None:
     import inspect
 
     import mma_ai.learning.checkpoint as ckpt_mod
+    from mma_ai.learning.errors import NonFiniteError
 
     # 1. Hợp đồng thành phần bắt buộc (FR-006, INV-004)
     assert set(ckpt_mod.REQUIRED_COMPONENTS) == {
@@ -41,10 +42,9 @@ def test_checkpoint_contract_independent_assertion(tmp_path: Path) -> None:
     assert computed_sha == hashlib.sha256(payload).hexdigest()
 
     # 4. Quét tính hữu hạn từ chối NaN/Inf trên cấu trúc dữ liệu thuần (F-004, INV-004)
-    non_finite_err = getattr(ckpt_mod, "NonFiniteError")
-    with pytest.raises(non_finite_err):
+    with pytest.raises(NonFiniteError):
         ckpt_mod._scan_finite({"loss": float("nan")})
-    with pytest.raises(non_finite_err):
+    with pytest.raises(NonFiniteError):
         ckpt_mod._scan_finite({"var": [1.0, float("inf")]})
 
     # Cấu trúc hợp lệ không ném lỗi

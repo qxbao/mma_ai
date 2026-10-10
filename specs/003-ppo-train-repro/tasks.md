@@ -77,39 +77,39 @@ Bảng vùng ghi hiệu lực KHÔNG phủ `scripts/**`, `configs/**`, `tests/re
 <a id="setup"></a>
 ## Setup
 
-- [ ] T301 Thêm `tensorboard` vào extra `rl` và khai package data cho `learning/*.yaml` — pyproject.toml, tests/unit/test_train_packaging.py
-- [ ] T302 Dựng gói `learning`, `monitoring` và các lớp lỗi — src/mma_ai/learning/__init__.py, errors.py, src/mma_ai/monitoring/__init__.py
+- [x] T301 Thêm `tensorboard` vào extra `rl` và khai package data cho `learning/*.yaml` — pyproject.toml, tests/unit/test_train_packaging.py
+- [x] T302 Dựng gói `learning`, `monitoring` và các lớp lỗi — src/mma_ai/learning/__init__.py, errors.py, src/mma_ai/monitoring/__init__.py
 
 <a id="foundational"></a>
 ## Foundational
 
 **Mục tiêu**: các mô-đun thuần dữ liệu/thuần số mà mọi story dùng — cấu hình, chuẩn hoá, mạng, PPO, checkpoint, thư mục run, tài nguyên, hồ sơ, tái lập, nhật ký, snapshot và vòng huấn luyện.
 
-- [ ] T303 Cấu hình huấn luyện một tệp `TrainConfig` — src/mma_ai/learning/train_config.py, train_elbow.yaml, train_elbow_smoke.yaml
-- [ ] T304 [P] Bộ chuẩn hoá observation `RunningNorm` — src/mma_ai/learning/normalizer.py
-- [ ] T305 [P] Thư mục run duy nhất `create_run_dir` — src/mma_ai/learning/run_dir.py
-- [ ] T306 [P] Đo tài nguyên, thông lượng, wall-clock — src/mma_ai/learning/resources.py
-- [ ] T307 [P] Ghi nhật ký TensorBoard và `metrics.jsonl` — src/mma_ai/learning/metrics_log.py
-- [ ] T308 [P] Ghi snapshot tiến trình `ProgressWriter` — src/mma_ai/learning/progress.py
-- [ ] T309 [P] Mạng `ActorCritic` 2×256 với `u = sigmoid(a)` — src/mma_ai/learning/networks.py
-- [ ] T310 `PPOAgent`: GAE, mục tiêu clip, gradient clipping — src/mma_ai/learning/ppo.py
-- [ ] T311 Checkpoint khứ hồi: lưu nguyên tử, nạp, `load_policy` — src/mma_ai/learning/checkpoint.py
-- [ ] T312 Hồ sơ thí nghiệm `build_manifest`/`write_manifest` — src/mma_ai/learning/manifest.py
-- [ ] T313 Tái lập: `seed_everything`, `compare_runs` — src/mma_ai/learning/repro.py
-- [ ] T314 Vòng huấn luyện `Trainer.run` — src/mma_ai/learning/trainer.py
+- [x] T303 Cấu hình huấn luyện một tệp `TrainConfig` — src/mma_ai/learning/train_config.py, train_elbow.yaml, train_elbow_smoke.yaml
+- [x] T304 [P] Bộ chuẩn hoá observation `RunningNorm` — src/mma_ai/learning/normalizer.py
+- [x] T305 [P] Thư mục run duy nhất `create_run_dir` — src/mma_ai/learning/run_dir.py
+- [x] T306 [P] Đo tài nguyên, thông lượng, wall-clock — src/mma_ai/learning/resources.py
+- [x] T307 [P] Ghi nhật ký TensorBoard và `metrics.jsonl` — src/mma_ai/learning/metrics_log.py
+- [x] T308 [P] Ghi snapshot tiến trình `ProgressWriter` — src/mma_ai/learning/progress.py
+- [x] T309 [P] Mạng `ActorCritic` 2×256 với `u = sigmoid(a)` — src/mma_ai/learning/networks.py
+- [x] T310 `PPOAgent`: GAE, mục tiêu clip, gradient clipping — src/mma_ai/learning/ppo.py
+- [x] T311 Checkpoint khứ hồi: lưu nguyên tử, nạp, `load_policy` — src/mma_ai/learning/checkpoint.py
+- [x] T312 Hồ sơ thí nghiệm `build_manifest`/`write_manifest` — src/mma_ai/learning/manifest.py
+- [x] T313 Tái lập: `seed_everything`, `compare_runs` — src/mma_ai/learning/repro.py
+- [x] T314 Vòng huấn luyện `Trainer.run` — src/mma_ai/learning/trainer.py
 
 <a id="duong-chay-chinh-giao-dien-quan-sat-lenh-cli-fixture"></a>
 ## Đường chạy chính: giao diện quan sát, lệnh CLI, fixture
 
 **Mục tiêu**: bảng điều khiển web chỉ-đọc, hiển thị 3D tuỳ chọn, bốn lệnh CLI trong gói và fixture dùng chung cho test tích hợp.
 
-- [ ] T315 [US5] Bảng điều khiển web `serve` (`API-TRN-0001`, `API-TRN-0002`) — src/mma_ai/monitoring/dashboard.py
-- [ ] T316 [P] [US5] Hiển thị 3D tuỳ chọn `View3D` — src/mma_ai/monitoring/viewer3d.py
-- [ ] T317 [US5] CLI giao diện quan sát `monitoring/cli.py` (`CMD-TRN-0002`) — src/mma_ai/monitoring/cli.py
-- [ ] T318 [P] [US4] CLI so sánh hai run `compare_cli.py` (`CMD-TRN-0003`) — src/mma_ai/learning/compare_cli.py
-- [ ] T319 [US1] CLI huấn luyện `cli.py` (`CMD-TRN-0001`) — src/mma_ai/learning/cli.py
-- [ ] T320 [US5] Benchmark chi phí giao diện `benchmark.py` (`CMD-TRN-0004`) — src/mma_ai/learning/benchmark.py
-- [ ] T321 [US1] Fixture dùng chung cho test tích hợp — tests/integration/train_fixtures.py
+- [x] T315 [US5] Bảng điều khiển web `serve` (`API-TRN-0001`, `API-TRN-0002`) — src/mma_ai/monitoring/dashboard.py
+- [x] T316 [P] [US5] Hiển thị 3D tuỳ chọn `View3D` — src/mma_ai/monitoring/viewer3d.py
+- [x] T317 [US5] CLI giao diện quan sát `monitoring/cli.py` (`CMD-TRN-0002`) — src/mma_ai/monitoring/cli.py
+- [x] T318 [P] [US4] CLI so sánh hai run `compare_cli.py` (`CMD-TRN-0003`) — src/mma_ai/learning/compare_cli.py
+- [x] T319 [US1] CLI huấn luyện `cli.py` (`CMD-TRN-0001`) — src/mma_ai/learning/cli.py
+- [x] T320 [US5] Benchmark chi phí giao diện `benchmark.py` (`CMD-TRN-0004`) — src/mma_ai/learning/benchmark.py
+- [x] T321 [US1] Fixture dùng chung cho test tích hợp — tests/integration/train_fixtures.py
 
 <a id="user-story-us1-chay-huan-luyen-ppo-bang-mot-lenh-p1-mvp"></a>
 ## User story US1 — chạy huấn luyện PPO bằng một lệnh (P1, MVP)
@@ -118,64 +118,64 @@ Bảng vùng ghi hiệu lực KHÔNG phủ `scripts/**`, `configs/**`, `tests/re
 
 **Kiểm thử độc lập**: chạy cấu hình smoke qua CLI thật trên mô hình MuJoCo thật.
 
-- [ ] T322 [US1] Test chạy smoke, log TensorBoard, checkpoint định kỳ — tests/integration/test_train_cli.py
-- [ ] T323 [US1] Test headless và bộ đếm NaN/Inf — tests/integration/test_train_headless.py
-- [ ] T324 [US1] Test chỉ dùng tập train — tests/integration/test_train_split.py
-- [ ] T325 [US1] Test bảo vệ NaN/Inf, mất ổn định, lỗi ghi đĩa — tests/integration/test_train_nan_guard.py
-- [ ] T326 [US1] Test phụ thuộc cài chung — tests/integration/test_dependency_train.py
+- [x] T322 [US1] Test chạy smoke, log TensorBoard, checkpoint định kỳ — tests/integration/test_train_cli.py
+- [x] T323 [US1] Test headless và bộ đếm NaN/Inf — tests/integration/test_train_headless.py
+- [x] T324 [US1] Test chỉ dùng tập train — tests/integration/test_train_split.py
+- [x] T325 [US1] Test bảo vệ NaN/Inf, mất ổn định, lỗi ghi đĩa — tests/integration/test_train_nan_guard.py
+- [x] T326 [US1] Test phụ thuộc cài chung — tests/integration/test_dependency_train.py
 
 <a id="user-story-us2-luu-nap-checkpoint-va-train-tiep-p1"></a>
 ## User story US2 — lưu, nạp checkpoint và train tiếp (P1)
 
 **Mục tiêu**: nạp lại cho cùng hành động xác định (≤ 1×10⁻⁶), train tiếp khôi phục optimizer, bộ chuẩn hoá, RNG, tạo run con (AC-2, KQ-2); logic ở T311, T314, T319.
 
-- [ ] T327 [US2] Test train tiếp và nạp checkpoint hỏng — tests/integration/test_resume.py
+- [x] T327 [US2] Test train tiếp và nạp checkpoint hỏng — tests/integration/test_resume.py
 
 <a id="user-story-us3-ho-so-thi-nghiem-du-truong-p1"></a>
 ## User story US3 — hồ sơ thí nghiệm đủ trường (P1)
 
 **Mục tiêu**: mỗi run một thư mục không ghi đè, hồ sơ đủ seed · config · phiên bản · hash XML · checkpoint · reward metrics · tài nguyên (AC-3, KQ-3); logic ở T305, T306, T312.
 
-- [ ] T328 [US3] Test hợp đồng hồ sơ run — tests/integration/test_manifest_contract.py
-- [ ] T329 [US3] Test ví dụ hợp đồng hợp schema — tests/integration/test_contract_examples_train.py
+- [x] T328 [US3] Test hợp đồng hồ sơ run — tests/integration/test_manifest_contract.py
+- [x] T329 [US3] Test ví dụ hợp đồng hợp schema — tests/integration/test_contract_examples_train.py
 
 <a id="user-story-us4-cung-seed-cho-ket-qua-tai-lap-p1"></a>
 ## User story US4 — cùng seed cho kết quả tái lập (P1)
 
 **Mục tiêu**: hai run cùng seed/cấu hình/thiết bị lệch ≤ 1×10⁻⁶ tương đối ở K điểm đầu; khác seed thì khác (AC-4, KQ-4); logic ở T313, T318.
 
-- [ ] T330 [US4] Test tái lập theo seed qua CLI — tests/integration/test_train_determinism.py
+- [x] T330 [US4] Test tái lập theo seed qua CLI — tests/integration/test_train_determinism.py
 
 <a id="user-story-us5-quan-sat-tien-trinh-huan-luyen-thoi-gian-thuc-p1"></a>
 ## User story US5 — quan sát tiến trình huấn luyện thời gian thực (P1)
 
 **Mục tiêu**: giao diện chỉ-đọc hiện reward, loss, kích hoạt 6 cơ, env steps/s, số bước / tổng, trạng thái checkpoint, trễ ≤ 5 s, chi phí ≤ 10% (AC-7); logic ở T308, T315…T317, T320.
 
-- [ ] T331 [US5] Test giao diện sống cùng lượt train và train sống sót khi giao diện lỗi — tests/integration/test_dashboard_resilience.py
-- [ ] T332 [US5] Test ràng buộc nhập của `monitoring` — tests/integration/test_monitoring_imports.py
-- [ ] T333 [US5] Test hiển thị 3D tuỳ chọn không làm hỏng train — tests/integration/test_viewer3d_train.py
-- [ ] T334 [US5] Test benchmark chi phí giao diện — tests/integration/test_benchmark_train.py
+- [x] T331 [US5] Test giao diện sống cùng lượt train và train sống sót khi giao diện lỗi — tests/integration/test_dashboard_resilience.py
+- [x] T332 [US5] Test ràng buộc nhập của `monitoring` — tests/integration/test_monitoring_imports.py
+- [x] T333 [US5] Test hiển thị 3D tuỳ chọn không làm hỏng train — tests/integration/test_viewer3d_train.py
+- [x] T334 [US5] Test benchmark chi phí giao diện — tests/integration/test_benchmark_train.py
 
 <a id="user-story-us6-mang-actorcritic-dung-cau-hinh-p2"></a>
 ## User story US6 — mạng actor/critic đúng cấu hình (P2)
 
 **Mục tiêu**: actor và critic đều 2×256, có chuẩn hoá observation và gradient clipping; cấu hình khác được ghi vào hồ sơ (AC-6); logic ở T309, T310.
 
-- [ ] T335 [US6] Test cấu hình mạng qua cấu hình mặc định và hồ sơ run — tests/integration/test_network_config.py
+- [x] T335 [US6] Test cấu hình mạng qua cấu hình mặc định và hồ sơ run — tests/integration/test_network_config.py
 
 <a id="user-story-us7-stage-chua-ho-tro-bao-chua-trien-khai-p2"></a>
 ## User story US7 — stage chưa hỗ trợ báo "chưa triển khai" (P2)
 
 **Mục tiêu**: `--stage balance` và mọi stage chưa hỗ trợ ⇒ thông báo rõ, mã 3, không tạo thư mục run (AC-5); logic ở T319.
 
-- [ ] T336 [US7] Test stage chưa triển khai qua CLI — tests/integration/test_train_stage.py
+- [x] T336 [US7] Test stage chưa triển khai qua CLI — tests/integration/test_train_stage.py
 
 <a id="qa-va-review-doc-lap"></a>
 ## QA và review độc lập
 
-- [ ] T337 QA: E2E AC-1…AC-7 trên entrypoint thật `python -m mma_ai.learning.cli` và `python -m mma_ai.monitoring.cli` — tests/e2e/test_train_acceptance.py
-- [ ] T338 Challenger: dựng vector đánh sập INV-001…INV-005 — tests/challenge/test_train_invariants.py, evidence/reviews/T338.challenge
-- [ ] T339 Reviewer: đối chiếu bằng chứng, ghi verdict — evidence/reviews/T339.verdict
+- [x] T337 QA: E2E AC-1…AC-7 trên entrypoint thật `python -m mma_ai.learning.cli` và `python -m mma_ai.monitoring.cli` — tests/e2e/test_train_acceptance.py
+- [x] T338 Challenger: dựng vector đánh sập INV-001…INV-005 — tests/challenge/test_train_invariants.py, evidence/reviews/T338.challenge
+- [x] T339 Reviewer: đối chiếu bằng chứng, ghi verdict — evidence/reviews/T339.verdict
 
 <a id="quyet-dinh-ve-vai-challenger"></a>
 ### Quyết định về vai `challenger`

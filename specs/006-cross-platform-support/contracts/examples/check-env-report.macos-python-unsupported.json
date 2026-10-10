@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0.0",
+  "os": { "kind": "macos", "release": "24.5.0", "machine": "arm64", "is_wsl": false, "tested": true },
+  "python": { "version": "3.13.1", "supported": false, "required_range": ">=3.11,<3.13" },
+  "packages": { "mujoco": null, "myo_sim": null, "gymnasium": null, "numpy": null, "torch": null },
+  "torch_device": null,
+  "capabilities": {
+    "display": { "available": true, "reason": null },
+    "symlink": { "available": true, "reason": null },
+    "long_paths": { "available": true, "reason": null },
+    "ram_peak": { "available": true, "reason": null },
+    "utf8_stdio": { "available": true, "reason": null }
+  },
+  "checks": [
+    { "id": "python_version", "status": "fail", "message": "Python 3.13.1 nằm ngoài khoảng yêu cầu >=3.11,<3.13: cài Python 3.11 hoặc 3.12." },
+    { "id": "package_mujoco", "status": "fail", "message": "Chưa cài mujoco: chạy uv sync." }
+  ],
+  "overall": "fail"
+}

@@ -80,19 +80,19 @@ Bảng vùng ghi hiệu lực KHÔNG phủ `scripts/**`, `configs/**`, `tests/re
 <a id="setup"></a>
 ## Setup
 
-- [ ] T201 Khai dependency của môi trường và package data trong `pyproject.toml` — pyproject.toml, tests/unit/test_env_packaging.py
-- [ ] T202 Dựng gói con `environment`: đăng ký `MmaElbowReach-v0` và các lớp lỗi — src/mma_ai/environment/__init__.py, errors.py, tests/unit/test_env_errors.py
+- [x] T201 Khai dependency của môi trường và package data trong `pyproject.toml` — pyproject.toml, tests/unit/test_env_packaging.py
+- [x] T202 Dựng gói con `environment`: đăng ký `MmaElbowReach-v0` và các lớp lỗi — src/mma_ai/environment/__init__.py, errors.py, tests/unit/test_env_errors.py
 
 <a id="foundational"></a>
 ## Foundational
 
 **Mục tiêu**: các mô-đun thuần dữ liệu/thuần số mà mọi story dùng — cấu hình, bộ sinh mục tiêu, observation, reward, rồi môi trường ghép chúng.
 
-- [ ] T203 Cấu hình môi trường một tệp `ElbowEnvConfig` — src/mma_ai/environment/env_config.py, elbow_env.yaml, tests/unit/test_env_config.py
-- [ ] T204 Bộ sinh mục tiêu `TargetGenerator`, `TargetSetPair` — src/mma_ai/environment/targets.py, tests/unit/test_targets.py
-- [ ] T205 [P] Bố cục observation 14 chiều, chuẩn hoá và kiểm — src/mma_ai/environment/observation.py, tests/unit/test_observation.py
-- [ ] T206 [P] Reward hai thành phần và `is_reached` — src/mma_ai/environment/reward.py, tests/unit/test_reward.py
-- [ ] T207 Môi trường `ElbowReachEnv`, `make_env`, `model_record()` — src/mma_ai/environment/single_agent.py, tests/unit/test_single_agent_state.py
+- [x] T203 Cấu hình môi trường một tệp `ElbowEnvConfig` — src/mma_ai/environment/env_config.py, elbow_env.yaml, tests/unit/test_env_config.py
+- [x] T204 Bộ sinh mục tiêu `TargetGenerator`, `TargetSetPair` — src/mma_ai/environment/targets.py, tests/unit/test_targets.py
+- [x] T205 [P] Bố cục observation 14 chiều, chuẩn hoá và kiểm — src/mma_ai/environment/observation.py, tests/unit/test_observation.py
+- [x] T206 [P] Reward hai thành phần và `is_reached` — src/mma_ai/environment/reward.py, tests/unit/test_reward.py
+- [x] T207 Môi trường `ElbowReachEnv`, `make_env`, `model_record()` — src/mma_ai/environment/single_agent.py, tests/unit/test_single_agent_state.py
 
 <a id="user-story-us1-moi-truong-chi-dieu-khien-bang-6-co-p1-mvp"></a>
 ## User story US1 — môi trường chỉ điều khiển bằng 6 cơ (P1, MVP)
@@ -101,47 +101,47 @@ Bảng vùng ghi hiệu lực KHÔNG phủ `scripts/**`, `configs/**`, `tests/re
 
 **Kiểm thử độc lập**: tạo môi trường, đọc số actuator, loại actuator, action space, hash XML — không cần tập mục tiêu hay reward.
 
-- [ ] T208 [US1] Test nạp 6 cơ, action space, hash XML, `check_env` — tests/integration/test_elbow_env.py
-- [ ] T209 [US1] Test cấu trúc điều khiển: chỉ cơ, chỉ ghi `ctrl` — tests/integration/test_control_structure.py
+- [x] T208 [US1] Test nạp 6 cơ, action space, hash XML, `check_env` — tests/integration/test_elbow_env.py
+- [x] T209 [US1] Test cấu trúc điều khiển: chỉ cơ, chỉ ghi `ctrl` — tests/integration/test_control_structure.py
 
 <a id="user-story-us2-observationaction-xac-dinh-kiem-tu-dong-p1"></a>
 ## User story US2 — observation/action xác định, kiểm tự động (P1)
 
 **Mục tiêu**: rollout hành động ngẫu nhiên có seed, observation đúng chiều, 0 NaN/Inf, không ngoài cận; hành động sai bị từ chối; chạy headless (AC-1, AC-2, SC-001, SC-002); logic ở T205, T207.
 
-- [ ] T210 [US2] Test rollout ngẫu nhiên, hành động sai, mất ổn định số — tests/integration/test_env_rollout.py
-- [ ] T211 [US2] Test chạy không màn hình qua tiến trình Python mới — tests/integration/test_headless.py
+- [x] T210 [US2] Test rollout ngẫu nhiên, hành động sai, mất ổn định số — tests/integration/test_env_rollout.py
+- [x] T211 [US2] Test chạy không màn hình qua tiến trình Python mới — tests/integration/test_headless.py
 
 <a id="user-story-us3-tap-muc-tieu-traintest-tach-bach-tat-dinh-p1"></a>
 ## User story US3 — tập mục tiêu train/test tách bạch, tất định (P1)
 
 **Mục tiêu**: cùng seed ⇒ cùng tập, train ∩ test = ∅ với khoảng cách tối thiểu, môi trường chỉ bốc đúng tập đã chọn (AC-3, SC-003); logic ở T204, T207.
 
-- [ ] T212 [US3] Test tất định theo seed và giao rỗng (hồi quy) — tests/integration/test_target_determinism.py
-- [ ] T213 [US3] Test chọn nguồn mục tiêu và trường `info` của `reset` — tests/integration/test_env_split.py
+- [x] T212 [US3] Test tất định theo seed và giao rỗng (hồi quy) — tests/integration/test_target_determinism.py
+- [x] T213 [US3] Test chọn nguồn mục tiêu và trường `info` của `reset` — tests/integration/test_env_split.py
 
 <a id="user-story-us4-reward-va-ket-thuc-episode-cau-hinh-duoc-p2"></a>
 ## User story US4 — reward và kết thúc episode cấu hình được (P2)
 
 **Mục tiêu**: reward hữu hạn hai thành phần có trọng số; `terminated` khi tới mục tiêu, `truncated` khi hết số hành động (AC-2); logic ở T206, T207.
 
-- [ ] T214 [US4] Test kết thúc episode và thành phần reward qua môi trường thật — tests/integration/test_env_episode_end.py
+- [x] T214 [US4] Test kết thúc episode và thành phần reward qua môi trường thật — tests/integration/test_env_episode_end.py
 
 <a id="user-story-us5-quyet-dinh-phien-ban-va-cai-trong-moi-truong-sach-p2"></a>
 ## User story US5 — quyết định phiên bản và cài trong môi trường sạch (P2)
 
 **Mục tiêu**: quyết định bỏ MyoSuite có lý do và bằng chứng (`research.md` Q1), cài được trong môi trường ảo sạch, lockfile chỉ khoá sau smoke test (AC-5, SC-005, NFR-INST-001).
 
-- [ ] T215 [US5] Script xác minh cài sạch `verify_clean_install` — src/mma_ai/environment/verify_clean_install.py, tests/unit/test_verify_clean_install.py
-- [ ] T216 [US5] Khoá lockfile sau smoke test và test quyết định phiên bản — uv.lock, tests/integration/test_dependency_decision.py
-- [ ] T217 [US5] Test hợp đồng bản ghi: ví dụ và đầu ra thật hợp schema — tests/integration/test_contract_examples_m1.py
+- [x] T215 [US5] Script xác minh cài sạch `verify_clean_install` — src/mma_ai/environment/verify_clean_install.py, tests/unit/test_verify_clean_install.py
+- [x] T216 [US5] Khoá lockfile sau smoke test và test quyết định phiên bản — uv.lock, tests/integration/test_dependency_decision.py
+- [x] T217 [US5] Test hợp đồng bản ghi: ví dụ và đầu ra thật hợp schema — tests/integration/test_contract_examples_m1.py
 
 <a id="qa-va-review-doc-lap"></a>
 ## QA và review độc lập
 
-- [ ] T218 QA: E2E AC-1…AC-5 trên entrypoint thật (`gymnasium.make` trong tiến trình mới, `python -m mma_ai.environment.verify_clean_install`) — tests/e2e/test_env_acceptance.py
-- [ ] T219 Challenger: dựng vector đánh sập INV-001…INV-004 — tests/challenge/test_env_invariants.py, evidence/reviews/T219.challenge
-- [ ] T220 Reviewer: đối chiếu bằng chứng, ghi verdict — evidence/reviews/T220.verdict
+- [x] T218 QA: E2E AC-1…AC-5 trên entrypoint thật (`gymnasium.make` trong tiến trình mới, `python -m mma_ai.environment.verify_clean_install`) — tests/e2e/test_env_acceptance.py
+- [x] T219 Challenger: dựng vector đánh sập INV-001…INV-004 — tests/challenge/test_env_invariants.py, evidence/reviews/T219.challenge
+- [x] T220 Reviewer: đối chiếu bằng chứng, ghi verdict — evidence/reviews/T220.verdict
 
 <a id="quyet-dinh-ve-vai-challenger"></a>
 ### Quyết định về vai `challenger`

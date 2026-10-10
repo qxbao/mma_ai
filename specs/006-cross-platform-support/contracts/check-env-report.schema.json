@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "check-env-report.schema.json",
+  "title": "Báo cáo môi trường — đầu ra của `python scripts/check_env.py --json` (CMD-PLT-0001, API-PLT-0008)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "os", "python", "packages", "torch_device", "capabilities", "checks", "overall"],
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "os": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "release", "machine", "is_wsl", "tested"],
+      "properties": {
+        "kind": { "enum": ["windows", "linux", "wsl2", "macos"] },
+        "release": { "type": "string", "minLength": 1 },
+        "machine": { "type": "string", "minLength": 1 },
+        "is_wsl": { "type": "boolean" },
+        "tested": { "type": "boolean", "description": "false khi tổ hợp OS/kiến trúc không thuộc cấu hình đã kiểm (Windows ARM64, macOS Intel)." }
+      }
+    },
+    "python": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "supported", "required_range"],
+      "properties": {
+        "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+" },
+        "supported": { "type": "boolean" },
+        "required_range": { "const": ">=3.11,<3.13" }
+      }
+    },
+    "packages": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mujoco", "myo_sim", "gymnasium", "numpy", "torch"],
+      "properties": {
+        "mujoco": { "type": ["string", "null"] },
+        "myo_sim": { "type": ["string", "null"] },
+        "gymnasium": { "type": ["string", "null"] },
+        "numpy": { "type": ["string", "null"] },
+        "torch": { "type": ["string", "null"], "description": "null khi chưa cài extra `rl`." }
+      }
+    },
+    "torch_device": {
+      "type": ["object", "null"],
+      "description": "null khi chưa cài torch.",
+      "additionalProperties": false,
+      "required": ["kind", "name"],
+      "properties": {
+        "kind": { "enum": ["cpu", "cuda"] },
+        "name": { "type": ["string", "null"], "description": "Tên GPU khi kind = cuda; null khi cpu." }
+      }
+    },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["display", "symlink", "long_paths", "ram_peak", "utf8_stdio"],
+      "properties": {
+        "display": { "$ref": "#/$defs/capability" },
+        "symlink": { "$ref": "#/$defs/capability" },
+        "long_paths": { "$ref": "#/$defs/capability" },
+        "ram_peak": { "$ref": "#/$defs/capability" },
+        "utf8_stdio": { "$ref": "#/$defs/capability" }
+      }
+    },
+    "checks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "status", "message"],
+        "properties": {
+          "id": {
+            "enum": [
+              "python_version", "package_mujoco", "package_myo_sim", "package_gymnasium", "package_numpy",
+              "package_torch", "tested_configuration", "display", "symlink", "long_paths", "ram_peak",
+              "utf8_stdio", "wsl_windows_drive"
+            ]
+          },
+          "status": { "enum": ["ok", "warn", "fail"] },
+          "message": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "overall": { "enum": ["ok", "fail"], "description": "fail khi có ít nhất một phép kiểm status = fail; mã thoát 1." }
+  },
+  "$defs": {
+    "capability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["available", "reason"],
+      "properties": {
+        "available": { "type": "boolean" },
+        "reason": { "type": ["string", "null"], "description": "null khi available = true; tiếng Việt khi false." }
+      }
+    }
+  }
+}

@@ -59,18 +59,18 @@ version: "1.0.0"
 <a id="setup"></a>
 ## Setup
 
-- [ ] T501 Khung dự án tối thiểu (manifest, `conftest.py`, test khói) nếu repo chưa có — pyproject.toml, conftest.py, src/mma_ai/__init__.py
-- [ ] T502 Dựng gói con `visualization` và các lớp lỗi — src/mma_ai/visualization/__init__.py, errors.py
+- [x] T501 Khung dự án tối thiểu (manifest, `conftest.py`, test khói) nếu repo chưa có — pyproject.toml, conftest.py, src/mma_ai/__init__.py
+- [x] T502 Dựng gói con `visualization` và các lớp lỗi — src/mma_ai/visualization/__init__.py, errors.py
 
 <a id="foundational"></a>
 ## Foundational
 
 **Mục tiêu**: các mô-đun thuần dữ liệu mà mọi story dùng — cấu hình, định dạng episode, accessor đọc trạng thái, kiểm mô hình.
 
-- [ ] T503 Cấu hình replay một tệp — src/mma_ai/visualization/replay_config.py, replay.yaml
-- [ ] T504 Định dạng episode (đọc/ghi nguyên tử/kiểm R1–R7) — src/mma_ai/visualization/episode.py
-- [ ] T505 [P] Accessor đọc-chỉ `read_state()` ở môi trường của 002 — src/mma_ai/environment/single_agent.py
-- [ ] T506 Kiểm lệch mô hình — src/mma_ai/visualization/model_check.py
+- [x] T503 Cấu hình replay một tệp — src/mma_ai/visualization/replay_config.py, replay.yaml
+- [x] T504 Định dạng episode (đọc/ghi nguyên tử/kiểm R1–R7) — src/mma_ai/visualization/episode.py
+- [x] T505 [P] Accessor đọc-chỉ `read_state()` ở môi trường của 002 — src/mma_ai/environment/single_agent.py
+- [x] T506 Kiểm lệch mô hình — src/mma_ai/visualization/model_check.py
 
 <a id="user-story-us1-phat-lai-3d-mot-episode-da-luu-p1-mvp"></a>
 ## User story US1 — phát lại 3D một episode đã lưu (P1, MVP)
@@ -79,50 +79,50 @@ version: "1.0.0"
 
 **Kiểm thử độc lập**: `RecordingSink` kiểm thứ tự khung ở mọi môi trường; viewer thật ở máy có màn hình (T519).
 
-- [ ] T508 [P] [US1] Bộ lập nhịp thời gian thực và nội suy khung — src/mma_ai/visualization/pacing.py
-- [ ] T510 [US1] Vòng phát `play` + giao diện `FrameSink` — src/mma_ai/visualization/playback.py
-- [ ] T512 [US1] `ViewerSink` bọc `launch_passive` — src/mma_ai/visualization/viewer.py
-- [ ] T514 [US1] Điều phối `run_replay` và ánh xạ ngoại lệ → mã thoát — src/mma_ai/visualization/replay.py
-- [ ] T515 [US1] CLI mỏng `cli.py` (`main`) + `os._exit` có điều kiện — src/mma_ai/visualization/cli.py
-- [ ] T519 [US1] Test viewer thật rẽ nhánh theo môi trường — tests/integration/test_replay_viewer_real.py
+- [x] T508 [P] [US1] Bộ lập nhịp thời gian thực và nội suy khung — src/mma_ai/visualization/pacing.py
+- [x] T510 [US1] Vòng phát `play` + giao diện `FrameSink` — src/mma_ai/visualization/playback.py
+- [x] T512 [US1] `ViewerSink` bọc `launch_passive` — src/mma_ai/visualization/viewer.py
+- [x] T514 [US1] Điều phối `run_replay` và ánh xạ ngoại lệ → mã thoát — src/mma_ai/visualization/replay.py
+- [x] T515 [US1] CLI mỏng `cli.py` (`main`) + `os._exit` có điều kiện — src/mma_ai/visualization/cli.py
+- [x] T519 [US1] Test viewer thật rẽ nhánh theo môi trường — tests/integration/test_replay_viewer_real.py
 
 <a id="user-story-us2-demo-chay-policy-tu-checkpoint-p1"></a>
 ## User story US2 — demo: chạy policy từ checkpoint (P1)
 
 **Mục tiêu**: `--checkpoint <path>` chạy MỘT episode bằng policy trên môi trường của 002, chỉ qua kích thích cơ `u ∈ [0,1]^6`, rồi phát bằng đúng đường phát của replay (AC-2, KQ-2).
 
-- [ ] T513 [US2] Bộ ghi episode `record_episode` — src/mma_ai/visualization/recorder.py
-- [ ] T518 [US2] Test demo và chỉ-đọc qua CLI — tests/integration/test_demo_cli.py, test_replay_readonly.py
+- [x] T513 [US2] Bộ ghi episode `record_episode` — src/mma_ai/visualization/recorder.py
+- [x] T518 [US2] Test demo và chỉ-đọc qua CLI — tests/integration/test_demo_cli.py, test_replay_readonly.py
 
 <a id="user-story-us3-thay-va-ghi-6-activation-theo-thoi-gian-p1"></a>
 ## User story US3 — thấy và ghi 6 activation theo thời gian (P1)
 
 **Mục tiêu**: bảng 6 activation có tên cơ trong viewer và trong tóm tắt (AC-1, AC-2, AC-3, KQ-4).
 
-- [ ] T509 [P] [US3] HUD tên cơ + giá trị + thanh — src/mma_ai/visualization/hud.py
-- [ ] T507 [US3] Tóm tắt không màn hình `summarize_episode` — src/mma_ai/visualization/summary.py
+- [x] T509 [P] [US3] HUD tên cơ + giá trị + thanh — src/mma_ai/visualization/hud.py
+- [x] T507 [US3] Tóm tắt không màn hình `summarize_episode` — src/mma_ai/visualization/summary.py
 
 <a id="user-story-us4-episode-tu-du-de-phat-lai-dung-mo-hinh-p1"></a>
 ## User story US4 — episode tự đủ để phát lại đúng mô hình (P1)
 
 **Mục tiêu**: hợp đồng dữ liệu của con 4 (AC-1, AC-4) — thực hiện ở T504; kiểm hợp đồng schema ở:
 
-- [ ] T520 [US4] Test import sạch và ví dụ hợp schema — tests/integration/test_visualization_imports.py, test_contract_examples_replay.py
+- [x] T520 [US4] Test import sạch và ví dụ hợp schema — tests/integration/test_visualization_imports.py, test_contract_examples_replay.py
 
 <a id="user-story-us5-may-khong-co-man-hinh-p2"></a>
 ## User story US5 — máy không có màn hình (P2)
 
 **Mục tiêu**: không treo; báo lỗi rõ hoặc `--headless` (AC-3, KQ-3).
 
-- [ ] T511 [P] [US5] Kiểm màn hình khả dụng trước khi mở viewer — src/mma_ai/visualization/display.py
-- [ ] T516 [US5] Test `--headless` và không màn hình qua CLI — tests/integration/test_replay_headless.py, test_replay_nodisplay.py
+- [x] T511 [P] [US5] Kiểm màn hình khả dụng trước khi mở viewer — src/mma_ai/visualization/display.py
+- [x] T516 [US5] Test `--headless` và không màn hình qua CLI — tests/integration/test_replay_headless.py, test_replay_nodisplay.py
 
 <a id="user-story-us6-lech-mo-hinh-thi-canh-bao-khong-phat-sai-ngam-p2"></a>
 ## User story US6 — lệch mô hình thì cảnh báo, không phát sai ngầm (P2)
 
 **Mục tiêu**: AC-4 — logic ở T506; kiểm qua CLI cùng nhóm US7:
 
-- [ ] T517 [US6] Test lệch mô hình và đầu vào hỏng qua CLI — tests/integration/test_replay_model_mismatch.py, test_replay_bad_input.py
+- [x] T517 [US6] Test lệch mô hình và đầu vào hỏng qua CLI — tests/integration/test_replay_model_mismatch.py, test_replay_bad_input.py
 
 <a id="user-story-us7-nguon-khong-dung-duoc-thi-bao-loi-ma-thoat-khac-0-p2"></a>
 ## User story US7 — nguồn không dùng được thì báo lỗi, mã thoát khác 0 (P2)
@@ -132,9 +132,9 @@ version: "1.0.0"
 <a id="qa-va-review-doc-lap"></a>
 ## QA và review độc lập
 
-- [ ] T521 QA: E2E AC-1…AC-5 trên entrypoint thật `python -m mma_ai.visualization.cli` — tests/e2e/test_replay_acceptance.py
-- [ ] T522 Challenger: dựng vector đánh sập INV-001…INV-005 — tests/challenge/test_replay_invariants.py, evidence/reviews/T522.challenge
-- [ ] T523 Reviewer: đối chiếu bằng chứng, ghi verdict — evidence/reviews/T523.verdict
+- [x] T521 QA: E2E AC-1…AC-5 trên entrypoint thật `python -m mma_ai.visualization.cli` — tests/e2e/test_replay_acceptance.py
+- [x] T522 Challenger: dựng vector đánh sập INV-001…INV-005 — tests/challenge/test_replay_invariants.py, evidence/reviews/T522.challenge
+- [x] T523 Reviewer: đối chiếu bằng chứng, ghi verdict — evidence/reviews/T523.verdict
 
 <a id="quyet-dinh-ve-vai-challenger"></a>
 ### Quyết định về vai `challenger`

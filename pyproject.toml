@@ -35,7 +35,6 @@ dev = [
 packages = ["src/mma_ai"]
 artifacts = [
     "src/mma_ai/visualization/*.yaml",
-    "src/mma_ai/visualization/*.json",
     "src/mma_ai/environment/*.yaml",
     "src/mma_ai/learning/*.yaml",
     "src/mma_ai/evaluation/*.yaml",
@@ -66,18 +65,12 @@ strict = true
 disallow_untyped_decorators = false
 warn_return_any = true
 warn_unused_configs = false
-exclude = [
-    "^tests/e2e/",
-]
 
 [[tool.mypy.overrides]]
 module = [
     "conftest",
     "tests.*",
     "tests.unit.*",
-    "tests.challenge.*",
-    "test_replay_invariants",
-    "test_replay_invariants.*",
 ]
 disallow_untyped_decorators = false
 
@@ -92,7 +85,5 @@ module = [
     "jsonschema.*",
     "tensorboard.*",
     "packaging.*",
-    "pandas.*",
-    "matplotlib.*",
 ]
 ignore_missing_imports = true
