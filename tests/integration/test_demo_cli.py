@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+import pytest
 from jsonschema import Draft202012Validator
 
 from mma_ai.physics.body_model import load_muscle_model
@@ -81,6 +82,7 @@ def _get_clean_env() -> dict[str, str]:
 
 def _create_test_checkpoint(run_dir: Path, *, seed: int = 42) -> Path:
     """Tạo tệp điểm kiểm tra (checkpoint) hợp lệ phục vụ kiểm thử tích hợp CLI."""
+    pytest.importorskip("torch", reason="Cần extra rl (torch) để thực thi demo CLI")
     from mma_ai.learning.checkpoint import save_checkpoint
     from mma_ai.learning.networks import ActorCritic
     from mma_ai.learning.normalizer import RunningNorm
