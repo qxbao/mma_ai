@@ -13,7 +13,7 @@ import socket
 import threading
 import urllib.parse
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 ALLOWED_LOOPBACK_HOSTS: frozenset[str] = frozenset({"127.0.0.1", "::1", "localhost"})
 
@@ -338,8 +338,21 @@ def _build_html_template(poll_interval_ms: int) -> str:
 class _DashboardHandler(http.server.BaseHTTPRequestHandler):
     """Bộ xử lý yêu cầu HTTP chỉ-đọc cho bảng quan sát huấn luyện."""
 
-    run_dir: Path
-    html_content: bytes
+    @property
+    def run_dir(self) -> Path:
+        """Đường dẫn thư mục chạy huấn luyện gắn với máy chủ hiện hành."""
+        server_obj = getattr(self, "server", None)
+        if server_obj is not None and hasattr(server_obj, "run_dir"):
+            return cast(Path, server_obj.run_dir)
+        return Path(".")
+
+    @property
+    def html_content(self) -> bytes:
+        """Nội dung HTML tĩnh gắn với máy chủ hiện hành."""
+        server_obj = getattr(self, "server", None)
+        if server_obj is not None and hasattr(server_obj, "html_content"):
+            return cast(bytes, server_obj.html_content)
+        return b""
 
     def log_message(self, format: str, *args: Any) -> None:
         """Tắt ghi nhật ký mặc định ra thiết bị xuất chuẩn để bảo đảm yên lặng."""
@@ -438,6 +451,19 @@ class _DashboardHTTPServer(http.server.ThreadingHTTPServer):
 
     daemon_threads = True
     allow_reuse_address = True
+    run_dir: Path
+    html_content: bytes
+
+    def __init__(
+        self,
+        server_address: tuple[str, int],
+        RequestHandlerClass: type[http.server.BaseHTTPRequestHandler],
+        run_dir: Path,
+        html_content: bytes,
+    ) -> None:
+        self.run_dir = run_dir
+        self.html_content = html_content
+        super().__init__(server_address, RequestHandlerClass)
 
 
 class _DashboardIPv6Server(_DashboardHTTPServer):
@@ -527,12 +553,13 @@ def serve(
     resolved_run_dir = Path(run_dir).resolve()
     html_bytes = _build_html_template(poll_interval_ms).encode("utf-8")
 
-    # Gán thuộc tính dùng chung cho lớp xử lý
-    _DashboardHandler.run_dir = resolved_run_dir
-    _DashboardHandler.html_content = html_bytes
-
     server_factory = _DashboardIPv6Server if host == "::1" else _DashboardHTTPServer
-    httpd = server_factory((host, port), _DashboardHandler)
+    httpd = server_factory(
+        (host, port),
+        _DashboardHandler,
+        run_dir=resolved_run_dir,
+        html_content=html_bytes,
+    )
 
     # Lấy cổng thực tế sau khi bind
     actual_port = int(httpd.server_address[1])

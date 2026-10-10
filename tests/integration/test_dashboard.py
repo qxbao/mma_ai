@@ -328,3 +328,29 @@ def test_finished_status_snapshots(tmp_path: Path) -> None:
                 assert response.status == 200
                 data = json.loads(response.read().decode("utf-8"))
             assert data["status"] == st
+
+
+def test_two_servers_in_one_process_keep_their_own_run_dir(tmp_path: Path) -> None:
+    """INV-005, FR-020, F-006: Hai máy chủ trong cùng tiến trình giữ run_dir độc lập."""
+    dir_a = tmp_path / "run_a"
+    dir_b = tmp_path / "run_b"
+    dir_a.mkdir()
+    dir_b.mkdir()
+    (dir_a / "progress.json").write_text(json.dumps({"run": "a"}), encoding="utf-8")
+    (dir_b / "progress.json").write_text(json.dumps({"run": "b"}), encoding="utf-8")
+
+    with serve(dir_a, host="127.0.0.1", port=0) as server_a:
+        with serve(dir_b, host="127.0.0.1", port=0) as server_b:
+            url_a = f"{server_a.url}/api/progress"
+            req_a = urllib.request.Request(url_a, method="GET")
+            with urllib.request.urlopen(req_a, timeout=5.0) as res_a:
+                assert res_a.status == 200
+                data_a = json.loads(res_a.read().decode("utf-8"))
+                assert data_a["run"] == "a"
+
+            url_b = f"{server_b.url}/api/progress"
+            req_b = urllib.request.Request(url_b, method="GET")
+            with urllib.request.urlopen(req_b, timeout=5.0) as res_b:
+                assert res_b.status == 200
+                data_b = json.loads(res_b.read().decode("utf-8"))
+                assert data_b["run"] == "b"
