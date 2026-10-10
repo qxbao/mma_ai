@@ -446,3 +446,127 @@ def test_load_existing_contract_examples() -> None:
         assert ep2.schema_version == "1.0.0"
         assert ep2.source is not None
         assert ep2.outcome.reached is True
+
+
+def test_regress_f001_non_finite_numeric_string_rejected(
+    tmp_path: Path, valid_episode_data: dict[str, Any]
+) -> None:
+    """Kiểm tra hồi quy F-001 (INV-003, NFR-REL-001, FR-009): từ chối chuỗi số không hữu hạn.
+
+    Các chuỗi như 'NaN', 'inf', '-inf', 'Infinity', '-Infinity', '1e999' ở trường số
+    (qpos, qvel, fingertip, reward, tolerance_m, final_distance_m) phải bị từ chối.
+    """
+    bad_strings = ["NaN", "nan", "inf", "-inf", "Infinity", "-Infinity", "1e999"]
+    for val in bad_strings:
+        # Trường hợp 1: qpos chứa chuỗi
+        d1 = dict(valid_episode_data)
+        d1["frames"] = [dict(f) for f in d1["frames"]]
+        d1["frames"][1] = dict(d1["frames"][1])
+        d1["frames"][1]["qpos"] = [val]
+        p1 = tmp_path / f"bad_qpos_{val}.json"
+        p1.write_text(json.dumps(d1), encoding="utf-8")
+        with pytest.raises(EpisodeInvalid):
+            read_episode(p1)
+
+        # Trường hợp 2: reward chứa chuỗi
+        d2 = dict(valid_episode_data)
+        d2["frames"] = [dict(f) for f in d2["frames"]]
+        d2["frames"][0] = dict(d2["frames"][0])
+        d2["frames"][0]["reward"] = val
+        p2 = tmp_path / f"bad_reward_{val}.json"
+        p2.write_text(json.dumps(d2), encoding="utf-8")
+        with pytest.raises(EpisodeInvalid):
+            read_episode(p2)
+
+        # Trường hợp 3: target.tolerance_m chứa chuỗi
+        d3 = dict(valid_episode_data)
+        d3["target"] = dict(d3["target"])
+        d3["target"]["tolerance_m"] = val
+        p3 = tmp_path / f"bad_tolerance_{val}.json"
+        p3.write_text(json.dumps(d3), encoding="utf-8")
+        with pytest.raises(EpisodeInvalid):
+            read_episode(p3)
+
+        # Trường hợp 4: outcome.final_distance_m chứa chuỗi
+        d4 = dict(valid_episode_data)
+        d4["outcome"] = dict(d4["outcome"])
+        d4["outcome"]["final_distance_m"] = val
+        p4 = tmp_path / f"bad_dist_{val}.json"
+        p4.write_text(json.dumps(d4), encoding="utf-8")
+        with pytest.raises(EpisodeInvalid):
+            read_episode(p4)
+
+
+def test_regress_f002_schema_type_and_range_violations_rejected(
+    tmp_path: Path, valid_episode_data: dict[str, Any]
+) -> None:
+    """Kiểm tra hồi quy F-002 (INV-003, FR-009): từ chối vi phạm lược đồ episode.schema.json.
+
+    Bao gồm: target.split ngoài enum, target.index sai kiểu/âm, tolerance_m <= 0,
+    final_distance_m < 0, created_utc sai kiểu, phần tử bool thay cho số.
+    """
+    cases: list[tuple[str, Any, Any]] = [
+        ("target", "split", 123),
+        ("target", "split", "validation"),
+        ("target", "split", {}),
+        ("target", "index", "x"),
+        ("target", "index", -5),
+        ("target", "index", []),
+        ("target", "tolerance_m", -0.05),
+        ("target", "tolerance_m", 0.0),
+        ("outcome", "final_distance_m", -1.0),
+        ("created_utc", None, {}),
+        ("created_utc", None, 12345),
+        ("created_utc", None, None),
+    ]
+
+    for parent, child, val in cases:
+        d = dict(valid_episode_data)
+        if child is None:
+            d[parent] = val
+        else:
+            d[parent] = dict(d[parent])
+            d[parent][child] = val
+        p = tmp_path / f"bad_schema_{parent}_{child}_{type(val).__name__}.json"
+        p.write_text(json.dumps(d), encoding="utf-8")
+        with pytest.raises(EpisodeInvalid):
+            read_episode(p)
+
+    # Kiểm tra bool thay cho số trong qpos/reward
+    d_bool = dict(valid_episode_data)
+    d_bool["frames"] = [dict(f) for f in d_bool["frames"]]
+    d_bool["frames"][0] = dict(d_bool["frames"][0])
+    d_bool["frames"][0]["qpos"] = [True]
+    p_bool = tmp_path / "bad_bool_qpos.json"
+    p_bool.write_text(json.dumps(d_bool), encoding="utf-8")
+    with pytest.raises(EpisodeInvalid):
+        read_episode(p_bool)
+
+
+def test_regress_f003_race_condition_file_created_between_check_and_write_not_overwritten(
+    tmp_path: Path, valid_episode_data: dict[str, Any]
+) -> None:
+    """Kiểm tra hồi quy F-003 (INV-005): tệp xuất hiện trước bước hoán đổi không bị ghi đè.
+
+    Sử dụng os.link nguyên tử thay vì os.replace ghi đè, và kiểm tra từ chối cả symlink treo.
+    """
+    dest = tmp_path / "concurrent_ep.json"
+    ep = Episode.from_dict(valid_episode_data)
+
+    # 1. Ghi lần đầu thành công
+    res_path = write_episode(ep, dest)
+    assert res_path == dest
+    first_bytes = dest.read_bytes()
+
+    # 2. Ghi lần hai vào cùng đích bị từ chối và nội dung cũ nguyên vẹn
+    with pytest.raises(EpisodeWriteError):
+        write_episode(ep, dest)
+    assert dest.read_bytes() == first_bytes
+
+    # 3. Đích là symlink treo (dangling symlink) phải bị từ chối
+    dangling_link = tmp_path / "dangling.json"
+    dangling_link.symlink_to(tmp_path / "nonexistent.json")
+    with pytest.raises(EpisodeWriteError):
+        write_episode(ep, dangling_link)
+    assert dangling_link.is_symlink()
+
