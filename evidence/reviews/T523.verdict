@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "run-20261010-641635",
+  "task_id": "T523",
+  "round": 1,
+  "sha_reviewed": "1ee323cc6056821e62d752192e828a42174e07a6",
+  "verdict": "APPROVE",
+  "findings": [
+    {
+      "id": "F-001",
+      "severity": "MINOR",
+      "file": "tests/integration/test_demo_cli.py",
+      "line": 85,
+      "claim": "Trợ giúp _create_test_checkpoint gọi pytest.importorskip(\"torch\"), trái luật 'không skip/xfail' của tasks.md (dòng 44); cổng chạy `uv run --isolated --with pytest` không cài extra `rl` nên AC-2 bị SKIP trong bằng chứng cổng ngoài.",
+      "failure_scenario": "evidence/gates/logs/T521/e2e.log ghi '16 passed, 1 skipped'; chạy hẹp `pytest tests/e2e/test_replay_acceptance.py -rs` trong môi trường cổng cho '4 passed, 1 skipped' với SKIPPED tests/integration/test_demo_cli.py:85 (test_ac_2_demo_from_checkpoint). Cùng lý do, mọi test của test_demo_cli.py/test_replay_readonly.py cần checkpoint (FR-002/003, INV-002 qua CLI, NFR-REPRO-001) đều không được cổng chứng minh. Reviewer đã chạy lại hẹp với `--extra rl`: test_replay_acceptance + test_demo_cli + test_replay_readonly = 13 passed, 0 skipped ⇒ mã đúng, thiếu chỉ là bằng chứng cổng. Không chặn vì sản phẩm không vi phạm AC; cần khai `torch` vào môi trường cổng (extra rl) hoặc bỏ importorskip để thiếu torch thành lỗi đỏ."
+    },
+    {
+      "id": "F-002",
+      "severity": "MINOR",
+      "file": "src/mma_ai/visualization/episode.py",
+      "line": 548,
+      "claim": "INV-005: write_episode kiểm exists()/is_symlink() rồi mới os.replace nên cửa sổ TOCTOU còn nguyên; os.replace luôn ghi đè đích xuất hiện sau lần kiểm cuối (đồng nhất với F-003 của T522.challenge, xfail không strict còn đỏ).",
+      "failure_scenario": "Tiến trình khác tạo `--save-episode` đích đúng giữa lần kiểm lại (episode.py:545) và os.replace (episode.py:548): tệp của họ bị thay êm, lệnh vẫn trả mã 0 thay vì mã 8. Cần hai bên ghi đồng thời, cửa sổ rất hẹp; test test_inv005_file_created_between_check_and_replace_is_not_overwritten (xfail F-003) tái hiện bằng bọc os.replace. Cách vá gốc: os.link(tmp, dest) rồi unlink tmp, hoặc mở đích bằng chế độ 'x'."
+    },
+    {
+      "id": "F-003",
+      "severity": "MINOR",
+      "file": "specs/005-replay-3d-muscle-demo/spec.md",
+      "line": 85,
+      "claim": "[plan-mandated] Spec (AC-1, SC-001, FR) nêu lệnh `python scripts/replay.py ...` nhưng thư mục scripts/ không tồn tại; entrypoint thật hiện là `python -m mma_ai.visualization.cli` (tasks.md T515 ghi rõ 'khoảng trống năng lực' vì không task nào ghi được scripts/**).",
+      "failure_scenario": "Người dùng làm đúng theo spec/quickstart chạy `python scripts/replay.py --episode <path>` ⇒ FileNotFoundError 'can't open file scripts/replay.py'. Mọi test e2e/tích hợp đi qua `-m mma_ai.visualization.cli` nên AC vẫn được chứng minh trên entrypoint thật, nhưng chuỗi lệnh nguyên văn trong AC chưa chạy được cho tới khi có chủ cho vỏ `scripts/replay.py`."
+    },
+    {
+      "id": "F-004",
+      "severity": "OPTIONAL",
+      "file": "specs/005-replay-3d-muscle-demo/checklists/acceptance.md",
+      "line": 0,
+      "claim": "Không có checklist chấp nhận do qa sinh (specs/005-replay-3d-muscle-demo/ không có thư mục checklists/), nên không đối chiếu được dòng THIẾU/AC-không-test-entrypoint theo checklist.",
+      "failure_scenario": "Reviewer buộc phải tự dựng ma trận AC↔test từ spec.md và tests/e2e/test_replay_acceptance.py (đủ AC-1…AC-5 mức entrypoint subprocess); nếu checklist có thêm yêu cầu bằng chứng ảnh/trace thì không thể phát hiện. Spec không đòi ảnh chụp cho feature CLI/viewer này nên không nâng mức."
+    }
+  ]
+}
