@@ -38,7 +38,39 @@ from mma_ai.visualization.errors import (
 )
 from mma_ai.visualization.replay_config import ReplayConfig
 
-__all__: list[str] = ["run_replay"]
+_viewer_was_opened: bool = False
+_last_viewer_sink: Any | None = None
+
+__all__: list[str] = [
+    "get_active_viewer_sink",
+    "reset_viewer_opened",
+    "run_replay",
+    "was_viewer_opened",
+]
+
+
+def was_viewer_opened() -> bool:
+    """Kiểm tra xem MuJoCo Viewer có được mở trong phiên chạy gần nhất hay không."""
+    return _viewer_was_opened
+
+
+def reset_viewer_opened() -> None:
+    """Đặt lại trạng thái theo dõi mở MuJoCo Viewer."""
+    global _viewer_was_opened, _last_viewer_sink
+    _viewer_was_opened = False
+    _last_viewer_sink = None
+
+
+def get_active_viewer_sink() -> Any | None:
+    """Lấy thể hiện bộ nhận khung hình ViewerSink đang hoạt động hoặc gần nhất."""
+    return _last_viewer_sink
+
+
+def _mark_viewer_opened(sink: Any) -> None:
+    """Đánh dấu MuJoCo Viewer đã được mở trong phiên chạy và lưu tham chiếu sink."""
+    global _viewer_was_opened, _last_viewer_sink
+    _viewer_was_opened = True
+    _last_viewer_sink = sink
 
 
 class _ReplayArgumentParser(argparse.ArgumentParser):
@@ -172,6 +204,7 @@ def run_replay(args: Sequence[str] | argparse.Namespace | None = None) -> int:
     Returns:
         Mã thoát nguyên (exit code) tương ứng theo bảng mã chuẩn.
     """
+    reset_viewer_opened()
     save_path_obj: Path | None = None
 
     try:
@@ -537,6 +570,7 @@ def run_replay(args: Sequence[str] | argparse.Namespace | None = None) -> int:
             viewer_data = mujoco.MjData(viewer_model)
 
             sink = ViewerSink(viewer_model, viewer_data, cfg)
+            _mark_viewer_opened(sink)
             sink.set_target(episode.target.position_m)
 
             pacer = Pacer()
