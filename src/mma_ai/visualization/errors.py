@@ -5,6 +5,9 @@
 - FR-018: Hỗ trợ thông điệp tiếng Việt (Vietnamese) kèm giá trị và ngữ cảnh (context).
 - INV-004: Thoát mã lỗi khác 0 khi phát sinh sự cố, không để lại trạng thái dở dang.
 """
+from __future__ import annotations
+
+from typing import Any
 
 
 class ReplayError(Exception):
@@ -67,6 +70,11 @@ class DemoUnstable(ReplayError):
     """Lỗi mô phỏng demo mất ổn định số học hoặc vật lý trong quá trình chạy (mã thoát 1)."""
 
     exit_code: int = 1
+
+    def __init__(self, message: str = "", episode: Any = None) -> None:
+        """Khởi tạo ngoại lệ kèm bản ghi episode dở dang (nếu có)."""
+        super().__init__(message)
+        self.episode = episode
 
 
 __all__: list[str] = [
