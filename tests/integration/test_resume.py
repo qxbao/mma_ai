@@ -22,6 +22,7 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -87,6 +88,32 @@ def test_resume_contract_independent_assertion() -> None:
         assert set(REQUIRED_COMPONENTS) == expected_components, (
             f"Danh sách thành phần checkpoint không khớp: {REQUIRED_COMPONENTS}"
         )
+
+    # 4. Xác minh CLI huấn luyện khi nhận cờ --resume bắt buộc phải đối chiếu expected_model_sha256
+    # từ môi trường cánh tay khuỷu (FR-008, FR-009, INV-003)
+    import mma_ai.learning.cli as cli_mod
+    from mma_ai.learning.errors import CheckpointError
+
+    recorded_kwargs: dict[str, Any] = {}
+
+    def spy_load_checkpoint(path: Any, **kwargs: Any) -> Any:
+        recorded_kwargs.update(kwargs)
+        raise CheckpointError("Ngắt kiểm tra hợp đồng CLI resume")
+
+    orig_load_checkpoint = getattr(cli_mod, "load_checkpoint", None)
+    cli_mod.load_checkpoint = spy_load_checkpoint
+    try:
+        with tempfile.NamedTemporaryFile() as dummy_file:
+            exit_code = cli_mod.main(["--stage", "elbow", "--resume", dummy_file.name])
+            assert exit_code == 4, f"Kỳ vọng mã thoát 4 khi kiểm tra checkpoint, nhận {exit_code}"
+            assert recorded_kwargs.get("expected_model_sha256") is not None, (
+                "CLI không truyền expected_model_sha256 vào load_checkpoint khi tiếp tục huấn luyện"
+            )
+            assert len(str(recorded_kwargs["expected_model_sha256"])) == 64, (
+                "Mã băm XML expected_model_sha256 phải là chuỗi SHA-256 dài 64 ký tự"
+            )
+    finally:
+        cli_mod.load_checkpoint = orig_load_checkpoint
 
 
 def _require_torch() -> Any:
