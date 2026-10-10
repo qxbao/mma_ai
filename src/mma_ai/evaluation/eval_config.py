@@ -270,6 +270,9 @@ class EvalConfig:
                 else:
                     normalized_updates[key] = value
 
+        orig_ep_base = raw_dict.get("seeds", {}).get("episode_base")
+        orig_rand_policy = raw_dict.get("seeds", {}).get("random_policy")
+
         # Kiểm tra tính hợp lệ của từng khoá ghi đè
         for dot_path, val in normalized_updates.items():
             if dot_path not in _ALLOWED_OVERRIDE_PATHS:
@@ -285,6 +288,12 @@ class EvalConfig:
                     target[part] = {}
                 target = target[part]
             target[parts[-1]] = val
+
+        # NFR-REPRO-001, INV-007: Đồng bộ random_policy theo episode_base khi cấu hình ban đầu
+        # dùng chung hạt giống đánh giá (evaluation seed) và không tách riêng hai hạt giống
+        if "seeds.episode_base" in normalized_updates and orig_rand_policy == orig_ep_base:
+            if "seeds" in raw_dict and isinstance(raw_dict["seeds"], dict):
+                raw_dict["seeds"]["random_policy"] = raw_dict["seeds"]["episode_base"]
 
     @classmethod
     def _validate_and_build(cls, data: dict[str, Any]) -> EvalConfig:
