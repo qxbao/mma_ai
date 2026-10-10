@@ -8,6 +8,7 @@ Cung cấp giao diện Gymnasium chuẩn bọc mô phỏng cơ bắp MyoElbow 6 
 - FR-006, INV-004: Observation 14 chiều chuẩn hoá với cận hữu hạn, kiểm soát mất ổn định số học.
 - FR-009, AC-2: Kết thúc terminated (tới đích) thắng truncated (hết số bước) khi cùng bước.
 - FR-012, AC-3: Quản lý chọn mục tiêu train/test tách bạch, báo qua reset info.
+- FR-002, INV-002, API-EVL-0005: Tuỳ chọn target_index khi reset để đánh giá mục tiêu.
 - FR-013, AC-1: Báo mã băm SHA-256 XML và hồ sơ mô hình qua model_record().
 - NFR-HEADLESS-001: Hoạt động headless hoàn toàn, không phụ thuộc màn hình hiển thị.
 """
@@ -213,7 +214,7 @@ class ElbowReachEnv(gym.Env[np.ndarray, np.ndarray]):
 
         Args:
             seed: Seed ngẫu nhiên (nếu None, rút một seed nguyên ngẫu nhiên).
-            options: Tuỳ chọn đặt lại, bao gồm 'split' ('train' hoặc 'test').
+            options: Tuỳ chọn đặt lại ('split', 'target_index' theo FR-002, API-EVL-0005).
 
         Returns:
             Bộ đôi (observation 14 chiều float32, info theo reset-info.schema.json).
@@ -243,10 +244,29 @@ class ElbowReachEnv(gym.Env[np.ndarray, np.ndarray]):
         # Đặt lại mô phỏng bằng mj_resetData (trạng thái đầu cố định qpos=0, act=0)
         self.sim.reset()
 
-        # Chọn mục tiêu ngẫu nhiên từ tập tương ứng bằng self.np_random.integers (INV-001)
+        # Chọn mục tiêu: theo target_index hoặc rút ngẫu nhiên (FR-002, INV-002, API-EVL-0005)
         target_set = self.targets.train if current_split == "train" else self.targets.test
         n_targets = len(target_set.targets)
-        target_idx = int(self.np_random.integers(0, n_targets))
+        if options is not None and "target_index" in options:
+            raw_target_idx = options["target_index"]
+            is_int = isinstance(raw_target_idx, (int, np.integer)) and not isinstance(
+                raw_target_idx, bool
+            )
+            if not is_int:
+                raise ValueError(
+                    f"Chỉ mục mục tiêu (target_index) phải là số nguyên (integer): "
+                    f"{raw_target_idx!r}, kích thước tập '{current_split}' là {n_targets}."
+                )
+            target_idx = int(raw_target_idx)
+            if target_idx < 0 or target_idx >= n_targets:
+                raise ValueError(
+                    f"Chỉ mục mục tiêu (target_index) ngoài phạm vi hợp lệ: {target_idx}, "
+                    f"kích thước tập '{current_split}' là {n_targets} "
+                    f"(kỳ vọng 0 <= target_index < {n_targets})."
+                )
+        else:
+            target_idx = int(self.np_random.integers(0, n_targets))
+
         selected_target = target_set.targets[target_idx]
         self._current_target = selected_target
 
