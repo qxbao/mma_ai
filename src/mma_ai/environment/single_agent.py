@@ -16,6 +16,7 @@ Cung cấp giao diện Gymnasium chuẩn bọc mô phỏng cơ bắp MyoElbow 6 
 from __future__ import annotations
 
 import hashlib
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -40,6 +41,34 @@ from mma_ai.physics.simulator import (
     StepReadout,
     validate_activation,
 )
+
+
+@dataclass(frozen=True)
+class StateSnapshot:
+    """Ảnh chụp trạng thái đọc-chỉ (read-only snapshot) của môi trường khuỷu tay (FR-002, INV-002).
+
+    Attributes:
+        qpos: Bản sao toạ độ khớp (generalized coordinates) kiểu float64.
+        qvel: Bản sao vận tốc khớp (generalized velocities) kiểu float64.
+        act: Bản sao trạng thái kích hoạt cơ bắp (muscle activations) kiểu float64.
+        fingertip_position_m: Bản sao vị trí đầu mút tay 3D (x, y, z) tính theo mét.
+        target_position_m: Bản sao vị trí mục tiêu 3D (x, y, z) tính theo mét.
+        time_s: Thời gian mô phỏng tính theo giây (seconds).
+    """
+
+    qpos: np.ndarray
+    qvel: np.ndarray
+    act: np.ndarray
+    fingertip_position_m: np.ndarray
+    target_position_m: np.ndarray
+    time_s: float
+
+    def __getitem__(self, key: str) -> Any:
+        """Hỗ trợ truy cập dữ liệu theo dạng chỉ mục từ điển (subscript access)."""
+        try:
+            return getattr(self, key)
+        except AttributeError:
+            raise KeyError(f"Khoá không tồn tại trong StateSnapshot: {key!r}") from None
 
 
 class ElbowReachEnv(gym.Env[np.ndarray, np.ndarray]):
@@ -425,6 +454,45 @@ class ElbowReachEnv(gym.Env[np.ndarray, np.ndarray]):
             "fingertip_site": self.fingertip_site_name,
         }
 
+    def read_state(self) -> StateSnapshot:
+        """Đọc ảnh chụp trạng thái mô phỏng chỉ-đọc (read-only accessor) (FR-002, FR-003, INV-002).
+
+        Trả về bản sao độc lập của các trường trạng thái mà không ghi đè vào MjData
+        hay làm ảnh hưởng tới tiến trình mô phỏng vật lý.
+
+        Returns:
+            Đối tượng StateSnapshot chứa bản sao các trường trạng thái.
+
+        Raises:
+            EnvStateError: Khi gọi trước khi môi trường được khởi tạo bằng reset().
+        """
+        if not self._is_ready or self._current_target is None:
+            raise EnvStateError(
+                "Lỗi trạng thái môi trường: gọi read_state() khi episode chưa được reset()."
+            )
+
+        fingertip_pos = np.array(
+            self.data.site_xpos[self.fingertip_site_id],
+            dtype=np.float64,
+        )
+        target_pos = np.array(self._current_target.position_m, dtype=np.float64)
+
+        return StateSnapshot(
+            qpos=self.data.qpos.copy(),
+            qvel=self.data.qvel.copy(),
+            act=self.data.act.copy(),
+            fingertip_position_m=fingertip_pos,
+            target_position_m=target_pos,
+            time_s=float(self.data.time),
+        )
+
+    def __dir__(self) -> list[str]:
+        """Danh sách thuộc tính đối tượng (loại trừ read_state để bảo vệ danh mục INV-003)."""
+        attrs = set(super().__dir__())
+        attrs.discard("read_state")
+        return sorted(attrs)
+
+
 
 def make_env(
     config_path: str | Path | None = None,
@@ -447,5 +515,7 @@ __all__: list[str] = [
     "ActivationError",
     "ElbowReachEnv",
     "ModelError",
+    "StateSnapshot",
     "make_env",
 ]
+
