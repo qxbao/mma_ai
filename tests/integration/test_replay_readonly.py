@@ -125,7 +125,7 @@ def _create_sample_episode_file(dest: Path) -> Path:
     return dest
 
 
-def _create_mock_run_directory(run_dir: Path) -> tuple[Path, Path | None]:
+def _create_mock_run_directory(run_dir: Path) -> tuple[Path, Path]:
     """Dựng cấu trúc hoàn chỉnh của một thư mục run bao gồm cấu hình, tệp episode và checkpoint."""
     run_dir.mkdir(parents=True, exist_ok=True)
 
@@ -146,34 +146,30 @@ def _create_mock_run_directory(run_dir: Path) -> tuple[Path, Path | None]:
     # 3. Tệp episode đã ghi
     ep_file = _create_sample_episode_file(run_dir / "episodes" / "test_ep.json")
 
-    # 4. Checkpoint (nếu có torch trong môi trường)
-    ckpt_file: Path | None = None
-    try:
-        from mma_ai.learning.checkpoint import save_checkpoint
-        from mma_ai.learning.networks import ActorCritic
-        from mma_ai.learning.normalizer import RunningNorm
-        from mma_ai.learning.ppo import PPOAgent
-        from mma_ai.learning.train_config import TrainConfig
+    # 4. Checkpoint hợp lệ phục vụ kiểm tra read-only cho demo
+    from mma_ai.learning.checkpoint import save_checkpoint
+    from mma_ai.learning.networks import ActorCritic
+    from mma_ai.learning.normalizer import RunningNorm
+    from mma_ai.learning.ppo import PPOAgent
+    from mma_ai.learning.train_config import TrainConfig
 
-        cfg = TrainConfig.load()
-        norm = RunningNorm(clip_obs=cfg.normalization.clip_obs)
-        norm.update(np.zeros((2, 14)))
-        model = ActorCritic(obs_dim=14, act_dim=6, cfg=cfg)
-        agent = PPOAgent(model=model, cfg=cfg)
+    cfg = TrainConfig.load()
+    norm = RunningNorm(clip_obs=cfg.normalization.clip_obs)
+    norm.update(np.zeros((2, 14)))
+    model = ActorCritic(obs_dim=14, act_dim=6, cfg=cfg)
+    agent = PPOAgent(model=model, cfg=cfg)
 
-        ctx = {
-            "obs_normalizer": norm,
-            "update_idx": 1,
-            "env_steps": 128,
-            "seed": 42,
-            "model_sha256": load_muscle_model("myoelbow").info.sha256,
-            "config": cfg,
-        }
-        save_checkpoint(agent=agent, run_dir=run_dir, kind="final", ctx=ctx)
-        ckpt_file = run_dir / "checkpoints" / "ckpt_u000001_final.pt"
-    except ImportError:
-        # Trong môi trường không có extra rl (torch), bỏ qua bước tạo checkpoint thật
-        ckpt_file = None
+    ctx = {
+        "obs_normalizer": norm,
+        "update_idx": 1,
+        "env_steps": 128,
+        "seed": 42,
+        "model_sha256": load_muscle_model("myoelbow").info.sha256,
+        "config": cfg,
+    }
+    save_checkpoint(agent=agent, run_dir=run_dir, kind="final", ctx=ctx)
+    ckpt_file = run_dir / "checkpoints" / "ckpt_u000001_final.pt"
+    assert ckpt_file.exists(), f"Không tìm thấy checkpoint tạo tại: {ckpt_file}"
 
     return ep_file, ckpt_file
 
@@ -217,20 +213,51 @@ def test_run_files_unchanged_by_replay_and_demo(tmp_path: Path) -> None:
     )
 
     # -------------------------------------------------------------------------
-    # GIAI ĐOẠN 2: Chạy demo từ checkpoint trong thư mục run (nếu có torch)
+    # GIAI ĐOẠN 2: Chạy demo từ checkpoint trong thư mục run
     # -------------------------------------------------------------------------
-    if ckpt_file is not None and ckpt_file.exists():
-        external_out = tmp_path / "external_output" / "demo_save.json"
-        proc_demo = subprocess.run(
+    assert ckpt_file.exists(), "Tệp checkpoint phải tồn tại để thực thi demo"
+    external_out = tmp_path / "external_output" / "demo_save.json"
+    proc_demo = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "mma_ai.visualization.cli",
+            "--checkpoint",
+            str(ckpt_file),
+            "--headless",
+            "--save-episode",
+            str(external_out),
+        ],
+        capture_output=True,
+        text=True,
+        env=clean_env,
+        timeout=30.0,
+        check=False,
+    )
+    assert proc_demo.returncode == 0, f"Demo thất bại: {proc_demo.stderr}"
+    assert external_out.exists(), "Tệp episode ngoài phải được lưu thành công"
+
+    # Xác nhận toàn bộ thư mục run hoàn toàn không bị thay đổi sau demo
+    snapshot_after_demo = _snapshot_directory(run_dir)
+    assert snapshot_after_demo == snapshot_initial, (
+        f"Thư mục run bị biến đổi sau khi chạy demo:\n"
+        f"Mới: {set(snapshot_after_demo) - set(snapshot_initial)}\n"
+        f"Mất: {set(snapshot_initial) - set(snapshot_after_demo)}"
+    )
+
+    # ---------------------------------------------------------------------
+    # GIAI ĐOẠN 3: Chạy demo qua con trỏ checkpoints/latest.json
+    # ---------------------------------------------------------------------
+    latest_file = run_dir / "checkpoints" / "latest.json"
+    if latest_file.exists():
+        proc_latest = subprocess.run(
             [
                 sys.executable,
                 "-m",
                 "mma_ai.visualization.cli",
                 "--checkpoint",
-                str(ckpt_file),
+                str(latest_file),
                 "--headless",
-                "--save-episode",
-                str(external_out),
             ],
             capture_output=True,
             text=True,
@@ -238,43 +265,12 @@ def test_run_files_unchanged_by_replay_and_demo(tmp_path: Path) -> None:
             timeout=30.0,
             check=False,
         )
-        assert proc_demo.returncode == 0, f"Demo thất bại: {proc_demo.stderr}"
-        assert external_out.exists(), "Tệp episode ngoài phải được lưu thành công"
+        assert proc_latest.returncode == 0, f"Demo latest.json thất bại: {proc_latest.stderr}"
 
-        # Xác nhận toàn bộ thư mục run hoàn toàn không bị thay đổi sau demo
-        snapshot_after_demo = _snapshot_directory(run_dir)
-        assert snapshot_after_demo == snapshot_initial, (
-            f"Thư mục run bị biến đổi sau khi chạy demo:\n"
-            f"Mới: {set(snapshot_after_demo) - set(snapshot_initial)}\n"
-            f"Mất: {set(snapshot_initial) - set(snapshot_after_demo)}"
+        snapshot_after_latest = _snapshot_directory(run_dir)
+        assert snapshot_after_latest == snapshot_initial, (
+            "Thư mục run bị biến đổi sau khi chạy demo qua con trỏ latest.json"
         )
-
-        # ---------------------------------------------------------------------
-        # GIAI ĐOẠN 3: Chạy demo qua con trỏ checkpoints/latest.json
-        # ---------------------------------------------------------------------
-        latest_file = run_dir / "checkpoints" / "latest.json"
-        if latest_file.exists():
-            proc_latest = subprocess.run(
-                [
-                    sys.executable,
-                    "-m",
-                    "mma_ai.visualization.cli",
-                    "--checkpoint",
-                    str(latest_file),
-                    "--headless",
-                ],
-                capture_output=True,
-                text=True,
-                env=clean_env,
-                timeout=30.0,
-                check=False,
-            )
-            assert proc_latest.returncode == 0, f"Demo latest.json thất bại: {proc_latest.stderr}"
-
-            snapshot_after_latest = _snapshot_directory(run_dir)
-            assert snapshot_after_latest == snapshot_initial, (
-                "Thư mục run bị biến đổi sau khi chạy demo qua con trỏ latest.json"
-            )
 
 
 def test_demo_atomic_write_disk_error_cleanup(
