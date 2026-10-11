@@ -457,3 +457,97 @@ def test_viewer_sink_compatible_with_play_pipeline() -> None:
     assert mock_handle.sync_calls >= 2
     assert user_scn.ngeom == 1
     assert user_scn.geoms[0].pos[0] == pytest.approx(0.2)
+
+
+class NonReentrantLockingMockHandle:
+    """Tay cầm giả lập có cơ chế khoá không tái nhập để phát hiện tranh chấp khoá."""
+
+    def __init__(self, user_scn: mujoco.MjvScene | None = None) -> None:
+        self.user_scn = user_scn
+        self.is_running_flag = True
+        self.is_locked = False
+        self.set_texts_called_while_locked = False
+        self.clear_texts_called_while_locked = False
+        self.text_records: list[Any] = []
+        self.clear_texts_calls = 0
+        self.sync_calls = 0
+
+    def is_running(self) -> bool:
+        """Đọc trạng thái hoạt động của viewer."""
+        return self.is_running_flag
+
+    @contextlib.contextmanager
+    def lock(self) -> Any:
+        """Quản lý ngữ cảnh khoá không tái nhập (non-reentrant lock)."""
+        if self.is_locked:
+            raise RuntimeError("Khoá không tái nhập đang bị chiếm giữ!")
+        self.is_locked = True
+        try:
+            yield
+        finally:
+            self.is_locked = False
+
+    def set_texts(self, texts: Any) -> None:
+        """Cập nhật văn bản HUD và kiểm tra cờ đang giữ khoá."""
+        if self.is_locked:
+            self.set_texts_called_while_locked = True
+            raise AssertionError(
+                "Lỗi bất biến: set_texts() bị gọi trong khi đang giữ khoá (lock_ctx)!"
+            )
+        self.text_records.append(texts)
+
+    def clear_texts(self) -> None:
+        """Xoá văn bản HUD và kiểm tra cờ đang giữ khoá."""
+        if self.is_locked:
+            self.clear_texts_called_while_locked = True
+            raise AssertionError(
+                "Lỗi bất biến: clear_texts() bị gọi trong khi đang giữ khoá (lock_ctx)!"
+            )
+        self.clear_texts_calls += 1
+
+    def sync(self, state_only: bool = False) -> None:
+        """Đồng bộ hiển thị và kiểm tra cờ đang giữ khoá."""
+        if self.is_locked:
+            raise AssertionError(
+                "Lỗi bất biến: sync() bị gọi trong khi đang giữ khoá (lock_ctx)!"
+            )
+        self.sync_calls += 1
+
+    def close(self) -> None:
+        """Đóng viewer giả lập."""
+        self.is_running_flag = False
+
+
+def test_viewer_sink_show_calls_set_texts_outside_lock() -> None:
+    """Kiểm tra gọi set_texts và clear_texts ngoài khối lock_ctx.
+
+    Bảo đảm không giữ khoá cảnh khi cập nhật HUD:
+    AC-1, AC-5, FR-001, FR-005, INV-002, NFR-REL-001.
+    """
+    from mma_ai.visualization.viewer import ViewerSink
+
+    loaded = load_muscle_model("myoelbow")
+    data = mujoco.MjData(loaded.model)
+    cfg = _create_sample_config()
+    mock_handle = NonReentrantLockingMockHandle()
+
+    sink = ViewerSink(loaded.model, data, cfg, handle=mock_handle)
+
+    frame = _create_sample_frame(t_s=0.04)
+    sample_hud = ["Dòng 1", "Dòng 2"]
+
+    # Gọi show với HUD hợp lệ: set_texts phải được gọi ngoài khối khoá lock_ctx
+    sink.show(frame, sample_hud)
+
+    assert not mock_handle.set_texts_called_while_locked
+    assert len(mock_handle.text_records) == 1
+    assert mock_handle.text_records[0][0][2] == "Dòng 1\nDòng 2"
+    assert mock_handle.sync_calls == 1
+
+    # Gọi show với HUD rỗng: clear_texts phải được gọi ngoài khối khoá lock_ctx
+    sink.show(frame, [])
+
+    assert not mock_handle.clear_texts_called_while_locked
+    assert mock_handle.clear_texts_calls == 1
+    assert mock_handle.sync_calls == 2
+

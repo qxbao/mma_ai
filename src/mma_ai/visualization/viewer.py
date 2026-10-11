@@ -117,29 +117,7 @@ class ViewerSink:
 
         import mujoco
 
-        # Gán trạng thái khớp qpos và vận tốc qvel (INV-002: replay chỉ đặt trạng thái đã ghi)
-        if frame.qpos and hasattr(self.data, "qpos"):
-            n_qpos = min(len(self.data.qpos), len(frame.qpos))
-            self.data.qpos[:n_qpos] = frame.qpos[:n_qpos]
-
-        if frame.qvel and hasattr(self.data, "qvel"):
-            n_qvel = min(len(self.data.qvel), len(frame.qvel))
-            self.data.qvel[:n_qvel] = frame.qvel[:n_qvel]
-
-        # Gán trạng thái kích hoạt cơ (muscle activation) vào mảng act của MuJoCo
-        if hasattr(self.model, "na") and self.model.na > 0 and hasattr(self.data, "act"):
-            if frame.activation:
-                n_act = min(self.model.na, len(frame.activation))
-                self.data.act[:n_act] = frame.activation[:n_act]
-
-        # Cập nhật thời gian mô phỏng tương ứng của khung hình
-        if hasattr(self.data, "time"):
-            self.data.time = float(frame.t_s)
-
-        # Tính toán động học thuận (forward kinematics) để đồng bộ hình học các phân đoạn cơ thể
-        mujoco.mj_forward(self.model, self.data)
-
-        # Khoá cảnh để cập nhật cảnh phụ (user_scn) và văn bản HUD một cách an toàn luồng
+        # Khoá cảnh để cập nhật trạng thái vật lý (qpos, act, mj_forward) và user_scn an toàn luồng
         lock_ctx = (
             self._handle.lock()
             if (self._handle is not None and hasattr(self._handle, "lock"))
@@ -147,6 +125,28 @@ class ViewerSink:
         )
 
         with lock_ctx:
+            # Gán trạng thái khớp qpos và vận tốc qvel (INV-002: replay chỉ đặt trạng thái đã ghi)
+            if frame.qpos and hasattr(self.data, "qpos"):
+                n_qpos = min(len(self.data.qpos), len(frame.qpos))
+                self.data.qpos[:n_qpos] = frame.qpos[:n_qpos]
+
+            if frame.qvel and hasattr(self.data, "qvel"):
+                n_qvel = min(len(self.data.qvel), len(frame.qvel))
+                self.data.qvel[:n_qvel] = frame.qvel[:n_qvel]
+
+            # Gán trạng thái kích hoạt cơ (muscle activation) vào mảng act của MuJoCo
+            if hasattr(self.model, "na") and self.model.na > 0 and hasattr(self.data, "act"):
+                if frame.activation:
+                    n_act = min(self.model.na, len(frame.activation))
+                    self.data.act[:n_act] = frame.activation[:n_act]
+
+            # Cập nhật thời gian mô phỏng tương ứng của khung hình
+            if hasattr(self.data, "time"):
+                self.data.time = float(frame.t_s)
+
+            # Tính toán động học thuận (forward kinematics) để đồng bộ hình học các phân đoạn cơ thể
+            mujoco.mj_forward(self.model, self.data)
+
             # Cập nhật hình cầu đánh dấu mục tiêu 3D trong user_scn (FR-004)
             scn = getattr(self._handle, "user_scn", None)
             if scn is not None:
@@ -171,17 +171,18 @@ class ViewerSink:
                 else:
                     scn.ngeom = 0
 
-            # Cập nhật bảng thông số HUD qua set_texts (FR-005)
-            if self._handle is not None:
-                if hud:
-                    hud_combined = "\n".join(hud)
-                    if hasattr(self._handle, "set_texts"):
-                        self._handle.set_texts([(None, None, hud_combined, "")])
-                else:
-                    if hasattr(self._handle, "clear_texts"):
-                        self._handle.clear_texts()
-                    elif hasattr(self._handle, "set_texts"):
-                        self._handle.set_texts([])
+        # Cập nhật bảng thông số HUD qua set_texts/clear_texts ở ngoài khối khoá cảnh (FR-005)
+        # Tránh tranh chấp khoá với luồng kết xuất đồ hoạ hoặc vòng lặp sự kiện giao diện
+        if self._handle is not None:
+            if hud:
+                hud_combined = "\n".join(hud)
+                if hasattr(self._handle, "set_texts"):
+                    self._handle.set_texts([(None, None, hud_combined, "")])
+            else:
+                if hasattr(self._handle, "clear_texts"):
+                    self._handle.clear_texts()
+                elif hasattr(self._handle, "set_texts"):
+                    self._handle.set_texts([])
 
         # Đồng bộ hoá khung hình tới cửa sổ hiển thị
         if self._handle is not None and hasattr(self._handle, "sync"):
