@@ -15,24 +15,5 @@
       "failure_scenario": "Với run '<stamp>_x_s1' đã tồn tại cùng giây: create_run_dir(root, 'x_s1/<hai cấp lên>/escape', 1) tạo thư mục escape_s1 ngoài runs_dir; create_run_dir(root, 'a/b', 1) ném FileNotFoundError không phải RunDirError. Test: test_inv001_stage_with_path_separators_cannot_leave_runs_dir (xfail không strict, F-005); chạy pytest --runxfail vẫn đỏ.",
       "parked": false
     }
-  ],
-  "round2_resolved": {
-    "F-001": "đã vá (4d1a289): rng_state numpy là trạng thái thực của agent; test_inv004_checkpoint_stores_agent_numpy_rng_state và test_inv004_resume_continues_same_trajectory_as_uninterrupted XPASS, đã gỡ xfail",
-    "F-002": "đã vá (4d1a289): load_checkpoint quét hữu hạn, ném CheckpointError; 3 ca nan/+inf/-inf XPASS, đã gỡ xfail",
-    "F-003": "đã vá (4d1a289): sha256 từ latest.json/meta.json được đối chiếu khi nạp; các ca lật bit trước đây lọt nay đều bị từ chối, đã gỡ xfail",
-    "F-004": "đã vá (4d1a289): RuntimeError của torch.save được bắt và dọn tệp tạm; đã gỡ xfail",
-    "F-006": "đã vá (bdc9911): run_dir/html tách theo từng máy chủ; đã gỡ xfail"
-  },
-  "vectors_tried_round2": [
-    "Trainer thật chạy 3 lượt: rng_state numpy của checkpoint cuối == _rng thực (không lách được)",
-    "Trainer thật: 2 lượt + lưu + resume 1 lượt khớp chạy liền 3 lượt (atol 1e-5)",
-    "Sửa nhất quán (cập nhật cả sha256 ở meta.json và latest.json) với NaN trong optimizer.exp_avg, Inf trong obs_normalizer, -Inf trong log_std: nạp qua .pt và qua latest.json đều CheckpointError",
-    "Nạp qua *.meta.json (đường vào mới của bản vá) sau khi đổi giá trị trọng số: CheckpointError",
-    "Con trỏ latest.json ghi sha sai trên tệp .pt còn nguyên: CheckpointError",
-    "Trainer(resume_checkpoint=<tệp bị lật/NaN>): CheckpointError, không train tiếp"
-  ],
-  "notes": [
-    "Nạp trực tiếp .pt khi KHÔNG có meta.json thì không có sha để đối chiếu (theo thiết kế, không phải finding).",
-    "Trainer._restore_from_checkpoint nuốt mọi Exception khi gán rng numpy; chỉ chạm được bằng tệp được dựng tinh vi với sha nhất quán, ghi chú không chặn."
   ]
 }
