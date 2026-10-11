@@ -2,71 +2,17 @@
   "schema_version": "1.0.0",
   "run_id": "run-20261011-3b6743",
   "task_id": "T425",
-  "round": 1,
-  "sha_reviewed": "3b46acaf5a1b223eb28a324c91a0e26d1aa575c4",
-  "verdict": "REQUEST_CHANGES",
+  "round": 2,
+  "sha_reviewed": "9cb551e9ab7a72d7a88d6ed5a979398f0bb93ab4",
+  "verdict": "APPROVE",
   "findings": [
     {
-      "id": "F-001",
-      "severity": "CRITICAL",
-      "file": "src/mma_ai/evaluation/split_guard.py",
-      "line": 198,
-      "claim": "INV-001/AC-4 (+INV-002): `paths.env_config_override` (khai được qua `--config`) quyết định tập train/test dùng cho phép kiểm giao rỗng, nhưng không được đối chiếu với môi trường của chính run: con 2 không ghi `target_fingerprint_sha256` vào manifest nên nhánh đối chiếu fingerprint không bao giờ chạy, chỉ phát cảnh báo `rebuilt_from_config`. Phép kiểm vì thế chạy trên tập train SAI và báo passed.",
-      "failure_scenario": "Run seed 42 (env_config mặc định, default_seed 42). `--config eval.yaml` với `paths.env_config_override` trỏ tới bản elbow_env.yaml có `targets.default_seed: 7`. check_disjoint(run, cfg) trả passed (provenance=rebuilt_from_config), trong khi tập test dựng từ seed 7 cách tập train THẬT của run (seed 42) chỉ 1.7e-5 m < min_separation 0.02 m ⇒ mục tiêu đánh giá nằm gần như trùng mục tiêu train mà không bị chặn; kết luận 'tốt hơn random' mất giá trị mà không báo lỗi. Test: tests/challenge/test_evaluate_invariants.py::test_inv001_env_override_cannot_move_eval_set_off_the_runs_train_set (xfail không strict, F-001; chạy --runxfail ⇒ AssertionError 'cách train THẬT chỉ 0.000017 m < 0.02 m'). Đối chứng xanh: cùng run với cấu hình môi trường của run bị chặn đúng ở các test quét seed/khoảng cách.",
-      "parked": false
-    },
-    {
-      "id": "F-002",
-      "severity": "MINOR",
-      "file": "src/mma_ai/evaluation/split_guard.py",
-      "line": 136,
-      "claim": "INV-001/FR-009: `resumed_from` có mặt nhưng không phải mapping (chuỗi, số, mảng) bị `break` lặng lẽ khỏi vòng đi ngược chuỗi cha ⇒ seed của mọi tổ tiên bị bỏ khỏi `train_seeds` thay vì từ chối vì không thiết lập được chuỗi train.",
-      "failure_scenario": "manifest.json của run có `\"resumed_from\": \"run1\"` (hoặc 7, hoặc [\"run1\"]) và run cha có seed trùng seed đánh giá: check_disjoint trả passed với train_seeds=(seed run con,) — mất seed cha. Mong đợi TrainSetUnknown như khi `resumed_from.run_id` hỏng. Test: test_inv001_malformed_resumed_from_refused[run1|7|bad2] (xfail không strict, F-002; --runxfail ⇒ DID NOT RAISE TrainSetUnknown). Chỉ chạm được khi hồ sơ bị hỏng/sửa tay nên xếp MINOR.",
-      "parked": false
-    },
-    {
-      "id": "F-003",
-      "severity": "MINOR",
-      "file": "src/mma_ai/evaluation/runner.py",
-      "line": 322,
-      "claim": "INV-001/AC-4: seed nhúng trong checkpoint (`LoadedCheckpoint.seed`) không bao giờ được đối chiếu với seed của hồ sơ run ghép (ghép theo vị trí hoặc theo TÊN thư mục cha ở `_find_run_directory_and_manifest` bước 3); check_disjoint chỉ tin seed trong manifest.",
-      "failure_scenario": "Checkpoint huấn luyện bằng seed 12345 đặt cạnh/được ghép với manifest của run khác (seed 42), chạy `evaluate --checkpoint <ckpt> --eval-seed 12345`: harness có load_checkpoint trả seed=12345 ⇒ lượt đánh giá hoàn tất mã 6 (không phải 4/5) và dải seed đánh giá chứa đúng seed train thật của checkpoint. Test: test_inv001_checkpoint_seed_must_match_manifest_seed (xfail không strict, F-003; --runxfail ⇒ 'ra mã 6').",
-      "parked": false
-    },
-    {
-      "id": "F-004",
-      "severity": "OPTIONAL",
-      "file": "src/mma_ai/evaluation/runner.py",
-      "line": 483,
-      "claim": "INV-004: nhánh dọn `.tmp-<id>` chỉ bắt `KeyboardInterrupt` và `Exception`; BaseException khác (SystemExit từ thư viện/bộ xử lý tín hiệu, GeneratorExit) làm `.tmp-*` bị bỏ lại trong `eval/` (không có bản ghi hợp lệ nào xuất hiện nên bất biến chính còn giữ).",
-      "failure_scenario": "Bước 5 hoặc 7 ném SystemExit(3)/GeneratorExit ⇒ `eval/.tmp-<id>` còn lại. Test: test_inv004_baseexception_leaves_no_tmp[4 tổ hợp] (xfail không strict, F-004). SIGKILL/SIGTERM không có xử lý cũng để lại `.tmp-*` (không dựng test vì không bắt được trong tiến trình).",
-      "parked": false
-    },
-    {
-      "id": "F-005",
-      "severity": "MINOR",
-      "file": "src/mma_ai/evaluation/runner.py",
-      "line": 377,
-      "claim": "INV-004/INV-005: `tmp_dir.mkdir(exist_ok=True)` dùng lại `.tmp-<eval_id>` còn sót từ lượt bị giết cùng giây và cùng `episode_base` (existing_ids chỉ xét tên KHÔNG có tiền tố `.tmp-`), nên tệp cũ trong thư mục tạm được `os.rename` công bố chung với kết quả mới.",
-      "failure_scenario": "eval/.tmp-20261011T010203Z_e12345/STALE_FROM_KILLED_RUN.txt có sẵn; đóng băng thời gian ở 2026-10-11T01:02:03Z rồi chạy evaluate: thư mục công bố `eval/20261011T010203Z_e12345/` chứa STALE_FROM_KILLED_RUN.txt. Test: test_inv004_stale_tmp_dir_not_mixed_into_published_result (xfail không strict, F-005; --runxfail ⇒ stale file tồn tại).",
-      "parked": false
-    },
-    {
-      "id": "F-006",
-      "severity": "OPTIONAL",
-      "file": "src/mma_ai/evaluation/split_guard.py",
-      "line": 281,
-      "claim": "INV-001: `_check_target_disjointness` cho qua tập train hoặc test RỖNG (n_checked=0, min_dist=inf) và toạ độ NaN (so sánh `dist < ngưỡng` luôn False) — API công khai `check_disjoint(pair=...)` báo passed mà không so cặp nào. Đường CLI không tạo được các tập này (TargetGenerator luôn sinh đủ).",
-      "failure_scenario": "check_disjoint(run, cfg, pair) với pair.train rỗng / pair.test rỗng / một mục tiêu test có position_m=(nan,nan,nan) ⇒ DisjointnessReport(passed=True). Test: test_inv001_degenerate_pair_never_reported_as_passed[train_empty|test_empty|test_nan] (xfail không strict, F-006).",
-      "parked": false
-    },
-    {
-      "id": "F-007",
+      "id": "F-008",
       "severity": "OPTIONAL",
       "file": "src/mma_ai/evaluation/rollout.py",
-      "line": 177,
-      "claim": "INV-003: `np.asarray(raw_action, dtype=np.float64)` cắt phần ảo của mảng phức (chỉ phát ComplexWarning) nên NaN ở phần ảo lọt qua chặn tại biên và tới env.step. LearnedPolicy ép float32 nên đường thật không phát sinh; chỉ policy tuỳ biến qua `run_policy_on_targets` chạm được.",
-      "failure_scenario": "policy.act trả np.array([0.5+nan*1j]*6) ⇒ env.step nhận [0.5]*6 ở cả 3 bước, episode không bị đánh dấu bất thường. Test: test_inv003_complex_action_imaginary_nan_not_silently_dropped (xfail không strict, F-007).",
+      "line": 190,
+      "claim": "INV-003: nhánh object-dtype mới của rollout chỉ nhận diện `complex` thuần Python; np.complex64 (không kế thừa complex) trong mảng object bị `astype(float64)` cắt phần ảo nên NaN ảo tới env.step. Biến thể của F-007 ở nhánh mới; chỉ policy tuỳ biến qua run_policy_on_targets chạm được (LearnedPolicy ép float32), không chặn.",
+      "failure_scenario": "policy trả np.empty(6, dtype=object) với mỗi phần tử np.complex64(0.5+nan·j) ⇒ env.seen có 3 hành động [0.5]*6 thay vì rỗng. Test: test_inv003_object_array_of_numpy_complex64_nan_imag_not_dropped (xfail không strict, F-008; --runxfail ⇒ AssertionError). Đối chứng đã chặn đúng: mảng complex128/complex64 dtype thuần, list lẫn complex, object chứa complex Python/np.complex128, None.",
       "parked": false
     }
   ]

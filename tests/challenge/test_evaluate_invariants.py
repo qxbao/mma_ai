@@ -2,8 +2,9 @@
 
 Mỗi test nhắm một bất biến của sản phẩm qua đầu vào mà người dùng/hệ thống gặp được: tệp cấu hình
 `--config`, cờ CLI, hồ sơ `manifest.json` của con 2, hành động của policy, ngắt/lỗi ghi đĩa.
-Ca đỏ (finding) mang `xfail` KHÔNG strict với mã F-NNN trong `reason`; ca xanh là vector đã thử
-mà không lách được (ghi vào `disproved_hypotheses`).
+Ca đỏ (finding) mang `xfail` KHÔNG strict với mã F-NNN trong `reason` khi còn chưa sửa; ca xanh là
+vector đã thử mà không lách được (ghi vào `disproved_hypotheses`). Vòng 2: mọi finding vòng 1 đã
+được sửa nên dấu `xfail` đã gỡ, các ca nay là hồi quy (regression) xanh.
 
 - INV-001 (AC-4): tập đánh giá không giao tập train — mục tiêu, seed, chuỗi run cha, hồ sơ thiếu.
 - INV-003 (AC-1): hành động tới `env.step` luôn hữu hạn, thuộc `[0,1]^6`, đúng chiều.
@@ -405,11 +406,6 @@ def _env_variant(tmp_path: Path, **targets: Any) -> Path:
     return out
 
 
-@pytest.mark.xfail(  # type: ignore[untyped-decorator]
-    reason="F-001: paths.env_config_override đổi tập train/test mà không bị đối chiếu với "
-    "hồ sơ run (con 2 không ghi fingerprint) ⇒ phép kiểm giao rỗng chạy trên tập sai",
-    strict=False,
-)
 def test_inv001_env_override_cannot_move_eval_set_off_the_runs_train_set(
     tmp_path: Path, cache: _Cache
 ) -> None:
@@ -442,10 +438,6 @@ def test_inv001_env_override_cannot_move_eval_set_off_the_runs_train_set(
     )
 
 
-@pytest.mark.xfail(  # type: ignore[untyped-decorator]
-    reason="F-002: resumed_from không phải mapping bị bỏ qua lặng lẽ ⇒ mất seed tổ tiên",
-    strict=False,
-)
 @pytest.mark.parametrize("bad", ["run1", 7, ["run1"]])  # type: ignore[untyped-decorator]
 def test_inv001_malformed_resumed_from_refused(tmp_path: Path, cache: _Cache, bad: Any) -> None:
     """FR-009/INV-001: `resumed_from` sai cấu trúc ⇒ không thiết lập được chuỗi train ⇒ từ chối."""
@@ -456,11 +448,6 @@ def test_inv001_malformed_resumed_from_refused(tmp_path: Path, cache: _Cache, ba
         check_disjoint(d, _cfg(episode_base=777_777, random_policy=888_888), cache.pair)
 
 
-@pytest.mark.xfail(  # type: ignore[untyped-decorator]
-    reason="F-003: seed nhúng trong checkpoint không được đối chiếu với seed hồ sơ run ghép "
-    "theo tên thư mục ⇒ checkpoint của run khác lọt kiểm rò rỉ seed",
-    strict=False,
-)
 def test_inv001_checkpoint_seed_must_match_manifest_seed(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, cache: _Cache
 ) -> None:
@@ -635,14 +622,29 @@ def test_inv003_shape_fuzz_only_valid_reaches_step() -> None:
         _assert_only_valid_actions_reached_step(env)
 
 
-@pytest.mark.xfail(  # type: ignore[untyped-decorator]
-    reason="F-007: np.asarray(dtype=float64) cắt phần ảo của hành động phức (chỉ cảnh báo) ⇒ NaN "
-    "ở phần ảo lọt qua chặn tại biên và tới env.step",
-    strict=False,
-)
 def test_inv003_complex_action_imaginary_nan_not_silently_dropped() -> None:
     """INV-003: hành động phức có phần ảo NaN không được lặng lẽ cắt phần ảo rồi chạy."""
     act = np.array([complex(0.5, math.nan)] * 6)
+    env = _SpyEnv()
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        run_policy_on_targets(
+            env=env, policy=_ScriptPolicy([act]), n_targets=1, repeats=1, seed_base=1,
+            policy_name="learned",
+        )
+    assert env.seen == []
+
+
+@pytest.mark.xfail(  # type: ignore[untyped-decorator]
+    reason="F-008: nhánh object-dtype của rollout chỉ nhận diện `complex` thuần Python; "
+    "np.complex64 trong mảng object bị float() cắt phần ảo ⇒ NaN ảo tới env.step",
+    strict=False,
+)
+def test_inv003_object_array_of_numpy_complex64_nan_imag_not_dropped() -> None:
+    """INV-003: mảng object chứa np.complex64 phần ảo NaN không được cắt ảo rồi chạy."""
+    act = np.empty(6, dtype=object)
+    for i in range(6):
+        act[i] = np.complex64(complex(0.5, math.nan))
     env = _SpyEnv()
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
@@ -734,10 +736,6 @@ def test_inv004_interrupt_during_second_policy_leaves_no_record(
     assert world.residue() == []
 
 
-@pytest.mark.xfail(  # type: ignore[untyped-decorator]
-    reason="F-004: ngoại lệ BaseException khác KeyboardInterrupt (SystemExit) bỏ lại .tmp-*",
-    strict=False,
-)
 @pytest.mark.parametrize(  # type: ignore[untyped-decorator]
     "exc", [SystemExit(3), GeneratorExit()], ids=["SystemExit", "GeneratorExit"]
 )
@@ -793,11 +791,6 @@ def test_inv004_disk_full_on_second_file_leaves_nothing(
     assert world.residue() == []
 
 
-@pytest.mark.xfail(  # type: ignore[untyped-decorator]
-    reason="F-005: .tmp-<eval_id> cũ (tiến trình trước bị SIGKILL) được dùng lại, tệp cũ lọt vào "
-    "thư mục kết quả đã công bố",
-    strict=False,
-)
 def test_inv004_stale_tmp_dir_not_mixed_into_published_result(
     world: _World, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -1081,11 +1074,6 @@ def test_inv006_rerun_with_other_config_keeps_old_result_and_old_criterion(
 # --------------------------------------------------------------------------------------
 
 
-@pytest.mark.xfail(  # type: ignore[untyped-decorator]
-    reason="F-006: check_disjoint(pair=...) cho qua tập train rỗng hoặc toạ độ NaN (n_checked=0 "
-    "hoặc khoảng cách NaN không bao giờ < ngưỡng) ⇒ 'passed' rỗng nghĩa",
-    strict=False,
-)
 @pytest.mark.parametrize("kind", ["train_empty", "test_empty", "test_nan"])  # type: ignore[untyped-decorator]
 def test_inv001_degenerate_pair_never_reported_as_passed(
     tmp_path: Path, cache: _Cache, kind: str
