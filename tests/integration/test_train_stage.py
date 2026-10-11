@@ -18,7 +18,7 @@ from mma_ai.learning.cli import _build_parser
 
 
 def test_red_stage_contract_independent_assertion() -> None:
-    """FR-015, SC-005, AC-5: Khẳng định độc lập chứng minh cờ --stage tồn tại và mặc định elbow."""
+    """FR-015, SC-005, 003/AC-5: Cờ --stage tồn tại, mặc định elbow."""
     parser = _build_parser()
     actions = {action.dest: action for action in parser._actions}
     assert "stage" in actions, "CLI parser phải có tham số --stage"
@@ -27,7 +27,7 @@ def test_red_stage_contract_independent_assertion() -> None:
 
 
 def test_stage_not_implemented_exit3(tmp_path: Path) -> None:
-    """AC-5, US7: --stage balance, locomotion, selfplay báo 'chưa triển khai' và thoát mã 3."""
+    """003/AC-5, US7: --stage balance, locomotion, selfplay báo 'chưa triển khai' và thoát mã 3."""
     config_file = smoke_config(tmp_path)
     runs_dir = tmp_path / "runs"
 
@@ -51,7 +51,7 @@ def test_stage_not_implemented_exit3(tmp_path: Path) -> None:
 
 
 def test_unknown_stage_exit3(tmp_path: Path) -> None:
-    """AC-5, US7: Giá trị stage lạ cũng báo 'chưa triển khai' và thoát mã 3."""
+    """003/AC-5, US7: Giá trị stage lạ cũng báo 'chưa triển khai' và thoát mã 3."""
     config_file = smoke_config(tmp_path)
     runs_dir = tmp_path / "runs"
 
@@ -75,7 +75,7 @@ def test_unknown_stage_exit3(tmp_path: Path) -> None:
 
 
 def test_no_run_dir_for_unimplemented(tmp_path: Path) -> None:
-    """AC-5, US7: Không tạo thư mục run, không checkpoint khi stage chưa triển khai."""
+    """003/AC-5, US7: Không tạo thư mục run, không checkpoint khi stage chưa triển khai."""
     # Chỉ định đường dẫn runs_dir chưa tồn tại để kiểm tra không bị tạo
     custom_runs_dir = tmp_path / "non_existent_runs"
     assert not custom_runs_dir.exists(), "custom_runs_dir không được tồn tại trước khi chạy"
