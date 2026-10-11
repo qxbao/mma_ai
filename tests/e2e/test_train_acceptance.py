@@ -213,7 +213,7 @@ def test_ac_4_same_seed_within_tolerance(completed_runs: dict[str, Any]) -> None
 
 
 def test_ac_5_stage_not_implemented(tmp_path: Path) -> None:
-    """AC-5, SC-005: stage ngoài elbow trả mã 3 trước khi tạo thư mục run."""
+    """AC-5, 003/AC-5, SC-005: stage ngoài elbow trả mã 3 trước khi tạo thư mục run."""
     config_path, runs_dir = _write_config(tmp_path, "unsupported")
     result = _run_train(["--stage", "balance", "--config", str(config_path)])
     assert result.returncode == 3
