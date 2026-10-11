@@ -227,6 +227,9 @@ def test_inv001_env_rejects_injected_overlapping_target_pair(env: Any) -> None:
         ElbowReachEnv(split="test", targets=overlapping)
 
 
+@pytest.mark.linux_only(  # type: ignore[untyped-decorator]
+    reason="RLIMIT_AS không có ở Windows và không đáng tin ở macOS"
+)
 @pytest.mark.xfail(  # type: ignore[untyped-decorator]
     strict=False, reason="F-004: tập quá lớn làm cạn bộ nhớ (MemoryError) thay vì TargetConfigError"
 )
