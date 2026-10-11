@@ -17,6 +17,9 @@ from typing import Any
 import jsonschema
 import pytest
 
+import mma_ai.learning.benchmark as benchmark_module
+from mma_ai.compat.display import DisplayProbe
+from mma_ai.compat.platform_info import PlatformProfile
 from mma_ai.learning.benchmark import (
     build_benchmark_report,
     calculate_median,
@@ -149,6 +152,101 @@ def test_view3d_measured_false_without_display(monkeypatch: pytest.MonkeyPatch) 
     assert status_explicit_true["measured"] is False
     reason_true = status_explicit_true["reason"] or ""
     assert "tắt mặc định" in reason_true or "không kích hoạt" in reason_true
+
+
+def test_inv_001_ac_3_view3d_uses_shared_linux_display_probe(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """006 AC-3, INV-001: benchmark dùng phép dò chung và giữ lý do Linux."""
+    monkeypatch.delenv("DISPLAY", raising=False)
+    monkeypatch.delenv("WAYLAND_DISPLAY", raising=False)
+    monkeypatch.delenv("MMA_AI_FORCE_NO_DISPLAY", raising=False)
+    calls: list[bool] = []
+    profile = PlatformProfile("linux", "6", "x86_64", (3, 11, 0), False, True)
+
+    def fake_probe(selected: PlatformProfile) -> DisplayProbe:
+        calls.append(selected.kind == "linux")
+        return DisplayProbe(False, "Không phát hiện màn hình --headless.")
+
+    monkeypatch.setattr(
+        benchmark_module,
+        "probe_display",
+        fake_probe,
+        raising=False,
+    )
+    monkeypatch.setattr(benchmark_module, "detect_platform", lambda: profile, raising=False)
+
+    status = evaluate_view3d_status()
+
+    assert status == {
+        "measured": False,
+        "reason": "không có màn hình (DISPLAY chưa đặt)",
+    }
+    assert calls == [True]
+
+
+def test_ac_3_view3d_reports_shared_probe_reason_for_non_linux(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """006 AC-3: benchmark chuyển nguyên lý do phép dò trên hệ điều hành khác."""
+    monkeypatch.setattr(
+        benchmark_module,
+        "probe_display",
+        lambda selected: DisplayProbe(False, "Không tìm thấy màn hình chính (--headless)."),
+        raising=False,
+    )
+    monkeypatch.setattr(
+        benchmark_module,
+        "detect_platform",
+        lambda: PlatformProfile("windows", "11", "AMD64", (3, 11, 0), False, True),
+        raising=False,
+    )
+
+    status = evaluate_view3d_status()
+
+    assert status["reason"] == "Không tìm thấy màn hình chính (--headless)."
+
+
+def test_inv_003_ac_4_benchmark_report_uses_atomic_text_writer(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """006 AC-4, INV-003: báo cáo được ghi qua bộ ghi văn bản nguyên tử."""
+    report_file = tmp_path / "benchmark.json"
+    captured: dict[str, str] = {}
+    atomic_writer = getattr(benchmark_module, "write_text_atomic")
+
+    def capture(path: Path | str, text: str) -> None:
+        captured["path"] = str(path)
+        captured["text"] = text
+        atomic_writer(path, text)
+
+    monkeypatch.setattr(benchmark_module, "write_text_atomic", capture, raising=False)
+    result = write_benchmark_report(report_file, {"ok": True})
+
+    assert result == report_file
+    assert captured["path"] == str(report_file)
+    assert captured["text"] == '{\n  "ok": true\n}\n'
+    assert report_file.read_bytes() == b'{\n  "ok": true\n}\n'
+
+
+def test_ac_4_main_configures_utf8_before_argument_validation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """006 AC-4: CLI cấu hình UTF-8 trước khi xử lý tham số."""
+    calls: list[str] = []
+    parser_builder = benchmark_module._build_parser
+
+    def build_parser() -> Any:
+        calls.append("parser")
+        return parser_builder()
+
+    monkeypatch.setattr(
+        benchmark_module, "ensure_utf8_stdio", lambda: calls.append("utf8"), raising=False
+    )
+    monkeypatch.setattr(benchmark_module, "_build_parser", build_parser)
+
+    assert main(["--repeats", "4"]) == 2
+    assert calls == ["utf8", "parser"]
 
 
 def test_ui_cost_delta_calculation() -> None:

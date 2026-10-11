@@ -20,6 +20,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from mma_ai.compat.display import probe_display
+from mma_ai.compat.fsio import write_text_atomic
+from mma_ai.compat.platform_info import detect_platform
+from mma_ai.compat.stdio import ensure_utf8_stdio
+
 __all__: list[str] = [
     "build_benchmark_report",
     "calculate_median",
@@ -142,13 +147,26 @@ def evaluate_view3d_status(has_display: bool | None = None) -> dict[str, Any]:
     Khi không phát hiện màn hình (DISPLAY hoặc WAYLAND_DISPLAY chưa đặt), ghi nhận
     measured: false kèm lý do rõ ràng để tuân thủ kiểm định không cần giao diện đồ hoạ.
     """
+    probe = None
+    profile = None
     if has_display is None:
-        has_display = bool(os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"))
+        profile = detect_platform()
+        probe = probe_display(profile)
+        has_display = probe.available
 
     if not has_display:
+        reason = "không có màn hình (DISPLAY chưa đặt)"
+        if probe is not None and not (
+            profile is not None
+            and profile.kind in ("linux", "wsl2")
+            and not os.environ.get("DISPLAY")
+            and not os.environ.get("WAYLAND_DISPLAY")
+            and os.environ.get("MMA_AI_FORCE_NO_DISPLAY", "") in ("", "0")
+        ):
+            reason = probe.reason
         return {
             "measured": False,
-            "reason": "không có màn hình (DISPLAY chưa đặt)",
+            "reason": reason,
         }
     return {
         "measured": False,
@@ -215,11 +233,8 @@ def write_benchmark_report(
     """Ghi báo cáo benchmark nguyên tử xuống đĩa bằng tệp tạm và thay thế (os.replace)."""
     out_file = Path(output_path)
     out_file.parent.mkdir(parents=True, exist_ok=True)
-    tmp_file = out_file.with_suffix(f"{out_file.suffix}.tmp")
-
     data_str = json.dumps(dict(report), indent=2, ensure_ascii=False)
-    tmp_file.write_text(data_str + "\n", encoding="utf-8")
-    os.replace(tmp_file, out_file)
+    write_text_atomic(out_file, data_str + "\n")
     return out_file
 
 
@@ -437,6 +452,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     - 1: Không đạt chuẩn hiệu năng hoặc xảy ra lỗi huấn luyện trong quá trình đo.
     - 2: Tham số dòng lệnh không hợp lệ (repeats < 5, seed < 0, ...).
     """
+    ensure_utf8_stdio()
     parser = _build_parser()
     try:
         args = parser.parse_args(list(argv) if argv is not None else None)
