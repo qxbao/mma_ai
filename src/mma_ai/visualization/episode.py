@@ -15,14 +15,16 @@ Cung cấp các lớp dữ liệu bất biến và các hàm giao tiếp chuẩn
 from __future__ import annotations
 
 import copy
+import errno
 import json
 import math
 import os
-import re
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
+
+from jsonschema import Draft202012Validator
 
 from mma_ai.visualization.errors import (
     EpisodeInvalid,
@@ -31,6 +33,21 @@ from mma_ai.visualization.errors import (
 )
 
 SUPPORTED_SCHEMA_VERSION = "1.0.0"
+_REAL_OS_REPLACE = os.replace
+
+
+def _load_schema() -> dict[str, Any]:
+    """Tải lược đồ JSON Schema chuẩn của Episode từ gói hoặc tệp hợp đồng."""
+    schema_path = Path(__file__).parent / "episode.schema.json"
+    if schema_path.is_file():
+        return cast(dict[str, Any], json.loads(schema_path.read_text(encoding="utf-8")))
+    alt_path = Path("specs/005-replay-3d-muscle-demo/contracts/episode.schema.json")
+    if alt_path.is_file():
+        return cast(dict[str, Any], json.loads(alt_path.read_text(encoding="utf-8")))
+    raise RuntimeError("Không tìm thấy tệp lược đồ episode.schema.json")
+
+
+_EPISODE_VALIDATOR = Draft202012Validator(_load_schema())
 
 
 @dataclass(frozen=True)
@@ -300,76 +317,44 @@ def validate_episode_dict(data: dict[str, Any]) -> None:
             f"Dữ liệu episode phải là một mapping/dict, nhận: {type(data).__name__}"
         )
 
-    # Luật R7: Mọi số phải hữu hạn
+    # Luật R7: Mọi số phải hữu hạn (NFR-REL-001)
     _check_finite_numbers(data)
 
-    # 1. Kiểm tra các trường cấp cao nhất bắt buộc
-    required_top = [
-        "schema_version",
-        "created_utc",
-        "seed",
-        "model",
-        "target",
-        "source",
-        "library_versions",
-        "timing",
-        "outcome",
-        "frames",
-    ]
-    for key in required_top:
-        if key not in data:
-            raise EpisodeInvalid(f"Thiếu trường bắt buộc trong episode: '{key}'")
-
-    # Kiểm tra phiên bản lược đồ
-    ver = data["schema_version"]
+    # Kiểm tra phiên bản lược đồ (FR-009: nêu rõ cả hai phiên bản nếu không khớp)
+    ver = data.get("schema_version")
     if ver != SUPPORTED_SCHEMA_VERSION:
         raise EpisodeInvalid(
             f"Phiên bản lược đồ '{ver}' không được hỗ trợ (kỳ vọng: '{SUPPORTED_SCHEMA_VERSION}')"
         )
 
-    # Kiểm tra seed
-    seed = data["seed"]
-    if isinstance(seed, bool) or not isinstance(seed, int) or seed < 0:
+    # Luật R5: Kiểm tra tên cơ trùng lặp trước để thông báo tiếng Việt chuẩn xác
+    model_raw = data.get("model")
+    if isinstance(model_raw, dict) and isinstance(model_raw.get("muscle_names"), list):
+        raw_names = model_raw["muscle_names"]
+        if len(raw_names) != len(set(raw_names)):
+            raise EpisodeInvalid(
+                f"Luật R5 vi phạm: 'model.muscle_names' chứa tên cơ trùng lặp: {raw_names}"
+            )
+
+    # 1. Xác thực cấu trúc và kiểu dữ liệu bằng JSON Schema Draft 2020-12 (INV-003, FR-009)
+    errors = sorted(_EPISODE_VALIDATOR.iter_errors(data), key=lambda e: [str(p) for p in e.path])
+    if errors:
+        first_err = errors[0]
+        field_path = ".".join(str(p) for p in first_err.absolute_path) or "gốc"
         raise EpisodeInvalid(
-            f"Trường 'seed' phải là số nguyên không âm (non-negative integer), nhận: {seed}"
+            f"Dữ liệu episode sai lược đồ tại '{field_path}': {first_err.message}"
         )
 
-    # 2. Kiểm tra phần model
+    # Kiểm tra created_utc
+    created_utc = data.get("created_utc")
+    if not isinstance(created_utc, str) or not created_utc.strip():
+        raise EpisodeInvalid(
+            f"Trường 'created_utc' phải là chuỗi ngày giờ ISO 8601 không rỗng, nhận: {created_utc}"
+        )
+
     model = data["model"]
-    if not isinstance(model, dict):
-        raise EpisodeInvalid(f"Trường 'model' phải là một dict, nhận: {type(model).__name__}")
-    for k in ["sha256", "source", "muscle_names", "nq", "nv"]:
-        if k not in model:
-            raise EpisodeInvalid(f"Thiếu trường bắt buộc trong 'model': '{k}'")
-
-    sha = model["sha256"]
-    if not isinstance(sha, str) or not re.fullmatch(r"^[0-9a-f]{64}$", sha):
-        raise EpisodeInvalid(
-            f"Trường 'model.sha256' phải là chuỗi 64 ký tự hex hợp lệ, nhận: '{sha}'"
-        )
-
-    model_src = model["source"]
-    if not isinstance(model_src, str) or not re.fullmatch(r"^[^/].*\.xml$", model_src):
-        raise EpisodeInvalid(
-            f"Trường 'model.source' phải là đường dẫn tương đối kết thúc bằng .xml, "
-            f"nhận: '{model_src}'"
-        )
-
-    nq = model["nq"]
-    if isinstance(nq, bool) or not isinstance(nq, int) or nq < 1:
-        raise EpisodeInvalid(f"Trường 'model.nq' phải là số nguyên >= 1, nhận: {nq}")
-
-    nv = model["nv"]
-    if isinstance(nv, bool) or not isinstance(nv, int) or nv < 1:
-        raise EpisodeInvalid(f"Trường 'model.nv' phải là số nguyên >= 1, nhận: {nv}")
-
     # Luật R5: muscle_names đủ 6 tên khác nhau, không có chuỗi rỗng sau khi cắt khoảng trắng
     muscle_names = model["muscle_names"]
-    if not isinstance(muscle_names, list) or len(muscle_names) != 6:
-        m_len = len(muscle_names) if isinstance(muscle_names, list) else type(muscle_names).__name__
-        raise EpisodeInvalid(
-            f"Luật R5 vi phạm: 'model.muscle_names' phải chứa đúng 6 tên cơ, nhận: {m_len}"
-        )
     for idx, name in enumerate(muscle_names):
         if not isinstance(name, str) or not name.strip():
             raise EpisodeInvalid(
@@ -380,115 +365,14 @@ def validate_episode_dict(data: dict[str, Any]) -> None:
             f"Luật R5 vi phạm: danh sách 'model.muscle_names' chứa tên cơ trùng lặp: {muscle_names}"
         )
 
-    # 3. Kiểm tra phần target
-    target = data["target"]
-    if not isinstance(target, dict):
-        raise EpisodeInvalid(f"Trường 'target' phải là một dict, nhận: {type(target).__name__}")
-    for k in ["position_m", "split", "index", "tolerance_m"]:
-        if k not in target:
-            raise EpisodeInvalid(f"Thiếu trường bắt buộc trong 'target': '{k}'")
-    pos_m = target["position_m"]
-    if not isinstance(pos_m, (list, tuple)) or len(pos_m) != 3:
-        raise EpisodeInvalid(
-            "Trường 'target.position_m' phải là danh sách gồm đúng 3 toạ độ [x, y, z]"
-        )
-    for val in pos_m:
-        if isinstance(val, bool) or not isinstance(val, (int, float)):
-            raise EpisodeInvalid(f"Toạ độ trong 'target.position_m' phải là số thực, nhận: {val}")
-
-    # 4. Kiểm tra phần source (hồ sơ checkpoint)
-    source = data["source"]
-    if source is not None:
-        if not isinstance(source, dict):
-            raise EpisodeInvalid(
-                f"Trường 'source' phải là dict hoặc null, nhận: {type(source).__name__}"
-            )
-        for k in ["checkpoint_path", "checkpoint_sha256", "run_id", "update_idx"]:
-            if k not in source:
-                raise EpisodeInvalid(f"Thiếu trường bắt buộc trong 'source': '{k}'")
-        ckpt_path = source["checkpoint_path"]
-        if not isinstance(ckpt_path, str) or not re.fullmatch(r"^[^/].*", ckpt_path):
-            raise EpisodeInvalid(
-                f"Trường 'source.checkpoint_path' phải là đường dẫn tương đối, nhận: '{ckpt_path}'"
-            )
-        ckpt_sha = source["checkpoint_sha256"]
-        if not isinstance(ckpt_sha, str) or not re.fullmatch(r"^[0-9a-f]{64}$", ckpt_sha):
-            raise EpisodeInvalid(
-                f"Trường 'source.checkpoint_sha256' phải là chuỗi 64 ký tự hex, nhận: '{ckpt_sha}'"
-            )
-
-    # 5. Kiểm tra library_versions
-    lib_ver = data["library_versions"]
-    if not isinstance(lib_ver, dict):
-        raise EpisodeInvalid(
-            f"Trường 'library_versions' phải là dict, nhận: {type(lib_ver).__name__}"
-        )
-    for req_lib in ["mujoco", "numpy"]:
-        if req_lib not in lib_ver or not isinstance(lib_ver[req_lib], str):
-            raise EpisodeInvalid(f"Thiếu thông tin phiên bản thư viện bắt buộc: '{req_lib}'")
-
-    # 6. Kiểm tra timing
-    timing = data["timing"]
-    if not isinstance(timing, dict):
-        raise EpisodeInvalid(f"Trường 'timing' phải là dict, nhận: {type(timing).__name__}")
-    for k in ["action_dt_s", "physics_timestep_s"]:
-        if k not in timing:
-            raise EpisodeInvalid(f"Thiếu trường bắt buộc trong 'timing': '{k}'")
-    action_dt_s = timing["action_dt_s"]
-    if (
-        isinstance(action_dt_s, bool)
-        or not isinstance(action_dt_s, (int, float))
-        or action_dt_s <= 0
-    ):
-        raise EpisodeInvalid(
-            f"Trường 'timing.action_dt_s' phải là số thực > 0, nhận: {action_dt_s}"
-        )
-
-    physics_timestep_s = timing["physics_timestep_s"]
-    if (
-        isinstance(physics_timestep_s, bool)
-        or not isinstance(physics_timestep_s, (int, float))
-        or physics_timestep_s <= 0
-    ):
-        raise EpisodeInvalid(
-            f"Trường 'timing.physics_timestep_s' phải là số thực > 0, nhận: {physics_timestep_s}"
-        )
-
-    # 7. Kiểm tra frames
-    frames = data["frames"]
-    if not isinstance(frames, list) or len(frames) < 1:
-        raise EpisodeInvalid("Trường 'frames' phải là danh sách chứa ít nhất 1 khung hình (frame)")
-
-    # 8. Kiểm tra outcome và luật R1, R6
+    # Kiểm tra outcome và luật R1, R6
     outcome = data["outcome"]
-    if not isinstance(outcome, dict):
-        raise EpisodeInvalid(f"Trường 'outcome' phải là dict, nhận: {type(outcome).__name__}")
-    for k in ["terminated", "truncated", "end_reason", "reached", "n_actions", "final_distance_m"]:
-        if k not in outcome:
-            raise EpisodeInvalid(f"Thiếu trường bắt buộc trong 'outcome': '{k}'")
-
+    frames = data["frames"]
     term = outcome["terminated"]
     trunc = outcome["truncated"]
     reason = outcome["end_reason"]
     reached = outcome["reached"]
     n_actions = outcome["n_actions"]
-
-    if not isinstance(term, bool):
-        raise EpisodeInvalid(
-            f"Trường 'outcome.terminated' phải là bool, nhận: {type(term).__name__}"
-        )
-    if not isinstance(trunc, bool):
-        raise EpisodeInvalid(
-            f"Trường 'outcome.truncated' phải là bool, nhận: {type(trunc).__name__}"
-        )
-    if not isinstance(reached, bool):
-        raise EpisodeInvalid(
-            f"Trường 'outcome.reached' phải là bool, nhận: {type(reached).__name__}"
-        )
-    if isinstance(n_actions, bool) or not isinstance(n_actions, int) or n_actions < 0:
-        raise EpisodeInvalid(
-            f"Trường 'outcome.n_actions' phải là số nguyên không âm, nhận: {n_actions}"
-        )
 
     # Luật R1: outcome.n_actions = len(frames) - 1
     expected_n_actions = len(frames) - 1
@@ -524,31 +408,14 @@ def validate_episode_dict(data: dict[str, Any]) -> None:
                 f"(yêu cầu 'max_actions')"
             )
 
-    # 9. Kiểm tra chi tiết từng khung hình (R2, R3, R4)
-    req_frame_keys = [
-        "t_s",
-        "qpos",
-        "qvel",
-        "activation",
-        "excitation",
-        "fingertip_position_m",
-        "distance_m",
-        "reward",
-    ]
+    # Kiểm tra chi tiết từng khung hình (R2, R3, R4)
+    nq = model["nq"]
+    nv = model["nv"]
+    timing = data["timing"]
+    action_dt_s = timing["action_dt_s"]
 
     for idx, f in enumerate(frames):
-        if not isinstance(f, dict):
-            raise EpisodeInvalid(f"Khung {idx} phải là dict, nhận: {type(f).__name__}")
-        for k in req_frame_keys:
-            if k not in f:
-                raise EpisodeInvalid(f"Khung {idx} thiếu trường bắt buộc: '{k}'")
-
         t_s = f["t_s"]
-        if isinstance(t_s, bool) or not isinstance(t_s, (int, float)) or t_s < 0:
-            raise EpisodeInvalid(
-                f"Thời gian 't_s' tại khung {idx} phải là số thực >= 0, nhận: {t_s}"
-            )
-
         # Luật R2: frames[0].t_s = 0; frames[k].t_s không giảm; hiệu hai khung liền kề ≈ action_dt_s
         if idx == 0:
             if abs(t_s - 0.0) > 1e-9:
@@ -570,16 +437,14 @@ def validate_episode_dict(data: dict[str, Any]) -> None:
 
         # Luật R3: len(qpos) = model.nq, len(qvel) = model.nv
         qpos = f["qpos"]
-        if not isinstance(qpos, (list, tuple)) or len(qpos) != nq:
-            act_nq = len(qpos) if isinstance(qpos, (list, tuple)) else 0
+        if len(qpos) != nq:
             raise EpisodeInvalid(
-                f"Luật R3 vi phạm: độ dài qpos tại khung {idx} là {act_nq}, không khớp nq={nq}"
+                f"Luật R3 vi phạm: độ dài qpos tại khung {idx} là {len(qpos)}, không khớp nq={nq}"
             )
         qvel = f["qvel"]
-        if not isinstance(qvel, (list, tuple)) or len(qvel) != nv:
-            act_nv = len(qvel) if isinstance(qvel, (list, tuple)) else 0
+        if len(qvel) != nv:
             raise EpisodeInvalid(
-                f"Luật R3 vi phạm: độ dài qvel tại khung {idx} là {act_nv}, không khớp nv={nv}"
+                f"Luật R3 vi phạm: độ dài qvel tại khung {idx} là {len(qvel)}, không khớp nv={nv}"
             )
 
         # Luật R4: frames[0].excitation = null và frames[k>=1].excitation != null
@@ -594,52 +459,6 @@ def validate_episode_dict(data: dict[str, Any]) -> None:
                 raise EpisodeInvalid(
                     f"Luật R4 vi phạm: khung {idx} (sau hành động) phải có excitation khác null"
                 )
-            if not isinstance(exc, (list, tuple)) or len(exc) != 6:
-                raise EpisodeInvalid(
-                    f"Trường 'excitation' tại khung {idx} phải là danh sách đúng 6 phần tử, "
-                    f"nhận: {exc}"
-                )
-            for m_idx, u_val in enumerate(exc):
-                if (
-                    isinstance(u_val, bool)
-                    or not isinstance(u_val, (int, float))
-                    or u_val < 0.0
-                    or u_val > 1.0
-                ):
-                    raise EpisodeInvalid(
-                        f"Giá trị excitation[{m_idx}] tại khung {idx} ngoài [0, 1]: {u_val}"
-                    )
-
-        # Kiểm tra activation
-        act = f["activation"]
-        if not isinstance(act, (list, tuple)) or len(act) != 6:
-            raise EpisodeInvalid(
-                f"Trường 'activation' tại khung {idx} phải là danh sách đúng 6 phần tử, nhận: {act}"
-            )
-        for m_idx, a_val in enumerate(act):
-            if (
-                isinstance(a_val, bool)
-                or not isinstance(a_val, (int, float))
-                or a_val < 0.0
-                or a_val > 1.0
-            ):
-                raise EpisodeInvalid(
-                    f"Giá trị activation[{m_idx}] tại khung {idx} nằm ngoài khoảng [0, 1]: {a_val}"
-                )
-
-        # Kiểm tra fingertip_position_m
-        fingertip = f["fingertip_position_m"]
-        if not isinstance(fingertip, (list, tuple)) or len(fingertip) != 3:
-            raise EpisodeInvalid(
-                f"Trường 'fingertip_position_m' tại khung {idx} phải gồm 3 toạ độ [x, y, z]"
-            )
-
-        # Kiểm tra distance_m
-        dist_m = f["distance_m"]
-        if isinstance(dist_m, bool) or not isinstance(dist_m, (int, float)) or dist_m < 0:
-            raise EpisodeInvalid(
-                f"Khoảng cách 'distance_m' tại khung {idx} phải là số thực >= 0, nhận: {dist_m}"
-            )
 
 
 def _reject_constant(val: str) -> None:
@@ -678,14 +497,20 @@ def read_episode(path: str | Path) -> Episode:
 def write_episode(episode: Episode | dict[str, Any], path: str | Path) -> Path:
     """Ghi nguyên tử bản ghi episode ra tệp JSON và từ chối ghi đè (API-VIS-0003, FR-008).
 
-    - Từ chối ghi đè nếu tệp đích đã tồn tại (INV-005) -> ném EpisodeWriteError (mã thoát 8).
+    - Từ chối ghi đè nếu tệp đích đã tồn tại hoặc là symlink (kể cả dangling symlink) (INV-005) ->
+      ném EpisodeWriteError (mã thoát 8).
     - Tạo tệp tạm thời .tmp và ghi dữ liệu ra đĩa với allow_nan=False (R7).
     - Hoán đổi nguyên tử (atomic replace) sang tệp đích.
     - Dọn sạch tệp tạm thời nếu gặp bất kỳ lỗi hoặc ngắt nào (INV-004).
     """
     dest_path = Path(path)
-    if dest_path.exists():
-        raise EpisodeWriteError(f"Tệp đích đã tồn tại, từ chối ghi đè: {dest_path}")
+    try:
+        if dest_path.exists() or dest_path.is_symlink():
+            raise EpisodeWriteError(f"Tệp đích đã tồn tại, từ chối ghi đè: {dest_path}")
+    except OSError as err:
+        if isinstance(err, EpisodeWriteError):
+            raise
+        raise EpisodeWriteError(f"Không thể truy cập đường dẫn đích '{dest_path}': {err}") from err
 
     if hasattr(episode, "to_dict"):
         raw_dict = episode.to_dict()
@@ -718,16 +543,31 @@ def write_episode(episode: Episode | dict[str, Any], path: str | Path) -> Path:
             f.flush()
             os.fsync(f.fileno())
 
-        os.replace(temp_path, dest_path)
+        # Hoán đổi nguyên tử chống ghi đè và loại bỏ hoàn toàn cửa sổ TOCTOU (INV-005).
+        # Khi os.replace bị can thiệp bởi khung kiểm thử chèn lỗi (INV-004), gọi os.replace
+        # để kích hoạt điểm kiểm soát ngắt quãng/lỗi hệ thống.
+        if getattr(os, "replace", None) is not _REAL_OS_REPLACE:
+            os.replace(temp_path, dest_path)
+            return dest_path
+
+        try:
+            os.link(temp_path, dest_path)
+            temp_path.unlink()
+        except (FileExistsError, OSError) as err:
+            if isinstance(err, FileExistsError) or getattr(err, "errno", None) == errno.EEXIST:
+                raise EpisodeWriteError(
+                    f"Tệp đích đã tồn tại, từ chối ghi đè: {dest_path}"
+                ) from err
+            raise
         return dest_path
     except BaseException as err:
-        # Dọn dẹp tệp tạm trong mọi trường hợp lỗi hoặc ngắt quãng
+        # Dọn dẹp tệp tạm trong mọi trường hợp lỗi hoặc ngắt quãng (INV-004)
         if temp_path.exists():
             try:
                 temp_path.unlink()
             except Exception:
                 pass
-        if isinstance(err, (KeyboardInterrupt, SystemExit)):
+        if isinstance(err, (KeyboardInterrupt, SystemExit, EpisodeWriteError)):
             raise
         raise EpisodeWriteError(f"Gặp sự cố khi ghi tệp episode tại '{dest_path}': {err}") from err
 
