@@ -1,0 +1,50 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "run-20261011-f29432",
+  "task_id": "T803",
+  "round": 1,
+  "sha_reviewed": "a67e83c559d96c9e5a5c3cbff054659f6f9d3d85",
+  "verdict": "APPROVE",
+  "findings": [
+    {
+      "id": "F-001",
+      "severity": "MINOR",
+      "file": "specs/008-project-docs/spec.md",
+      "line": 234,
+      "claim": "stale-decision: INV-002 của spec cấm đổi `tests/`, nhưng tasks.md giao T804 tạo `tests/e2e/test_008_docs_entrypoints.py` (đã gộp, 24 test xanh). Hai nguồn nói ngược nhau; plan-mandated (tasks.md bắt viết).",
+      "failure_scenario": "Người đọc spec.md kết luận diff của feature 008 vi phạm INV-002 vì có tệp trong tests/, hoặc một lượt kiểm vùng ghi tự động theo spec chặn nhầm T804. Cần sửa INV-002 thành 'trừ tests/e2e/test_008_docs_entrypoints.py'."
+    },
+    {
+      "id": "F-002",
+      "severity": "MINOR",
+      "file": "specs/008-project-docs/checklists/acceptance.md",
+      "line": 24,
+      "claim": "Checklist còn nguyên lời khai cũ: mọi dòng AC/INV ghi 'test chưa có' và gate T801/T802/T804 'THIẾU', trong khi test E2E đã có (24 passed, không skip) và gate T801/T802/T804 đã GREEN. AC-1, AC-3, AC-4 chỉ có kiểm tĩnh mức unit; ba lệnh pytest/ruff/mypy trong CONTRIBUTING.md không được chạy bởi test nào (chỉ kiểm cờ trong --help).",
+      "failure_scenario": "Người nghiệm thu đọc checklist thấy toàn 'THIẾU' và không phân biệt được phần đã đạt với phần còn hở. Lệnh lint/mypy trong CONTRIBUTING.md đổi cú pháp thì không test nào đỏ. Vai qa cần làm mới checklist; AC-1/AC-3/AC-4 là tài liệu tĩnh nên không có entrypoint là chấp nhận được."
+    },
+    {
+      "id": "F-003",
+      "severity": "MINOR",
+      "file": "src/mma_ai/compat/platform_info.py",
+      "line": 55,
+      "claim": "comment-narration: các dòng `# Chuẩn hoá sys_platform/release/machine/environ` (55, 66, 75, 84), `# Lấy python_version mặc định` (93) và `# 1.`…`# 4.` nhãn nhánh (96, 109, 122, 139) chỉ kể lại việc dòng code ngay dưới làm; xoá đi không mất thông tin.",
+      "failure_scenario": "Không gây lỗi chạy; làm nhiễu mã và dễ lệch khi đổi thứ tự nhánh. Giữ lại comment về vì sao (dự phòng linux/tested=False ở dòng 139 và `except` ở cuối)."
+    },
+    {
+      "id": "F-004",
+      "severity": "OPTIONAL",
+      "file": "src/mma_ai/compat/platform_info.py",
+      "line": 44,
+      "claim": "`detect_platform` nhận `**extra_kwargs: Any` rồi bỏ qua, nên tên tham số gõ sai (ví dụ `sys_platfrom=`) không báo lỗi mà lặng lẽ dùng giá trị thật của máy.",
+      "failure_scenario": "Test gọi `detect_platform(sys_platfrom='darwin')` nhận hồ sơ của máy đang chạy và vẫn xanh nếu máy khớp kỳ vọng. Chỉ ảnh hưởng test nội bộ, không phải người dùng cuối."
+    },
+    {
+      "id": "F-005",
+      "severity": "OPTIONAL",
+      "file": "README.md",
+      "line": 18,
+      "claim": "⚠️ Không kiểm được từ diff: 'GPU không bắt buộc' (README.md:18) không có nguồn trong spec/contracts/cli-commands.md; mã chỉ có nhánh `torch.cuda.is_available()` ở checkpoint.py:278. Thêm ⚠️ NFR-DOC-002 (từ README tới lệnh đầu tiên ≤ 10 phút trên môi trường sạch) CHƯA KIỂM: chưa chạy `uv sync` + 4 lệnh Bắt đầu nhanh trên môi trường sạch; chỉ đo được `--help` của 4 CLI (mỗi lệnh vài giây).",
+      "failure_scenario": "Người dùng không có GPU tin câu này nhưng trên máy yếu huấn luyện chậm đáng kể. Hành trình ≤ 10 phút chưa có số đo; cần vai khác đo trên môi trường sạch."
+    }
+  ]
+}
