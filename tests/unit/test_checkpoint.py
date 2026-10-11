@@ -118,7 +118,7 @@ def test_roundtrip_same_action(tmp_path: Path) -> None:
 
 
 def test_atomic_write_no_partial(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """FR-007, INV-004: ngắt giữa lúc ghi không để lại file partial hoặc tệp hỏng."""
+    """FR-007, INV-003: lỗi thay tệp không để lại file partial hoặc tệp tạm."""
     _torch()
     from mma_ai.learning.checkpoint import save_checkpoint
     from mma_ai.learning.errors import CheckpointIOError
@@ -142,6 +142,46 @@ def test_atomic_write_no_partial(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
         tmp_files = list(checkpoints_dir.glob("*.tmp"))
         assert len(tmp_files) == 0
         assert not (checkpoints_dir / "latest.json").exists()
+        assert not (checkpoints_dir / "ckpt_u000010.pt").exists()
+
+
+def test_inv_003_atomic_write_error_names_destination(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """INV-003, NFR-IO-001: lỗi ghi nguyên tử phải nêu đường dẫn đích."""
+    import sys
+    import types
+
+    from mma_ai.compat import fsio
+    from mma_ai.learning.checkpoint import save_checkpoint
+    from mma_ai.learning.errors import CheckpointIOError
+
+    destination = tmp_path / "checkpoints" / "ckpt_u000010.pt"
+    torch_stub = types.ModuleType("torch")
+    setattr(torch_stub, "__version__", "test")
+    setattr(torch_stub, "Tensor", ())
+    setattr(torch_stub, "as_tensor", lambda value: value)
+    setattr(torch_stub, "empty", lambda size: [])
+    setattr(torch_stub, "get_rng_state", lambda: b"rng")
+    setattr(torch_stub, "cuda", types.SimpleNamespace(is_available=lambda: False))
+    setattr(torch_stub, "save", lambda payload, stream: stream.write(b"checkpoint"))
+    monkeypatch.setitem(sys.modules, "torch", torch_stub)
+
+    class Agent:
+        def state_dict(self) -> dict[str, Any]:
+            return {"actor": {}, "critic": {}, "optimizer": {}}
+
+    def fail_replace(src: Any, dst: Any, **kwargs: Any) -> None:
+        raise fsio.AtomicWriteError(
+            destination, PermissionError("đích đang bị khóa"), f"Lỗi ghi {destination}"
+        )
+
+    monkeypatch.setattr(fsio, "replace_atomic", fail_replace)
+    with pytest.raises(CheckpointIOError, match=str(destination)):
+        save_checkpoint(Agent(), tmp_path, kind="periodic", ctx={"update_idx": 10})
+
+    assert not destination.exists()
+    assert not list(destination.parent.glob("*.tmp"))
 
 
 def test_nan_not_written(tmp_path: Path) -> None:

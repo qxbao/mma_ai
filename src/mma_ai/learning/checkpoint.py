@@ -9,9 +9,9 @@ from __future__ import annotations
 
 import copy
 import hashlib
+import io
 import json
 import math
-import os
 import sys
 import warnings
 from dataclasses import dataclass, field
@@ -28,6 +28,7 @@ if TYPE_CHECKING:
 else:
     Tensor = Any
 
+from mma_ai.compat.fsio import write_bytes_atomic, write_text_atomic
 from mma_ai.learning.errors import CheckpointError, CheckpointIOError, NonFiniteError
 from mma_ai.learning.normalizer import RunningNorm
 from mma_ai.learning.train_config import TrainConfig
@@ -330,24 +331,13 @@ def save_checkpoint(
     )
     rel_path = f"checkpoints/{filename}"
     target_pt_path = checkpoints_dir / filename
-    tmp_pt_path = checkpoints_dir / f"{filename}.tmp"
 
     try:
         checkpoints_dir.mkdir(parents=True, exist_ok=True)
-
-        # BƯỚC 2: Ghi tệp .tmp, fsync và thay thế nguyên tử (os.replace)
-        with tmp_pt_path.open("wb") as f:
-            torch.save(checkpoint_payload, f)
-            f.flush()
-            os.fsync(f.fileno())
-
-        os.replace(tmp_pt_path, target_pt_path)
+        buffer = io.BytesIO()
+        torch.save(checkpoint_payload, buffer)
+        write_bytes_atomic(target_pt_path, buffer.getvalue())
     except (OSError, IOError, RuntimeError) as err:
-        if tmp_pt_path.exists():
-            try:
-                tmp_pt_path.unlink()
-            except OSError:
-                pass
         raise CheckpointIOError(f"Lỗi ghi đĩa khi lưu tệp checkpoint: {err}") from err
 
     # BƯỚC 3: Tính hash SHA-256 của tệp checkpoint đã ghi
@@ -371,39 +361,19 @@ def save_checkpoint(
 
     meta_filename = f"{target_pt_path.stem}.meta.json"
     target_meta_path = checkpoints_dir / meta_filename
-    tmp_meta_path = checkpoints_dir / f"{meta_filename}.tmp"
 
     try:
-        with tmp_meta_path.open("w", encoding="utf-8") as f:
-            json.dump(meta.to_dict(), f, indent=2)
-            f.flush()
-            os.fsync(f.fileno())
-        os.replace(tmp_meta_path, target_meta_path)
+        write_text_atomic(target_meta_path, json.dumps(meta.to_dict(), indent=2))
     except (OSError, IOError, RuntimeError) as err:
-        if tmp_meta_path.exists():
-            try:
-                tmp_meta_path.unlink()
-            except OSError:
-                pass
         raise CheckpointIOError(f"Lỗi ghi đĩa khi lưu siêu dữ liệu checkpoint: {err}") from err
 
     # BƯỚC 5: Cập nhật con trỏ latest.json bằng thay thế nguyên tử SAU CÙNG
     latest_path = checkpoints_dir / "latest.json"
-    tmp_latest_path = checkpoints_dir / "latest.json.tmp"
     latest_payload = meta.to_dict()
 
     try:
-        with tmp_latest_path.open("w", encoding="utf-8") as f:
-            json.dump(latest_payload, f, indent=2)
-            f.flush()
-            os.fsync(f.fileno())
-        os.replace(tmp_latest_path, latest_path)
+        write_text_atomic(latest_path, json.dumps(latest_payload, indent=2))
     except (OSError, IOError, RuntimeError) as err:
-        if tmp_latest_path.exists():
-            try:
-                tmp_latest_path.unlink()
-            except OSError:
-                pass
         raise CheckpointIOError(f"Lỗi ghi đĩa khi cập nhật latest.json: {err}") from err
 
     return meta
