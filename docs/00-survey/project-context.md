@@ -1,40 +1,58 @@
 ---
-id: "SURVEY-CONTEXT-CP01"
+id: "SURVEY-CONTEXT-DOCS01"
 title: "Ngữ cảnh dự án mma_ai"
 doc_type: survey
 owner_agent: surveyor
 status: draft
-updated: "2026-10-11"
+updated: "2026-10-12"
 ---
 
 # Ngữ cảnh dự án mma_ai
 
+- [Lệnh](#lenh)
+- [Cấu trúc](#cau-truc)
+- [Bất biến](#bat-bien)
+- [Bẫy](#bay)
+- [Cổng](#cong)
+- [Đọc tiếp](#doc-tiep)
+
+
+<a id="lenh"></a>
 ## Lệnh
 
-- [đo: worktree HEAD `ff7b568`] `uv run --isolated --with pytest pytest -q -p no:cacheprovider --ignore=tests/e2e` được chạy trong worktree mới không có `.venv`; kết quả hoàn tất được ghi trong báo cáo survey.
-- Cổng ứng viên lint/typecheck/build được chạy cùng worktree: Ruff, mypy strict và `python -m compileall -q src tests`; chỉ cổng thoát 0 được đưa vào đề xuất stack.
+- `[đo: worktree sạch HEAD 629550d]` Bốn điểm vào `scripts/train.py`, `mma_ai.evaluation.cli`, `mma_ai.visualization.cli`, `mma_ai.learning.benchmark` đều nhận `--help` và thoát 0 qua `uv run --isolated python`.
+- `[đo: worktree sạch HEAD 629550d]` `uv run --isolated --with pytest pytest -q -p no:cacheprovider --ignore=tests/e2e` thoát 0: 1272 passed, 116 skipped, 11 xfailed.
+- `[đo: worktree sạch HEAD 629550d]` `uv run --isolated --with ruff ruff check .` và `uv run --isolated python -m compileall -q src tests scripts` thoát 0.
+- `[đo: worktree sạch HEAD 629550d]` `uv run --isolated --with mypy mypy --strict .` thoát 1 tại `tests/challenge/test_env_invariants.py:582`; không đưa vào cổng đề xuất.
 
+<a id="cau-truc"></a>
 ## Cấu trúc
 
-- Gói Python nguồn ở `src/mma_ai`; các bounded context (ngữ cảnh giới hạn) là physics, environment, learning, monitoring, evaluation, visualization (`docs/MAP.md:15`).
-- `pyproject.toml:5` khai Python 3.11–3.12; Hatch đóng gói YAML theo package tại `pyproject.toml:34`.
+- `pyproject.toml:5-31` khai gói Python 3.11–3.12 và các nhóm `rl`, `eval`, `dev`; Hatch đóng `src/mma_ai` tại `pyproject.toml:34-46`.
+- `docs/MAP.md:16-20` nối spec với các phân hệ physics, environment, learning, monitoring, evaluation, visualization; `scripts/train.py:3-9` là wrapper huấn luyện.
 
+<a id="bat-bien"></a>
 ## Bất biến
 
-- Writer checkpoint/manifest/episode dùng temp, `fsync`, rồi `os.replace` (`src/mma_ai/learning/checkpoint.py:338`, `src/mma_ai/learning/manifest.py:502`, `src/mma_ai/visualization/episode.py:713`).
-- Viewer train chỉ nạp `mujoco.viewer` sau guard display (`src/mma_ai/monitoring/viewer3d.py:86`).
+- Đánh giá kiểm tập huấn luyện/kiểm thử không giao trước rollout (`src/mma_ai/evaluation/runner.py:329-339`; `src/mma_ai/evaluation/split_guard.py:470-513`).
+- Phát lại chỉ nhận một trong `--episode` và `--checkpoint` (`src/mma_ai/visualization/replay.py:219-235`); viewer thiếu màn hình trả 7 (`src/mma_ai/visualization/replay.py:451-458`).
+- Benchmark cần `--repeats` tối thiểu 5 (`src/mma_ai/learning/benchmark.py:446-450`).
 
+<a id="bay"></a>
 ## Bẫy
 
-- `resource` nhập vô điều kiện và phép chia RAM chỉ phù hợp Linux (`src/mma_ai/learning/resources.py:8`, `src/mma_ai/learning/resources.py:77`).
-- Display hiện suy ra qua DISPLAY/WAYLAND ở viewer và benchmark (`src/mma_ai/monitoring/viewer3d.py:48`, `src/mma_ai/learning/benchmark.py:146`).
-- `xfail(strict=False)` còn che vấn đề POSIX/path (`tests/challenge/test_env_invariants.py:230`, `tests/challenge/test_train_invariants.py:783`).
+- `resource` nhập vô điều kiện; RAM đỉnh chia 1024 theo Linux (`src/mma_ai/learning/resources.py:8,77-79`).
+- `dev` chỉ gồm pytest/jsonschema (`pyproject.toml:29-32`), nên lệnh Ruff/mypy cần cài qua `uv run --with`.
+- `scripts/check_env.py` chưa có `[đo: git ls-files scripts/check_env.py` trả 0 dòng]`; tình trạng Windows/macOS nằm ở `specs/006-cross-platform-support/spec.md:54-58`.
 
+<a id="cong"></a>
 ## Cổng
 
-- Pytest chỉ có marker display hiện hữu (`pyproject.toml:48`); chưa có `.github/**` hay `scripts/check_env.py` [đo: `find .github scripts -type f`].
-- Ghi/đọc UTF-8 xuất hiện rõ ở episode (`src/mma_ai/visualization/episode.py:661`, `src/mma_ai/visualization/episode.py:715`).
+- Cổng đã đo thoát 0 trong worktree sạch: pytest, Ruff và compileall ở mục Lệnh.
+- Mypy strict hiện đỏ tại `tests/challenge/test_env_invariants.py:582`; không đưa vào `.ai/stack-proposal.yml` cho tới khi sửa trong task được phép.
 
+<a id="doc-tiep"></a>
 ## Đọc tiếp
 
-- Xem điểm neo, phạm vi ảnh hưởng (blast radius), hành vi và nợ đa nền tảng tại `docs/00-survey/mma-ai-cross-platform.md`.
+- Điểm neo, phạm vi ảnh hưởng (blast radius), hành vi và rủi ro của bộ tài liệu: `docs/00-survey/mma-ai-project-docs.md`.
+- Các neo kỹ thuật đa nền tảng được cập nhật ở `docs/00-survey/mma-ai-cross-platform.md`; chỉ đề xuất ghép tệp này vào `AGENTS.md`, không tự sửa cấu hình người dùng.

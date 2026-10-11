@@ -12,10 +12,10 @@ version: "1.1.0"
 # Implementation Plan: Hỗ trợ đa nền tảng cho mma_ai (Windows · Linux/WSL2 · macOS)
 
 - [Summary](#summary)
-- [Quyết định của người dùng đã áp vào kế hoạch](#quyet-dinh-cua-nguoi-dung)
+- [Quyết định của người dùng đã áp vào kế hoạch](#quyet-dinh-cua-nguoi-dung-da-ap-vao-ke-hoach)
 - [Technical Context](#technical-context)
 - [Constitution Check](#constitution-check)
-- [Phụ thuộc vào 001–005](#phu-thuoc-vao-001-005)
+- [Phụ thuộc vào 001–005](#phu-thuoc-vao-001005)
 - [Kiến trúc & tách trách nhiệm](#kien-truc-tach-trach-nhiem)
   - [Quyết định thiết kế](#quyet-dinh-thiet-ke)
 - [Project Structure](#project-structure)
@@ -49,7 +49,7 @@ Cách tiếp cận (chi tiết và số đo ở [research.md](research.md)):
 - **CI** (Q10): GitHub Actions, 3 OS × Python 3.11/3.12 = 6 ô; repo chưa có remote nên chỉ kiểm tĩnh tệp (CHƯA KIỂM chạy thật).
 - **Phạm vi**: không GPU AMD/Metal, không installer, không M2–M9, không sửa lỗi sản phẩm đã ghi bằng `xfail` hiện hữu.
 
-<a id="quyet-dinh-cua-nguoi-dung"></a>
+<a id="quyet-dinh-cua-nguoi-dung-da-ap-vao-ke-hoach"></a>
 ## Quyết định của người dùng đã áp vào kế hoạch
 
 Nguồn: Q-0002 (C-0035/C-0036), đã ghi ở mục Clarifications của `spec.md`.
@@ -103,7 +103,7 @@ Nguồn: Q-0002 (C-0035/C-0036), đã ghi ở mục Clarifications của `spec.m
 
 **Quy mô tài liệu & kiến trúc**: vẫn **một bounded context** (mô phỏng và huấn luyện cơ–xương, gói `mma_ai`) như 001–005; `compat` là gói hạ tầng lá trong cùng context, không phải context mới (không có ≥ 2 bounded context hay dịch vụ) ⇒ KHÔNG ghi `docs/02-strategic/context-map.md`, `docs/03-tactical/*` hay `docs/01-intent/overview.md` (không aggregate/invariant/NFR của context nào đổi; INV/NFR của feature này là xuyên suốt nền tảng và sống ở `spec.md`; hiện `docs/` không có tệp nào thuộc ba tầng đó để đọc hay đồng bộ). **Không có phân quyền** (lệnh cục bộ, không vai/khoá/token) ⇒ không `rbac.md`. Không có API HTTP ⇒ không có `contracts/<api-id>.schema.json` theo kiểu dây mạng; hợp đồng dây duy nhất là JSON của `check_env --json` có schema + ví dụ. Stack không đổi (`python-mujoco-cli`) ⇒ **không ghi lại `.ai/stack-proposal.yml`** (đã có bản máy kiểm; stack, cổng và preset không đổi — `preset.layer_rules` chưa nhắc `compat`, đề xuất thêm `compat` vào mọi dòng quy tắc tầng ở "Quyết định ở bước tasks").
 
-<a id="phu-thuoc-vao-001-005"></a>
+<a id="phu-thuoc-vao-001005"></a>
 ## Phụ thuộc vào 001–005
 
 Feature **sửa điểm gắn nền tảng** của mã 002–005 đã có; nó không đổi hành vi của chúng. Dựa vào các thành phần sau (đã có mã trừ khi ghi khác):

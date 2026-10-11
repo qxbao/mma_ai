@@ -14,10 +14,11 @@ version: "1.0.0"
 - [Đầu vào](#dau-vao)
 - [Quy ước task](#quy-uoc-task)
   - [Phụ thuộc chéo feature](#phu-thuoc-cheo-feature)
-- [User story US1–US4 — README, giấy phép, CONTRIBUTING (P1/P2)](#user-story-us1-us4-readme-giay-phep-contributing)
-- [User story US5–US6 — CHANGELOG và ba hướng dẫn (P2)](#user-story-us5-us6-changelog-va-ba-huong-dan)
+- [User story US1–US4 — README, giấy phép, CONTRIBUTING (P1/P2)](#user-story-us1us4-readme-giay-phep-contributing-p1p2)
+- [User story US5–US6 — CHANGELOG và ba hướng dẫn (P2)](#user-story-us5us6-changelog-va-ba-huong-dan-p2)
 - [Đối chiếu độc lập](#doi-chieu-doc-lap)
   - [Quyết định về vai `challenger`](#quyet-dinh-ve-vai-challenger)
+- [Bảng task](#bang-task)
 - [Dependencies và wave](#dependencies-va-wave)
 - [Điều kiện hoàn thành](#dieu-kien-hoan-thanh)
 
@@ -53,7 +54,7 @@ Không task nào của 008 đọc hay sửa tệp do task của feature khác si
 
 Không có task nào đổi hành vi mà test của task/feature trước đang khẳng định: grep `README`/`CHANGELOG`/`CONTRIBUTING`/`docs/guides` trong `tests/` và `conftest.py` không có kết quả ⇒ không cần task "cập nhật test cũ".
 
-<a id="user-story-us1-us4-readme-giay-phep-contributing"></a>
+<a id="user-story-us1us4-readme-giay-phep-contributing-p1p2"></a>
 ## User story US1–US4 — README, giấy phép, CONTRIBUTING (P1/P2)
 
 **Mục tiêu**: người lần đầu tới repo hiểu dự án làm gì, cài bằng `uv`, chạy đúng 4 lệnh thật trong ≤ 10 phút (NFR-DOC-002); `LICENSE` là MIT chuẩn với bản quyền đã xác nhận; người đóng góp biết test/lint/mypy, quy ước tiếng Việt, luồng ai-sdlc.
@@ -62,7 +63,7 @@ Không có task nào đổi hành vi mà test của task/feature trước đang 
 
 - [ ] T801 [US1] [US2] [US4] Viết `LICENSE` (MIT chuẩn, `Copyright (c) 2026 Dương Quan Bao`), `README.md` (tiêu đề + mô tả 2–3 dòng, huy hiệu, 10 mục bắt buộc, đúng 4 lệnh) và `CONTRIBUTING.md` (≤ 100 dòng) — README.md; LICENSE; CONTRIBUTING.md
 
-<a id="user-story-us5-us6-changelog-va-ba-huong-dan"></a>
+<a id="user-story-us5us6-changelog-va-ba-huong-dan-p2"></a>
 ## User story US5–US6 — CHANGELOG và ba hướng dẫn (P2)
 
 **Mục tiêu**: `CHANGELOG.md` theo Keep a Changelog với bản `[0.1.0]` tóm tắt M0–M1 truy được về spec/mã; `docs/guides/` có đúng ba hướng dẫn ngắn (huấn luyện, đánh giá, phát lại/demo), mỗi cái có liên kết ngược README.
@@ -82,7 +83,7 @@ Không có task nào đổi hành vi mà test của task/feature trước đang 
 
 **KHÔNG DÙNG** vai `challenger`. Bốn bất biến `INV-001…004` của spec là bất biến về **nội dung và vùng ghi của tài liệu** (lệnh khớp `--help`, không đổi mã, không hứa nền tảng chưa hỗ trợ, một chỗ gốc cho mỗi sự thật), không phải bất biến của một hàm nhận đầu vào người dùng nên không có vector/fuzz nào "đánh sập" được; chúng được kiểm tất định bằng đối chiếu `--help` và quét cờ (`T803`), so `git diff --name-only` với vùng ghi (quickstart KB-8) và grep (`006`, ba nhóm cài đặt). Dùng challenger chỉ thêm một lượt mà không thêm bằng chứng, và đổi cổng review thành nhất trí hai vai; yêu cầu gốc cũng cấm dùng challenger cho feature này. (Task `qa` `T804` được thêm sau lượt lint `NO_E2E` — xem mục Dependencies và wave.) Quyết định cũng được ghi ở `plan.md`.
 
-<a id="tasks-table"></a>
+<a id="bang-task"></a>
 ## Bảng task
 
 | id | mô tả | outputs | depends_on | role | độ khó |

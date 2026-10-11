@@ -14,12 +14,12 @@ version: "1.1.0"
 - [Q1. Nơi đặt lớp tương thích (FR-002, INV-002)](#q1-noi-dat-lop-tuong-thich-fr-002-inv-002)
 - [Q2. Nhận diện bốn loại nền tảng (FR-002, FR-017)](#q2-nhan-dien-bon-loai-nen-tang-fr-002-fr-017)
 - [Q3. Đo RAM đỉnh theo OS (FR-004, INV-007, NFR-RAM-001)](#q3-do-ram-dinh-theo-os-fr-004-inv-007-nfr-ram-001)
-- [Q4. Dò màn hình và viewer 3D theo OS (FR-005…FR-008, NFR-DISPLAY-001)](#q4-do-man-hinh-va-viewer-3d-theo-os-fr-005-fr-008-nfr-display-001)
+- [Q4. Dò màn hình và viewer 3D theo OS (FR-005…FR-008, NFR-DISPLAY-001)](#q4-do-man-hinh-va-viewer-3d-theo-os-fr-005fr-008-nfr-display-001)
 - [Q5. Ghi nguyên tử và thử lại trên Windows (FR-009, INV-003, NFR-IO-001)](#q5-ghi-nguyen-tu-va-thu-lai-tren-windows-fr-009-inv-003-nfr-io-001)
 - [Q6. Đường dẫn tuyệt đối theo mọi OS và đường dẫn trong bản ghi (FR-010, FR-011)](#q6-duong-dan-tuyet-doi-theo-moi-os-va-duong-dan-trong-ban-ghi-fr-010-fr-011)
 - [Q7. UTF-8, xuống dòng LF và đầu ra chuẩn (FR-012, FR-013, NFR-ENC-001)](#q7-utf-8-xuong-dong-lf-va-dau-ra-chuan-fr-012-fr-013-nfr-enc-001)
-- [Q8. Cài đặt tái lập: uv/pip, torch CPU/CUDA (FR-018, FR-019, AC-5)](#q8-cai-dat-tai-lap-uv-pip-torch-cpu-cuda-fr-018-fr-019-ac-5)
-- [Q9. Test theo năng lực mà không dùng skip/xfail (FR-021, FR-022, INV-006)](#q9-test-theo-nang-luc-ma-khong-dung-skip-xfail-fr-021-fr-022-inv-006)
+- [Q8. Cài đặt tái lập: uv/pip, torch CPU/CUDA (FR-018, FR-019, AC-5)](#q8-cai-dat-tai-lap-uvpip-torch-cpucuda-fr-018-fr-019-ac-5)
+- [Q9. Test theo năng lực mà không dùng skip/xfail (FR-021, FR-022, INV-006)](#q9-test-theo-nang-luc-ma-khong-dung-skipxfail-fr-021-fr-022-inv-006)
 - [Q10. CI ma trận (FR-020, NFR-CI-001)](#q10-ci-ma-tran-fr-020-nfr-ci-001)
 - [Q11. `multiprocessing` dưới `spawn` (FR-015)](#q11-multiprocessing-duoi-spawn-fr-015)
 - [Q12. Phạm vi các CLI và tệp đang bị xoá staged (FR-001, AC-1)](#q12-pham-vi-cac-cli-va-tep-dang-bi-xoa-staged-fr-001-ac-1)
@@ -60,7 +60,7 @@ Quy ước nhãn: **ĐÃ ĐO** = số/hành vi quan sát được ở máy phát
 - **Phương án loại**: `psutil.Process().memory_info().peak_wset` — loại vì thêm phụ thuộc, và `psutil` không có đỉnh RSS trên Linux; `tracemalloc` — loại vì chỉ đo heap Python, không phải RSS.
 - **Thất bại** (API Windows lỗi, `getrusage` ném ngoại lệ): trả `null` tường minh (INV-007); `check_env` ghi năng lực `ram_peak` không khả dụng kèm lý do.
 
-<a id="q4-do-man-hinh-va-viewer-3d-theo-os-fr-005-fr-008-nfr-display-001"></a>
+<a id="q4-do-man-hinh-va-viewer-3d-theo-os-fr-005fr-008-nfr-display-001"></a>
 ## Q4. Dò màn hình và viewer 3D theo OS (FR-005…FR-008, NFR-DISPLAY-001)
 
 - **Hiện trạng**: `display_available()` đã gọi `glfw.init()` thật (F-003) — là phép dò đúng cho mọi OS; hai nơi còn lại (F-004, F-005) chỉ xét biến môi trường POSIX. Trên Windows/macOS không có hai biến đó nên cả hai luôn báo "không có màn hình".
@@ -115,7 +115,7 @@ Quy ước nhãn: **ĐÃ ĐO** = số/hành vi quan sát được ở máy phát
 - **Đọc**: `read_text(encoding="utf-8")` chấp nhận cả LF và CRLF (chế độ văn bản phổ quát), nên cấu hình YAML/JSON checkout với CRLF vẫn đọc được. Hash XML mô hình (SHA-256 trên byte) lấy từ tệp trong gói `myo-sim` cài từ wheel — không qua `git autocrlf` — nên không đổi theo OS; **CHƯA KIỂM** trên Windows.
 - **`.gitattributes`**: đặt `eol=lf` cho `*.py`, `*.yaml`, `*.yml`, `*.json`, `*.md`, `*.toml`, `*.xml` để cây mã checkout trên Windows không đổi byte của tệp mà test so sánh/băm; nhỏ, thuộc kết quả (d) của yêu cầu.
 
-<a id="q8-cai-dat-tai-lap-uv-pip-torch-cpu-cuda-fr-018-fr-019-ac-5"></a>
+<a id="q8-cai-dat-tai-lap-uvpip-torch-cpucuda-fr-018-fr-019-ac-5"></a>
 ## Q8. Cài đặt tái lập: uv/pip, torch CPU/CUDA (FR-018, FR-019, AC-5)
 
 - **ĐÃ ĐO (đọc `uv.lock`)**: `torch` 2.14.1 có wheel `win_amd64` (≈ 124 MB), `macosx_14_0_arm64` (≈ 127 MB) và `manylinux_2_28_x86_64` (≈ 555 MB) cho CPython 3.11/3.12; **không** có wheel macOS x86_64 cho `torch`. `mujoco` 3.15.0 có `win_amd64`, `macosx_11_0_arm64`, `manylinux_2_27_x86_64`; `glfw` 2.10.2 có `win_amd64`, `macosx_11_0_arm64`, `manylinux`; `myo-sim` 0.2.3 là gói thuần Python (`py3-none-any`). Khoá có ≥ 24 dòng `win_amd64` và ≥ 56 dòng `macosx`.
@@ -129,7 +129,7 @@ Quy ước nhãn: **ĐÃ ĐO** = số/hành vi quan sát được ở máy phát
 - **Kiểm khoá cho ba OS**: `uv lock --check` trong CI; `uv sync --locked` ở từng ô — nếu khoá không giải quyết được cho một OS, ô đó đỏ (bằng chứng AC-5/AC-6).
 - **`uv.toml` cục bộ**: tệp `uv.toml` (chế độ liên kết `symlink`) nằm trong `.git/info/exclude`, **không** được commit (ĐÃ ĐO: `git ls-files uv.toml` rỗng) nên không ảnh hưởng người dùng Windows; tài liệu cài đặt không được chỉ dẫn dùng nó.
 
-<a id="q9-test-theo-nang-luc-ma-khong-dung-skip-xfail-fr-021-fr-022-inv-006"></a>
+<a id="q9-test-theo-nang-luc-ma-khong-dung-skipxfail-fr-021-fr-022-inv-006"></a>
 ## Q9. Test theo năng lực mà không dùng skip/xfail (FR-021, FR-022, INV-006)
 
 - **Mâu thuẫn cần giải**: yêu cầu (f) nói "test cần GPU/màn hình được đánh dấu và bỏ qua có chủ đích, không xfail/skip để che lỗi"; hiến chương II cấm thêm cơ chế bỏ qua. Giải theo hiến chương (Clarifications của spec).

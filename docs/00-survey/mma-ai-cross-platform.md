@@ -4,7 +4,7 @@ title: "Khảo sát đa nền tảng mma_ai"
 doc_type: survey
 owner_agent: surveyor
 status: draft
-updated: "2026-10-11"
+updated: "2026-10-12"
 ---
 
 # Khảo sát đa nền tảng mma_ai
@@ -12,6 +12,7 @@ updated: "2026-10-11"
 - [Mục tiêu và phạm vi](#muc-tieu-va-pham-vi)
 - [Điểm neo](#diem-neo)
 - [Kiến trúc hiện hữu](#kien-truc-hien-huu)
+  - [Known-broken và đường hiện đại hoá](#known-broken-va-duong-hien-dai-hoa)
 - [Blast radius](#blast-radius)
 - [Bản đồ hành vi](#ban-do-hanh-vi)
 - [Nợ, cạm bẫy và phần chưa kiểm](#no-cam-bay-va-phan-chua-kiem)
@@ -21,10 +22,10 @@ updated: "2026-10-11"
 <a id="muc-tieu-va-pham-vi"></a>
 ## Mục tiêu và phạm vi
 
-Khảo sát này chuẩn bị đặc tả đa nền tảng (cross-platform) cho CLI của `mma_ai` trên Windows gốc, Linux/WSL2 và macOS: train, evaluate, replay/demo và benchmark; gồm đo RAM, dò màn hình, đường dẫn/ghi tệp, cài đặt, kiểm thử và CI. Nguồn được khảo sát là HEAD `ff7b568`; worktree dùng chung đang có các xoá staged đối với CLI evaluation/replay nên những phần đó được đọc từ `HEAD:<file>` và được gắn cờ phối hợp.
+Khảo sát này chuẩn bị đặc tả đa nền tảng (cross-platform) cho CLI của `mma_ai` trên Windows gốc, Linux/WSL2 và macOS: train, evaluate, replay/demo và benchmark; gồm đo RAM, dò màn hình, đường dẫn/ghi tệp, cài đặt, kiểm thử và CI. Phần cập nhật này đối chiếu HEAD `629550d`; `[đo: git diff --name-only ff7b568e5276 HEAD -- <survey_scope>]` cho thấy `pyproject.toml`, mã đánh giá/phát lại và các test trong phạm vi đã đổi. CLI đánh giá/phát lại hiện có ở `src/mma_ai/evaluation/cli.py:189` và `src/mma_ai/visualization/cli.py:25`.
 
-- Tự chốt: coi Windows gốc, WSL2 và macOS đều là đích nghiệm thu — yêu cầu chưa xác định môi trường Windows chính, nên đặc tả sau phải hỏi lại mức ưu tiên/thiết bị CUDA thay vì bỏ một nhánh.
-- GitNexus đã được gọi với `repo: "/mnt/01DCE9A4D6522BD0/Project/AI/fighterl"` cho `query`, `context`, `impact` và `api_impact`; server trả `Repository ... not found. Available: skill_ai`. Chỉ mục `.ai/index` cũng cũ (HEAD index `38204a4`, HEAD khảo sát `ff7b568`), do đó các quan hệ dưới đây dùng `rg`/đọc symbol theo dòng mã và ghi rõ giới hạn này.
+- Tự chốt: coi Windows gốc là đích tham chiếu chính, Linux/WSL2 và macOS là các đích cần giữ/hỗ trợ — lý do: yêu cầu người dùng đã được ghi ở `specs/006-cross-platform-support/spec.md:54-58,66`; mức CUDA vẫn theo quyết định của spec 006.
+- GitNexus hiện trả đồ thị cho `repo: "/mnt/01DCE9A4D6522BD0/Project/AI/fighterl"`: `[đo: query(search_query="train elbow CLI evaluation checkpoint replay episode benchmark"); context(name="evaluate_checkpoint", file_path="src/mma_ai/evaluation/runner.py"); impact(target="src/mma_ai/evaluation/cli.py", direction="both", depth=2); api_impact(file="src/mma_ai/evaluation/cli.py") → không có HTTP route]`. Dòng mã là nguồn xác nhận vị trí sau thay đổi.
 
 <a id="diem-neo"></a>
 ## Điểm neo
@@ -39,9 +40,9 @@ Khảo sát này chuẩn bị đặc tả đa nền tảng (cross-platform) cho 
 | F-006 | service — thư mục run | `create_run_dir()` nối trực tiếp `stage` vào `Path` và tạo thư mục loại trừ va chạm tại `src/mma_ai/learning/run_dir.py:19`. |
 | F-007 | service — ghi nguyên tử | Checkpoint dùng `.tmp`, `fsync`, `os.replace` tại `src/mma_ai/learning/checkpoint.py:338`; manifest làm tương tự tại `src/mma_ai/learning/manifest.py:502`; episode đặt UTF-8, `ensure_ascii=False`, `fsync`, `os.replace` tại `src/mma_ai/visualization/episode.py:713`. |
 | F-008 | controller — train CLI | `learning.cli` sinh UI qua `sys.executable -m mma_ai.monitoring.cli`, không ghép shell command, tại `src/mma_ai/learning/cli.py:150`. |
-| F-009 | controller — evaluate CLI | HEAD có `main()` tại `HEAD:src/mma_ai/evaluation/cli.py:189` và điều phối đánh giá tại `HEAD:src/mma_ai/evaluation/runner.py:192`; các tệp này hiện bị xoá staged trong worktree dùng chung. |
-| F-010 | controller — replay/demo CLI | HEAD có `run_replay()` tại `HEAD:src/mma_ai/visualization/replay.py:189`, gọi F-003 trước viewer tại `HEAD:src/mma_ai/visualization/replay.py:452`, và CLI mỏng tại `HEAD:src/mma_ai/visualization/cli.py:25`; các tệp này hiện bị xoá staged trong worktree dùng chung. |
-| F-011 | packaging/CI | Python được giới hạn `>=3.11,<3.13` và base dependencies gồm MuJoCo/myo-sim tại `pyproject.toml:5`; marker test chỉ nói `DISPLAY`/`WAYLAND_DISPLAY` tại `pyproject.toml:48`; `find scripts` và `find .github` không tìm thấy tệp, nên `scripts/check_env.py` và workflow CI chưa tồn tại. |
+| F-009 | controller — evaluate CLI | `main()` ở `src/mma_ai/evaluation/cli.py:189`, gọi `evaluate_checkpoint` tại `src/mma_ai/evaluation/cli.py:221-226`; runner kiểm tra `check_disjoint` trước rollout tại `src/mma_ai/evaluation/runner.py:329-339`. |
+| F-010 | controller — replay/demo CLI | `run_replay()` ở `src/mma_ai/visualization/replay.py:189`, gọi F-003 trước viewer tại `src/mma_ai/visualization/replay.py:451-458`, và CLI mỏng ở `src/mma_ai/visualization/cli.py:25`. |
+| F-011 | packaging/CI | Python giới hạn `>=3.11,<3.13`, nhóm `rl`/`eval`/`dev` ở `pyproject.toml:5-31`; marker display ở `pyproject.toml:49-54`; `scripts/train.py:3-9` đã tồn tại, còn `[đo: git ls-files scripts/check_env.py '.github/**'` trả 0 dòng]`. |
 
 <a id="kien-truc-hien-huu"></a>
 ## Kiến trúc hiện hữu
@@ -70,11 +71,12 @@ graph LR
 |---|---|---|---|
 | Mô phỏng | `physics/*.py`, `environment/*.py` | `learning`, `evaluation`, `visualization` | Environment là biên Gym/MuJoCo dùng chung. |
 | Huấn luyện | `learning/*.py` | `environment`, `monitoring` | CLI, tài nguyên, persistence và PPO cùng bounded context. |
-| Đánh giá | `evaluation/*.py` | `environment`, `physics`, checkpoint | Độc lập theo package; source CLI/runner hiện cần phối hợp vì xoá staged. |
+| Đánh giá | `evaluation/*.py` | `environment`, `physics`, checkpoint | `src/mma_ai/evaluation/runner.py:36-60` nhập environment, physics và checkpoint. |
 | Hiển thị/phát lại | `visualization/*.py`, `monitoring/*.py` | `environment`, `learning` | Có hai viewer khác nhau nhưng cùng phụ thuộc khả năng màn hình. |
 
-Xếp hạng định lượng bằng GitNexus CHƯA KIỂM vì repo chưa được index; bảng trên chỉ khẳng định các cạnh import trực tiếp. Các writer dùng `Path` và encoding UTF-8 tại F-007, nhưng chưa thành một lớp tương thích (compatibility layer) duy nhất.
+GitNexus `impact(target="src/mma_ai/evaluation/cli.py", direction="both", depth=2)` trả 4 nút trực tiếp, 16 gián tiếp; `impact(target="src/mma_ai/visualization/replay.py", direction="both", depth=2)` trả 14 trực tiếp, 11 gián tiếp, với `repo` tuyệt đối ở trên. Các writer dùng `Path` và encoding UTF-8 tại F-007, nhưng chưa thành một lớp tương thích (compatibility layer) duy nhất.
 
+<a id="known-broken-va-duong-hien-dai-hoa"></a>
 ### Known-broken và đường hiện đại hoá
 
 - F-001 chặn Windows ngay lúc import; phép chia RAM hiện chỉ đúng Linux KiB→MiB và sai macOS byte→MiB (`src/mma_ai/learning/resources.py:8`, `src/mma_ai/learning/resources.py:77`).
@@ -84,7 +86,7 @@ Xếp hạng định lượng bằng GitNexus CHƯA KIỂM vì repo chưa đư�
 <a id="blast-radius"></a>
 ## Blast radius
 
-GitNexus `impact`/`api_impact` đã chạy cho `collect_resources`, `display_available`, `write_manifest`, `View3D` với repo tuyệt đối nhưng không thể trả đồ thị vì server không có repo. Phân tầng sau là từ import/call theo dòng mã, không phải đồ thị hoàn chỉnh.
+GitNexus `impact` đã chạy lại cho `src/mma_ai/evaluation/cli.py`, `src/mma_ai/visualization/replay.py`, `src/mma_ai/learning/benchmark.py` và `src/mma_ai/learning/cli.py` với `repo` tuyệt đối, `direction="both"`, `depth=2`, `includeTests=true`; `api_impact` cho hai CLI đánh giá/phát lại trả không có HTTP route. Phân tầng dưới đây kết hợp đồ thị và dòng mã.
 
 | Thay đổi | Callers/callees | Test liên quan | Rủi ro |
 |---|---|---|---|
@@ -102,9 +104,9 @@ Chuỗi sửa dự kiến: `(1) platform facade — add`; `(2) F-001/F-003/F-004
 |---|---|---|---|
 | Train | `main()` tạo/sử dụng run dir, có thể spawn UI module-mode; manifest tự thu resources khi caller không cấp. | `src/mma_ai/learning/cli.py:230`; `src/mma_ai/learning/manifest.py:362`; `src/mma_ai/learning/cli.py:165`. | Windows fail qua F-001; UI/viewer tùy chọn sai guard F-004. |
 | Benchmark | Đánh giá display bằng env POSIX và ghi JSON UTF-8 qua replace. | `src/mma_ai/learning/benchmark.py:139`; `src/mma_ai/learning/benchmark.py:220`. | Windows/macOS sai detection; atomic handling chưa test native. |
-| Evaluate | CLI lấy checkpoint/config/out/repeats/seed/runs-dir; runner nạp JSON UTF-8 và xuất report nguyên tử theo mô tả module. | `HEAD:src/mma_ai/evaluation/cli.py:58`; `HEAD:src/mma_ai/evaluation/runner.py:128`; `HEAD:src/mma_ai/evaluation/runner.py:1`. | CHƯA KIỂM chạy trên Windows/macOS; source đang xoá staged, phải phục hồi/phối hợp trước implementation. |
-| Replay/demo | Parse `--episode`/`--checkpoint`/`--headless`; không headless thì gọi display check, episode writer dùng atomic replace. | `HEAD:src/mma_ai/visualization/replay.py:93`; `HEAD:src/mma_ai/visualization/replay.py:452`; `src/mma_ai/visualization/episode.py:678`. | Native Windows/macOS bị ảnh hưởng F-003; source runner đang xoá staged. |
-| Clean install | Có module verifier, không có shell script. | `src/mma_ai/environment/verify_clean_install.py:203`; `find scripts` không có thư mục. | Không có `scripts/check_env.py`, hướng dẫn uv/pip hay kiểm OS. |
+| Evaluate | CLI lấy checkpoint/config/out/repeats/seed/runs-dir; runner chặn rò dữ liệu trước rollout và xuất report. | `src/mma_ai/evaluation/cli.py:58-93`; `src/mma_ai/evaluation/runner.py:329-339`. | CHƯA KIỂM chạy trên Windows/macOS. |
+| Replay/demo | Parse `--episode`/`--checkpoint`/`--headless`; không headless thì gọi display check, episode writer dùng atomic replace. | `src/mma_ai/visualization/replay.py:93-154`; `src/mma_ai/visualization/replay.py:451-458`; `src/mma_ai/visualization/episode.py:713`. | Native Windows/macOS bị ảnh hưởng F-003. |
+| Clean install | Có module verifier và `scripts/train.py`, chưa có `scripts/check_env.py`. | `src/mma_ai/environment/verify_clean_install.py:203`; `scripts/train.py:3-9`; `[đo: git ls-files scripts/check_env.py` trả 0 dòng]`. | Hướng dẫn nền tảng mới thuộc spec 006 (`specs/006-cross-platform-support/spec.md:172`). |
 
 <a id="no-cam-bay-va-phan-chua-kiem"></a>
 ## Nợ, cạm bẫy và phần chưa kiểm
@@ -112,6 +114,6 @@ Chuỗi sửa dự kiến: `(1) platform facade — add`; `(2) F-001/F-003/F-004
 - Test oversized set dùng `import resource` và `setrlimit`, lại đặt `xfail(strict=False)`: `tests/challenge/test_env_invariants.py:230`. Đây vừa không chạy Windows vừa che lỗi trái yêu cầu.
 - Test symlink tạo liên kết trực tiếp, không có capability check: `tests/challenge/test_train_invariants.py:763`. Mã sản phẩm không có `symlink`/`lstat`/`is_symlink` (truy vấn `rg` chỉ trả test), còn `stage` có thể chứa `/` và hiện bị `xfail(strict=False)` tại `tests/challenge/test_train_invariants.py:783`.
 - Test display chỉ bỏ `DISPLAY`/`WAYLAND_DISPLAY` (`conftest.py:17`; `tests/unit/test_display.py:51`), chưa mock platform Windows/macOS hay một capability native.
-- Không có `.github/**` hay `scripts/**` tại thời điểm khảo sát; chưa có CI matrix, check_env, hướng dẫn Windows uv/pip, hay lệnh phân biệt torch CPU/CUDA.
-- CHƯA KIỂM: Windows chính là native hay WSL2; có runner Windows/máy kiểm tay; CUDA Windows bắt buộc; macOS là support chạy đầy đủ hay chỉ import/không lỗi.
+- Có `scripts/train.py:3-9`; chưa có `.github/**` hay `scripts/check_env.py` theo `[đo: git ls-files '.github/**' scripts/check_env.py]`; CI matrix và kiểm OS vẫn là nợ của spec 006 (`specs/006-cross-platform-support/spec.md:172`).
+- CHƯA KIỂM: kết quả chạy CI trên runner Windows/macOS và kiểm tay viewer trên thiết bị thật; `specs/006-cross-platform-support/spec.md:66-68` đã chốt vai trò Windows native và WSL2 ở mức đặc tả.
 - CHƯA KIỂM: hành vi native MuJoCo/GLFW/myo-sim trên Windows và macOS; chỉ CI/thiết bị thật mới chứng minh được.

@@ -36,8 +36,8 @@ updated: "2026-10-12"
 | FR-008 | Thông báo lỗi của kiểm thử bằng tiếng Việt, nêu giá trị và ngữ cảnh (lệnh, hạn mức, mã thoát, đầu ra) | T701, T702 | `tests/integration/test_viewer3d_train.py::test_view3d_process_separate`, `tests/integration/test_replay_viewer_real.py::test_real_viewer_plays_or_reports_no_display` | entrypoint | có |
 | NFR-REL-001 | Mỗi kiểm thử chạy riêng xanh 5/5 liên tiếp; T-B thêm 5/5 có tải CPU nền; 0 lần quá hạn không chẩn đoán | T701, T702, T703 | `pytest <nodeid>` lặp 5 lần mỗi kiểm thử (cộng dồn qua các lượt), `.ai/runs/*/reports/qa-007-reliability.md` | cổng | có |
 | NFR-PERF-001 | T-A lệnh con ≤ 25 s (có màn hình) / ≤ 5 s (không màn hình); T-B phần tiến trình tách riêng ≤ 10 s, chờ khởi chạy ≤ 5 s | T701, T702, T703 | `pytest --durations=5 <nodeid>`, `.ai/runs/*/reports/qa-007-reliability.md` | cổng | có |
-| NFR-QUAL-001 | `ruff check` và `mypy --strict` xanh (0 lỗi) trên hai tệp kiểm thử đã sửa | T701, T702, T709, T711 | cổng `lint` (`ruff check .`), cổng `typecheck` (`mypy --strict .`) | cổng | có |
-| INV-001 | Số kiểm thử và độ chặt khẳng định trong hai tệp không giảm; không thêm cơ chế bỏ qua | T701, T702, T703, T704, T708, T710, T711 | `pytest --collect-only -q` trên hai tệp (số kiểm thử không giảm), quét `skip`/`xfail`/`importorskip`, `evidence/reviews/T704.verdict` | cổng | có |
+| NFR-QUAL-001 | `ruff check` và `mypy --strict` xanh (0 lỗi) trên hai tệp kiểm thử đã sửa | T701, T702, T711 | cổng `lint` (`ruff check .`), cổng `typecheck` (`mypy --strict .`) | cổng | có |
+| INV-001 | Số kiểm thử và độ chặt khẳng định trong hai tệp không giảm; không thêm cơ chế bỏ qua | T701, T702, T703, T704, T710, T711 | `pytest --collect-only -q` trên hai tệp (số kiểm thử không giảm), quét `skip`/`xfail`/`importorskip`, `evidence/reviews/T704.verdict` | cổng | có |
 | INV-002 | Kiểm thử độc lập thứ tự và trạng thái lần trước; không để tiến trình, luồng, tệp mồ côi ngoài `tmp_path` | T701, T702, T703 | `tests/integration/test_viewer3d_train.py::test_view3d_process_separate` (dọn bằng `stop_event`), `tests/integration/test_replay_viewer_real.py::test_real_viewer_plays_or_reports_no_display` (giết nhóm tiến trình), chạy lặp và chạy cả bộ ở `.ai/runs/*/reports/qa-007-reliability.md` | entrypoint | có |
 | INV-003 | Vùng ghi: hai tệp integration + một tệp e2e mới; `src/` chỉ đổi ở `viewer.py` khi đo chứng minh (AC-5) | T701, T702, T703, T704, T705, T706, T707 | `git diff --name-only` (`src/` chỉ có `viewer.py`), `evidence/reviews/T704.verdict` | cổng | có |
 | SC-001 | Cổng tests xanh ở hai kiểm thử, 5/5 lần mỗi kiểm thử chạy riêng và 5/5 có tải nền ở T-B; 0 lần đỏ chập chờn | T701, T702, T703 | `tests/integration/test_replay_viewer_real.py::test_real_viewer_plays_or_reports_no_display`, `tests/integration/test_viewer3d_train.py::test_view3d_process_separate`, `.ai/runs/*/reports/qa-007-reliability.md` | entrypoint | có |
@@ -58,8 +58,6 @@ updated: "2026-10-12"
 | T705 | qa | AC-1, AC-2, AC-3, FR-001, FR-003, NFR-REL-001, INV-002, INV-003 | `tests/e2e/test_007_viewer_entrypoint.py` |
 | T706 | builder | AC-1, AC-5, NFR-REL-001, FR-001 | `tests/unit/test_viewer.py`, `tests/integration/test_replay_viewer_real.py` |
 | T707 | spec | INV-003, FR-007, SC-005, AC-4, AC-5 | `specs/007-stabilize-viewer-tests/spec.md` (đọc lại: không còn câu "đúng hai tệp" mâu thuẫn) |
-| T708 | builder | không mã của 007 (nối mã `003/AC-5` vào docstring test của 003, không đổi khẳng định); giữ INV-001 | `tests/integration/test_train_stage.py` (`grep 003/AC-5`) |
-| T709 | builder | NFR-QUAL-001, INV-003 (khung gói trên cây gốc) | `tests/unit/test_smoke_mma_ai.py` |
 | T710 | qa | không mã của 007 (nối mã `003/AC-5` vào docstring e2e của 003); giữ INV-001 | `tests/e2e/test_train_acceptance.py` (`grep 003/AC-5`) |
 | T711 | reviewer | AC-1, AC-5, INV-001, INV-003, NFR-REL-001, NFR-QUAL-001 | `evidence/reviews/T711.verdict` |
 

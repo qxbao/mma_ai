@@ -190,8 +190,8 @@ uv run --isolated --with mypy mypy --strict tests/integration/test_replay_viewer
 <a id="quyet-dinh-o-buoc-tasks"></a>
 ## Quyết định ở bước tasks
 
-- Hai task kiểm thử độc lập (T-B nhanh, có thể làm trước; T-A đo trước rồi mới sửa); mỗi task có `outputs` đúng một tệp; không dùng `depends_on` giữa hai task. Hai task này `depends_on` task chủ cũ của tệp (003/005) và khung gói `T709`.
-- Task hội tụ: `T706` (builder, sửa `viewer.py` theo AC-5 sau khi `T702` đo), `T707` (spec, chỉnh INV-003/FR-007), `T708`/`T710` (nối mã `003/AC-5` vào docstring test của 003: integration do builder, e2e do qa vì builder không ghi được `tests/e2e/**`), `T709` (khung gói), `T711` (reviewer). `T705` (qa, e2e) và `T704` (reviewer) đứng sau `T701`/`T702`.
+- Hai task kiểm thử độc lập (T-B nhanh, có thể làm trước; T-A đo trước rồi mới sửa); mỗi task có `outputs` đúng một tệp; không dùng `depends_on` giữa hai task. Hai task này `depends_on` task chủ cũ của tệp (003/005); khung gói đã có sẵn trên `master` nên không có task dựng khung.
+- Task hội tụ: `T706` (builder, sửa `viewer.py` theo AC-5 sau khi `T702` đo), `T707` (spec, chỉnh INV-003/FR-007), `T710` (qa, nối mã `003/AC-5` vào docstring e2e của 003; builder không ghi được `tests/e2e/**`), `T711` (reviewer). Đã rút `T708` (`003/AC-5` đã có 4 lần trong `tests/integration/test_train_stage.py` trên `master`) và `T709` (bốn tệp khung gói đã có, giống hệt, trên `master`) vì không tạo diff. `T705` (qa, e2e) và `T704` (reviewer) đứng sau `T701`/`T702`.
 - Task T-A gồm hai bước ghi trong mô tả: (1) đo và ghi nguyên nhân; (2) sửa hoặc dừng-và-báo theo cây quyết định. Nếu dừng-và-báo thì task kết thúc với báo cáo, không tạo diff ngoài phần độ cứng FR-002.
 - Task cuối: chạy lặp theo NFR-REL-001 và gom bằng chứng (không có tệp mã; chỉ evidence do cổng sinh).
 - Không có task giao diện, hạ tầng hay khách duyệt.
