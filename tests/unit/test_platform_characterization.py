@@ -42,6 +42,7 @@ def test_display_unset_message_matches_legacy(monkeypatch: pytest.MonkeyPatch) -
     """INV-001, AC-3: thông điệp cũ giữ nguyên khi thiếu cả hai biến."""
     monkeypatch.delenv("DISPLAY", raising=False)
     monkeypatch.delenv("WAYLAND_DISPLAY", raising=False)
+    monkeypatch.delenv("MMA_AI_FORCE_NO_DISPLAY", raising=False)
     fake_glfw = SimpleNamespace(init=lambda: 0, terminate=lambda: None)
     monkeypatch.setitem(sys.modules, "glfw", fake_glfw)
     status = display.display_available()
@@ -54,10 +55,14 @@ def test_display_unset_message_matches_legacy(monkeypatch: pytest.MonkeyPatch) -
 
 
 def test_view3d_has_display_matches_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    """INV-001, AC-3: viewer 3D dựa vào DISPLAY hoặc WAYLAND_DISPLAY."""
+    """INV-001, INV-004, AC-3: viewer 3D dò biến Linux rồi kiểm GLFW."""
+    from mma_ai.compat import display as compat_display
+
     monkeypatch.delenv("DISPLAY", raising=False)
     monkeypatch.delenv("WAYLAND_DISPLAY", raising=False)
+    monkeypatch.delenv("MMA_AI_FORCE_NO_DISPLAY", raising=False)
     assert View3D.has_display() is False
+    monkeypatch.setattr(compat_display, "_default_glfw_init", lambda: True)
     monkeypatch.setenv("DISPLAY", ":99")
     assert View3D.has_display() is True
     monkeypatch.delenv("DISPLAY")

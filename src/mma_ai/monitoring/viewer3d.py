@@ -12,11 +12,12 @@ Hiện thực và bảo vệ các yêu cầu:
 
 from __future__ import annotations
 
-import os
 import sys
 import time
 from pathlib import Path
 from typing import Any
+
+from mma_ai.compat.display import probe_display, viewer_launch_hint
 
 __all__: list[str] = ["View3D"]
 
@@ -47,7 +48,7 @@ class View3D:
     @staticmethod
     def has_display() -> bool:
         """Kiểm tra sự hiện diện của biến môi trường hiển thị DISPLAY hoặc WAYLAND_DISPLAY."""
-        return bool(os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"))
+        return probe_display().available
 
     def _try_load_latest_policy(self) -> Any:
         """Đọc tệp checkpoints/latest.json và nạp chính sách (policy) mới nhất chỉ-đọc."""
@@ -151,7 +152,9 @@ class View3D:
 
         except Exception as err:
             # Đóng giao diện giữa chừng không làm hỏng tiến trình huấn luyện (INV-005)
-            sys.stderr.write(f"Cảnh báo giao diện 3D: {err}\n")
+            hint = viewer_launch_hint(str(err))
+            detail = f"{err} {hint}" if hint else str(err)
+            sys.stderr.write(f"Cảnh báo giao diện 3D: {detail}\n")
             sys.stderr.flush()
             return 0
         finally:

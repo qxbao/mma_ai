@@ -70,6 +70,7 @@ def test_view3d_unavailable_without_display_exit0(
     # Xoá biến môi trường màn hình hiển thị
     monkeypatch.delenv("DISPLAY", raising=False)
     monkeypatch.delenv("WAYLAND_DISPLAY", raising=False)
+    monkeypatch.delenv("MMA_AI_FORCE_NO_DISPLAY", raising=False)
 
     View3D = _get_view3d_class()
     viewer = View3D(tmp_path)
@@ -83,6 +84,51 @@ def test_view3d_unavailable_without_display_exit0(
     assert "3D không khả dụng" in captured.err, (
         f"Kỳ vọng '3D không khả dụng' trong stderr, thực tế nhận: {captured.err!r}"
     )
+
+
+def test_has_display_uses_platform_probe(monkeypatch: pytest.MonkeyPatch) -> None:
+    """INV-001, INV-004, AC-3: viewer dùng phép dò màn hình theo nền tảng."""
+    from mma_ai.compat import display
+    from mma_ai.compat.platform_info import PlatformProfile
+
+    monkeypatch.delenv("DISPLAY", raising=False)
+    monkeypatch.delenv("WAYLAND_DISPLAY", raising=False)
+    monkeypatch.delenv("MMA_AI_FORCE_NO_DISPLAY", raising=False)
+    profile = PlatformProfile(
+        kind="windows",
+        release="test",
+        machine="AMD64",
+        python_version=(3, 12, 0),
+        is_wsl=False,
+        tested=True,
+    )
+    monkeypatch.setattr(display, "detect_platform", lambda: profile)
+    monkeypatch.setattr(display, "_default_glfw_init", lambda: True)
+
+    assert _get_view3d_class().has_display() is True
+
+
+def test_launch_error_includes_macos_mjpython_hint(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """INV-004, AC-3: lỗi khởi chạy viewer có gợi ý mjpython trên macOS."""
+    import mma_ai.monitoring.viewer3d as viewer3d
+
+    monkeypatch.setattr(
+        viewer3d, "probe_display", lambda: type("Probe", (), {"available": True})()
+    )
+    monkeypatch.setattr(
+        viewer3d,
+        "viewer_launch_hint",
+        lambda _error: "Trên macOS, hãy chạy viewer bằng `mjpython -m <mô-đun>`. ",
+    )
+    with patch("mujoco.viewer.launch_passive", side_effect=RuntimeError("lỗi khởi chạy")):
+        exit_code = _get_view3d_class()(tmp_path).run(env=MagicMock())
+
+    assert exit_code == 0
+    assert "mjpython -m" in capsys.readouterr().err
 
 
 def test_viewer_reads_only_latest_json(
@@ -208,6 +254,9 @@ def test_no_training_imports() -> None:
             )
 
 
+@pytest.mark.requires_display(  # type: ignore[untyped-decorator]
+    reason="Kiểm tra cửa sổ thật cần một màn hình khả dụng."
+)
 def test_real_window_requires_display(tmp_path: Path) -> None:
     """FR-022: Ca cửa sổ thật; khi không có màn hình thì khẳng định trạng thái không khả dụng."""
     has_display = bool(os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"))
