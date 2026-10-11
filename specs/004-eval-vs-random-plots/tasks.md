@@ -69,21 +69,21 @@ Bảng vùng ghi hiệu lực KHÔNG phủ `scripts/**` và `configs/**` (và `t
 <a id="setup"></a>
 ## Setup
 
-- [ ] T401 Thêm extra `eval` (`pandas`, `matplotlib`) và package data cho `evaluation/*.yaml` — pyproject.toml, tests/unit/test_eval_packaging.py
-- [ ] T402 Dựng gói con `evaluation` và các lớp lỗi — src/mma_ai/evaluation/__init__.py, errors.py
+- [x] T401 Thêm extra `eval` (`pandas`, `matplotlib`) và package data cho `evaluation/*.yaml` — pyproject.toml, tests/unit/test_eval_packaging.py
+- [x] T402 Dựng gói con `evaluation` và các lớp lỗi — src/mma_ai/evaluation/__init__.py, errors.py
 
 <a id="foundational"></a>
 ## Foundational
 
 **Mục tiêu**: các mô-đun thuần dữ liệu/thuần số mà mọi story dùng — cấu hình, thống kê, accessor chọn mục tiêu, policy, vòng chạy, chỉ số.
 
-- [ ] T403 Cấu hình đánh giá một tệp — src/mma_ai/evaluation/eval_config.py, eval_elbow.yaml
-- [ ] T404 [P] Thống kê: Wilson, Newcombe, bootstrap có seed, `decide` — src/mma_ai/evaluation/stats.py
-- [ ] T405 [P] Accessor chọn mục tiêu `options["target_index"]` ở môi trường của 002 — src/mma_ai/environment/single_agent.py
-- [ ] T406 [P] `RandomPolicy` và `LearnedPolicy` — src/mma_ai/evaluation/policies.py
-- [ ] T407 Vòng chạy `run_policy_on_targets` và `EpisodeRecord` — src/mma_ai/evaluation/rollout.py
-- [ ] T408 Chỉ số `summarize` và đọc nhật ký `read_training_log` — src/mma_ai/evaluation/metrics.py
-- [ ] T409 Phép kiểm giao rỗng `check_disjoint` — src/mma_ai/evaluation/split_guard.py
+- [x] T403 Cấu hình đánh giá một tệp — src/mma_ai/evaluation/eval_config.py, eval_elbow.yaml
+- [x] T404 [P] Thống kê: Wilson, Newcombe, bootstrap có seed, `decide` — src/mma_ai/evaluation/stats.py
+- [x] T405 [P] Accessor chọn mục tiêu `options["target_index"]` ở môi trường của 002 — src/mma_ai/environment/single_agent.py
+- [x] T406 [P] `RandomPolicy` và `LearnedPolicy` — src/mma_ai/evaluation/policies.py
+- [x] T407 Vòng chạy `run_policy_on_targets` và `EpisodeRecord` — src/mma_ai/evaluation/rollout.py
+- [x] T408 Chỉ số `summarize` và đọc nhật ký `read_training_log` — src/mma_ai/evaluation/metrics.py
+- [x] T409 Phép kiểm giao rỗng `check_disjoint` — src/mma_ai/evaluation/split_guard.py
 
 <a id="user-story-us1-danh-gia-hai-policy-tren-cung-tap-muc-tieu-p1-mvp"></a>
 ## User story US1 — đánh giá hai policy trên cùng tập mục tiêu (P1, MVP)
@@ -92,57 +92,57 @@ Bảng vùng ghi hiệu lực KHÔNG phủ `scripts/**` và `configs/**` (và `t
 
 **Kiểm thử độc lập**: test tích hợp qua CLI thật trên mô hình MuJoCo thật và run mẫu (T414).
 
-- [ ] T411 [US1] Dựng báo cáo `build_report` + công bố nguyên tử `publish_report` — src/mma_ai/evaluation/report.py
-- [ ] T412 [US1] Điều phối `evaluate_checkpoint` và ánh xạ ngoại lệ → mã thoát — src/mma_ai/evaluation/runner.py
-- [ ] T413 [US1] CLI mỏng `cli.py` (`main`) — src/mma_ai/evaluation/cli.py
-- [ ] T414 [US1] Fixture run mẫu cho test tích hợp — tests/integration/eval_fixtures.py
-- [ ] T415 [US1] Test đánh giá qua CLI — tests/integration/test_evaluate_cli.py
-- [ ] T416 [US1] Test hợp đồng báo cáo và ví dụ hợp schema — tests/integration/test_report_contract.py
-- [ ] T421 [US1] Test tái lập theo seed — tests/integration/test_eval_determinism.py
+- [x] T411 [US1] Dựng báo cáo `build_report` + công bố nguyên tử `publish_report` — src/mma_ai/evaluation/report.py
+- [x] T412 [US1] Điều phối `evaluate_checkpoint` và ánh xạ ngoại lệ → mã thoát — src/mma_ai/evaluation/runner.py
+- [x] T413 [US1] CLI mỏng `cli.py` (`main`) — src/mma_ai/evaluation/cli.py
+- [x] T414 [US1] Fixture run mẫu cho test tích hợp — tests/integration/eval_fixtures.py
+- [x] T415 [US1] Test đánh giá qua CLI — tests/integration/test_evaluate_cli.py
+- [x] T416 [US1] Test hợp đồng báo cáo và ví dụ hợp schema — tests/integration/test_report_contract.py
+- [x] T421 [US1] Test tái lập theo seed — tests/integration/test_eval_determinism.py
 
 <a id="user-story-us2-ket-luan-tot-hon-random-theo-tieu-chi-khai-truoc-p1"></a>
 ## User story US2 — kết luận "tốt hơn random" theo tiêu chí khai trước (P1)
 
 **Mục tiêu**: kết luận đúng cơ chế trên policy có chất lượng đã biết, kèm hiệu và khoảng tin cậy (AC-2, KQ-2); logic ở T404, T411.
 
-- [ ] T417 [US2] Test kết luận bằng policy chất lượng đã biết — tests/integration/test_verdict_known_policies.py
+- [x] T417 [US2] Test kết luận bằng policy chất lượng đã biết — tests/integration/test_verdict_known_policies.py
 
 <a id="user-story-us3-ba-bieu-do-tu-nhat-ky-cua-run-p1"></a>
 ## User story US3 — ba biểu đồ từ nhật ký của run (P1)
 
 **Mục tiêu**: ba tệp ảnh loss, reward, activation 6 cơ, headless, thiếu nhật ký thì báo rõ (AC-3, KQ-3).
 
-- [ ] T410 [US3] Vẽ biểu đồ `render_charts` — src/mma_ai/evaluation/charts.py
-- [ ] T418 [US3] Test headless và nhật ký thiếu — tests/integration/test_evaluate_headless.py
+- [x] T410 [US3] Vẽ biểu đồ `render_charts` — src/mma_ai/evaluation/charts.py
+- [x] T418 [US3] Test headless và nhật ký thiếu — tests/integration/test_evaluate_headless.py
 
 <a id="user-story-us4-tap-danh-gia-khong-giao-tap-train-p1"></a>
 ## User story US4 — tập đánh giá không giao tập train (P1)
 
 **Mục tiêu**: giao rỗng và seed khác seed train, kiểm mỗi lần trước episode đầu (AC-4); logic ở T409.
 
-- [ ] T419 [US4] Test rò rỉ qua CLI — tests/integration/test_evaluate_leakage.py
+- [x] T419 [US4] Test rò rỉ qua CLI — tests/integration/test_evaluate_leakage.py
 
 <a id="user-story-us5-ket-qua-luu-cung-ho-so-run-p2"></a>
 ## User story US5 — kết quả lưu cùng hồ sơ run (P2)
 
 **Mục tiêu**: bản ghi trong `eval/<eval_id>/`, không ghi đè, không sửa tệp con 2 (AC-1, KQ-4).
 
-- [ ] T420 [US5] Test lưu trữ và chỉ-đọc — tests/integration/test_evaluate_storage.py
-- [ ] T423 [US5] Test ràng buộc nhập (không `learning.trainer`/`learning.ppo`) — tests/integration/test_evaluation_imports.py
+- [x] T420 [US5] Test lưu trữ và chỉ-đọc — tests/integration/test_evaluate_storage.py
+- [x] T423 [US5] Test ràng buộc nhập (không `learning.trainer`/`learning.ppo`) — tests/integration/test_evaluation_imports.py
 
 <a id="user-story-us6-checkpoint-loi-thi-bao-loi-khong-ket-qua-gia-p2"></a>
 ## User story US6 — checkpoint lỗi thì báo lỗi, không kết quả giả (P2)
 
 **Mục tiêu**: AC-5 — logic ở T412; kiểm ở:
 
-- [ ] T422 [US6] Test checkpoint không tồn tại/hỏng/lệch hash qua CLI — tests/integration/test_evaluate_bad_checkpoint.py
+- [x] T422 [US6] Test checkpoint không tồn tại/hỏng/lệch hash qua CLI — tests/integration/test_evaluate_bad_checkpoint.py
 
 <a id="qa-va-review-doc-lap"></a>
 ## QA và review độc lập
 
-- [ ] T424 QA: E2E AC-1…AC-5 trên entrypoint thật `python -m mma_ai.evaluation.cli` — tests/e2e/test_evaluate_acceptance.py
-- [ ] T425 Challenger: dựng vector đánh sập INV-001…INV-006 — tests/challenge/test_evaluate_invariants.py, evidence/reviews/T425.challenge
-- [ ] T426 Reviewer: đối chiếu bằng chứng, ghi verdict — evidence/reviews/T426.verdict
+- [x] T424 QA: E2E AC-1…AC-5 trên entrypoint thật `python -m mma_ai.evaluation.cli` — tests/e2e/test_evaluate_acceptance.py
+- [x] T425 Challenger: dựng vector đánh sập INV-001…INV-006 — tests/challenge/test_evaluate_invariants.py, evidence/reviews/T425.challenge
+- [x] T426 Reviewer: đối chiếu bằng chứng, ghi verdict — evidence/reviews/T426.verdict
 
 <a id="quyet-dinh-ve-vai-challenger"></a>
 ### Quyết định về vai `challenger`
