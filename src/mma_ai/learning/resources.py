@@ -5,11 +5,12 @@ from __future__ import annotations
 import importlib
 import os
 import platform
-import resource
 import time
 from dataclasses import dataclass
 from types import ModuleType
 from typing import Literal, TypedDict
+
+from mma_ai.compat.memory import peak_ram_mb
 
 
 class ResourceSnapshot(TypedDict):
@@ -75,8 +76,7 @@ def _load_torch() -> ModuleType | None:
 
 
 def _peak_ram_mb() -> float | None:
-    peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-    return peak / 1024.0
+    return peak_ram_mb()
 
 
 def detect_device() -> dict[str, Literal["cpu", "cuda"] | str | None]:

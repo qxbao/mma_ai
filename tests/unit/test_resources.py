@@ -51,6 +51,18 @@ def test_fr_012_nfr_res_001_resource_fields_present_null_without_gpu(
     assert measured["vram_peak_mb"] is None
 
 
+def test_inv_002_inv_007_peak_ram_uses_cross_platform_measurement(
+    monkeypatch: pytest.MonkeyPatch, resource_module: ModuleType
+) -> None:
+    """INV-002, INV-007: số đo RAM tuân theo bộ đo đa nền tảng, kể cả khi không đọc được."""
+    monkeypatch.setattr(resource_module, "peak_ram_mb", lambda: 37.5, raising=False)
+
+    assert resource_module._peak_ram_mb() == 37.5
+
+    monkeypatch.setattr(resource_module, "peak_ram_mb", lambda: None, raising=False)
+    assert resource_module._peak_ram_mb() is None
+
+
 def test_fr_013_throughput_and_wallclock_measured(resource_module: ModuleType) -> None:
     """FR-013: đồng hồ thật đo thời gian quanh công việc, không dự đoán."""
     stopwatch = resource_module.Stopwatch()
