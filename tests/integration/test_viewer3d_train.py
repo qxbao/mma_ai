@@ -23,7 +23,7 @@ import sys
 import threading
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 from unittest.mock import patch
 
 import pytest
@@ -34,6 +34,71 @@ from mma_ai.learning.cli import _build_parser
 from mma_ai.learning.train_config import TrainConfig
 from mma_ai.monitoring.cli import main as watch_cli_main
 from mma_ai.monitoring.viewer3d import View3D
+
+# Hạn mức thời gian chờ tiến trình View3D khởi chạy có PID (007 AC-2, NFR-PERF-001)
+PROCESS_START_TIMEOUT_S: float = 5.0
+
+
+class _ProcessLike(Protocol):
+    @property
+    def pid(self) -> int | None: ...
+
+    @property
+    def exitcode(self) -> int | None: ...
+
+
+def _wait_until_started(proc: _ProcessLike, timeout_s: float) -> None:
+    """Chờ tiến trình View3D khởi chạy có hạn mức, tránh race condition khi máy bận.
+
+    Hiện thực 007 AC-2, FR-003, FR-008:
+    - Poll ngắn (time.sleep) cho tới khi proc.pid is not None.
+    - Trả sớm và báo riêng 'đã thoát sớm' kèm mã thoát nếu proc.exitcode is not None.
+    - Hết hạn mức timeout_s thì báo lỗi tiếng Việt 'không khởi chạy được trong hạn mức'.
+    """
+    deadline = time.time() + timeout_s
+    while time.time() < deadline:
+        if proc.exitcode is not None:
+            pytest.fail(f"Tiến trình View3D đã thoát sớm với mã {proc.exitcode}")
+        if proc.pid is not None:
+            return
+        time.sleep(0.01)
+
+    if proc.exitcode is not None:
+        pytest.fail(f"Tiến trình View3D đã thoát sớm với mã {proc.exitcode}")
+    pytest.fail(f"Tiến trình View3D không khởi chạy được trong hạn mức {timeout_s} s")
+
+
+def test_wait_until_started_success() -> None:
+    """007 AC-2, FR-003: Chờ thành công khi tiến trình đã có PID hợp lệ."""
+
+    class _LiveProcess:
+        pid: int | None = 12345
+        exitcode: int | None = None
+
+    _wait_until_started(_LiveProcess(), timeout_s=0.5)
+
+
+def test_wait_until_started_timeout() -> None:
+    """007 AC-2, FR-003, FR-008: Kiểm thử báo lỗi tiếng Việt khi quá hạn mức."""
+
+    class _HungProcess:
+        pid: int | None = None
+        exitcode: int | None = None
+
+    with pytest.raises(pytest.fail.Exception, match="không khởi chạy được trong hạn mức"):
+        _wait_until_started(_HungProcess(), timeout_s=0.05)
+
+
+def test_wait_until_started_early_exit() -> None:
+    """007 AC-2, FR-003, FR-008: Báo riêng đã thoát sớm kèm mã thoát khi exitcode khác None."""
+
+    class _DeadProcess:
+        pid: int | None = None
+        exitcode: int | None = 1
+
+    with pytest.raises(pytest.fail.Exception, match="đã thoát sớm với mã 1"):
+        _wait_until_started(_DeadProcess(), timeout_s=0.05)
+
 
 
 def test_viewer3d_train_independent_assertion(
@@ -181,13 +246,22 @@ def test_view3d_unavailable_without_display_does_not_break_train(tmp_path: Path)
 
 
 def test_view3d_process_separate(tmp_path: Path) -> None:
-    """FR-022, INV-005, AC-7, US5: Hiển thị 3D ở tiến trình riêng, kết thúc không ảnh hưởng train.
+    """Hiển thị 3D ở tiến trình riêng, kết thúc không ảnh hưởng train.
+
+    Truy vết yêu cầu:
+    - 007 AC-2, 007 AC-3, 007 AC-4, FR-003, FR-004, FR-005, FR-006, FR-007, FR-008
+    - INV-001, INV-002, INV-003, NFR-PERF-001, NFR-QUAL-001, NFR-REL-001
+    - FR-022, INV-005, AC-7, US5, US2.
 
     Xác minh:
     1. Khi bật --view3d, tiến trình hiển thị 3D chạy ở tiến trình con độc lập với PID riêng
-       khác với PID của tiến trình huấn luyện chính và PID của máy chủ quan sát.
-    2. Đóng hoặc kết thúc (terminate/kill) tiến trình 3D giữa chừng KHÔNG làm gián đoạn huấn luyện,
-       không làm mất checkpoint và không làm sai lệch tính toàn vẹn của thư mục run.
+       khác với PID của tiến trình huấn luyện chính và PID của máy chủ quan sát (FR-022).
+       Tiến trình được chờ khởi chạy có hạn mức hữu hạn khai tường minh trước khi
+       kiểm tra PID (007 AC-2, FR-003).
+    2. Đóng hoặc kết thúc (terminate/kill) tiến trình 3D giữa chừng KHÔNG làm gián đoạn
+       huấn luyện, không làm mất ui.json và không làm sai lệch tính toàn vẹn của run (INV-005).
+    3. Luồng quan sát dừng sạch sẽ bằng stop_event.
+    4. Huấn luyện thật với --view3d hoàn thành thành công mã 0 và có latest.json khi có torch.
     """
     # 1. Kiểm tra kiến trúc tiến trình độc lập thông qua giao diện quan sát watch_cli
     run_dir = tmp_path / "run_separate_test"
@@ -220,19 +294,27 @@ def test_view3d_process_separate(tmp_path: Path) -> None:
         )
         cli_thread.start()
 
-        # Chờ tiến trình 3D được khởi chạy
-        deadline = time.time() + 5.0
+        # Chờ tiến trình 3D được đưa vào danh sách theo dõi khi khởi tạo đối tượng
+        deadline = time.time() + PROCESS_START_TIMEOUT_S
         while time.time() < deadline and not started_processes:
-            time.sleep(0.05)
+            time.sleep(0.01)
 
         assert len(started_processes) == 1, "Phải khởi tạo đúng 1 tiến trình hiển thị 3D"
         viewer_proc = started_processes[0]
+
+        # Chờ tiến trình thực sự khởi chạy có PID trong hạn mức (007 AC-2, FR-003)
+        _wait_until_started(viewer_proc, timeout_s=PROCESS_START_TIMEOUT_S)
 
         # Khẳng định tiến trình 3D có PID riêng biệt khác PID tiến trình hiện tại
         assert viewer_proc.pid is not None, "Tiến trình 3D phải có PID hợp lệ sau khi khởi chạy"
         assert viewer_proc.pid != os.getpid(), (
             f"FR-022: PID 3D ({viewer_proc.pid}) phải khác PID chính ({os.getpid()})"
         )
+        if viewer_proc.exitcode is not None:
+            pytest.fail(
+                f"Tiến trình View3D đã thoát sớm với mã {viewer_proc.exitcode} "
+                "trước khi kiểm tra is_alive"
+            )
         assert viewer_proc.is_alive() is True, "Tiến trình 3D phải đang hoạt động"
 
         # 2. Ngắt đột ngột tiến trình 3D (simulate kill)
