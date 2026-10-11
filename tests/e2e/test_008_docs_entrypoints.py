@@ -1,7 +1,7 @@
 """Kiểm thử đầu-cuối (end-to-end, E2E) tài liệu qua entrypoint CLI thật.
 
-Truy vết: AC-1, AC-2, AC-3, AC-4, AC-5, INV-001, INV-004,
-NFR-DOC-001, NFR-DOC-003, NFR-DOC-004.
+Truy vết: AC-1, AC-2, AC-3, AC-4, AC-5, INV-001, INV-002,
+INV-003, INV-004, NFR-DOC-001, NFR-DOC-002, NFR-DOC-003, NFR-DOC-004.
 """
 
 from __future__ import annotations
@@ -9,6 +9,7 @@ from __future__ import annotations
 import re
 import subprocess
 import sys
+import time
 import tomllib
 from functools import cache
 from pathlib import Path
@@ -111,6 +112,64 @@ def test_ac2_inv004_readme_quickstart() -> None:
         "python -m mma_ai.visualization.cli --episode <tệp>",
         "python -m mma_ai.learning.benchmark --seed 42 --repeats 5",
     ]
+
+
+def test_inv002_document_commits_keep_product_code_untouched() -> None:
+    """INV-002: các commit tạo tài liệu không sửa mã sản phẩm hay CI."""
+    allowed = {
+        "README.md", "LICENSE", "CONTRIBUTING.md", "CHANGELOG.md",
+        *(f"docs/guides/{name}" for name in GUIDES),
+    }
+    changed: set[str] = set()
+    for document in ("README.md", "CHANGELOG.md"):
+        history = subprocess.run(
+            ["git", "log", "--diff-filter=A", "-1", "--format=%H", "--", document],
+            cwd=PROJECT_ROOT, capture_output=True, text=True, check=True,
+        )
+        commit = history.stdout.strip()
+        assert commit, f"Không tìm được commit tạo {document}"
+        files = subprocess.run(
+            ["git", "show", "--format=", "--name-only", commit],
+            cwd=PROJECT_ROOT, capture_output=True, text=True, check=True,
+        )
+        changed.update(files.stdout.splitlines())
+    assert changed == allowed, f"Commit tài liệu đổi sai phạm vi: {sorted(changed ^ allowed)}"
+
+
+def test_ac2_inv003_platform_claims_match_draft_support() -> None:
+    """AC-2, INV-003: README nêu giới hạn nền tảng khi spec 006 còn draft."""
+    platform = _read(PROJECT_ROOT / "README.md").split(
+        "## Tình trạng nền tảng\n", 1
+    )[1].split("\n## ", 1)[0]
+    support_spec = _read(PROJECT_ROOT / "specs/006-cross-platform-support/spec.md")
+    assert re.search(r"^status: draft$", support_spec, re.MULTILINE)
+    for claim in ("Linux", "WSL2", "Windows", "macOS", "specs/006-cross-platform-support/"):
+        assert claim in platform
+    assert "đang được triển khai" in platform
+    assert "chưa xác nhận khả năng chạy" in platform
+
+
+def test_ac2_nfr_doc002_first_step_is_executable() -> None:
+    """AC-2, NFR-DOC-002: kiểm tiền đề tự động; thời gian đọc do reviewer đo."""
+    readme = _read(PROJECT_ROOT / "README.md")
+    install = readme.split("## Cài đặt bằng uv\n", 1)[1].split("\n## ", 1)[0]
+    quickstart = readme.split("## Bắt đầu nhanh\n", 1)[1].split("\n## ", 1)[0]
+    assert "uv sync" in install
+    assert ".venv" in quickstart and "uv run" in quickstart
+    assert _documented_commands(quickstart)[0] == "python scripts/train.py --stage elbow --seed 42"
+    start = time.monotonic()
+    result = subprocess.run(
+        [*COMMANDS["train"], "--help"], cwd=PROJECT_ROOT,
+        capture_output=True, text=True, timeout=600, check=False,
+    )
+    elapsed = time.monotonic() - start
+    if result.returncode != 0 and (
+        "ModuleNotFoundError" in result.stderr or "ImportError" in result.stderr
+    ):
+        pytest.skip(f"Thiếu phụ thuộc nhóm rl: {result.stderr.strip()}")
+    assert result.returncode == 0, result.stderr
+    assert "usage:" in result.stdout.lower()
+    assert elapsed <= 600, f"Entrypoint đầu tiên mất {elapsed:.2f} giây"
 
 
 @pytest.mark.parametrize("path", DOCUMENTS, ids=lambda path: path.name)
