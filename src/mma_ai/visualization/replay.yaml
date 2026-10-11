@@ -1,0 +1,23 @@
+# Cấu hình mặc định (default configuration) cho phân hệ phát lại và demo khuỷu tay 3D (FR-006, FR-017)
+playback:
+  speed: 1.0
+  loop: false
+  display_hz: 60
+  hold_after_end_s: null
+
+demo:
+  split: test
+  target_index: 0
+  seed: 12345
+
+hud:
+  decimals: 3
+  bar_width: 10
+
+target_marker:
+  radius_m: 0.02
+  rgba:
+    - 1.0
+    - 0.2
+    - 0.2
+    - 0.6

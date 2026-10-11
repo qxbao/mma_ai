@@ -1,0 +1,73 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "run-20261009-73f18a",
+  "task_id": "T219",
+  "round": 1,
+  "sha_reviewed": "e79c12505e50d5d69d5817499adf79ed6450fa32",
+  "verdict": "APPROVE",
+  "findings": [
+    {
+      "id": "F-001",
+      "severity": "MINOR",
+      "file": "src/mma_ai/environment/targets.py",
+      "line": 253,
+      "claim": "INV-001: cấu hình NaN (min_separation_m / split_block_m / angle_margin_rad) lọt qua mọi so sánh `<=`/`>=` và nổ ValueError ở int(nan) thay vì TargetConfigError nêu giới hạn vi phạm; YAML `.nan` còn lọt cả ElbowEnvConfig.load.",
+      "failure_scenario": "TargetGenerator(model, TargetConfig(200, 50, float('nan'), 0.05, 0.05, 42)).generate(1) => ValueError 'cannot convert float NaN to integer' (không phải TargetConfigError). Lỗi vẫn ồn ào, không có mục tiêu sai nào được trả ra. Test: tests/challenge/test_env_invariants.py::test_inv001_nan_config_raises_target_config_error (xfail không strict, F-001).",
+      "parked": false
+    },
+    {
+      "id": "F-002",
+      "severity": "MINOR",
+      "file": "src/mma_ai/environment/targets.py",
+      "line": 278,
+      "claim": "FR-010/INV-001: TargetConfig và cấu hình dict không kiểm angle_margin_rad >= 0 (chỉ ElbowEnvConfig.load kiểm), nên margin âm đẩy theta_lo/theta_hi ra ngoài hành trình khớp và bộ sinh trả mục tiêu không với tới được.",
+      "failure_scenario": "TargetGenerator(model, {..., 'angle_margin_rad': -0.5}).generate(1) => angle_rad trải từ -0.439 tới 2.674 trong khi jnt_range = [0, 2.26893]; spec dòng 176 cấm mục tiêu ngoài tầm với. Test: test_inv001_negative_margin_never_yields_unreachable_targets (xfail không strict, F-002).",
+      "parked": false
+    },
+    {
+      "id": "F-003",
+      "severity": "MINOR",
+      "file": "src/mma_ai/environment/single_agent.py",
+      "line": 162,
+      "claim": "INV-001: ElbowReachEnv(targets=...) và TargetSetPair.from_dict nhận cặp mục tiêu mà không kiểm lại giao rỗng/khoảng cách tối thiểu/tập rỗng; bất biến chỉ được thi hành ở bộ sinh, không ở nơi môi trường tiêu thụ.",
+      "failure_scenario": "Cặp có test.targets == train.targets (hoặc tập test rỗng) được môi trường nhận; ở split='test' reset trả đúng mục tiêu thuộc tập train, tập rỗng thì reset ném ValueError 'high <= 0' thay vì lỗi cấu hình rõ ràng. Test: test_inv001_env_rejects_injected_overlapping_target_pair (xfail không strict, F-003).",
+      "parked": false
+    },
+    {
+      "id": "F-004",
+      "severity": "OPTIONAL",
+      "file": "src/mma_ai/environment/targets.py",
+      "line": 359,
+      "claim": "Trần số lượng: ma trận khoảng cách (n_train x n_test x 3) float64 không bị chặn; cấu hình n_train, n_test lớn làm cạn bộ nhớ với MemoryError thay vì TargetConfigError.",
+      "failure_scenario": "n_train = n_test = 30000 (cần ~21,6 GB) trong tiến trình giới hạn 6 GB => MemoryError. Trên máy RAM nhỏ có thể bị OOM-kill. Test: test_inv001_oversized_sets_fail_with_target_config_error (xfail không strict, F-004).",
+      "parked": false
+    },
+    {
+      "id": "F-005",
+      "severity": "MINOR",
+      "file": "src/mma_ai/environment/targets.py",
+      "line": 239,
+      "claim": "INV-002/NFR-REPRO-001: seed kiểu numpy.int64 được giữ nguyên trong master_seed nên TargetSetPair.to_dict() không serialize được JSON, trong khi env.reset đã chuẩn hoá bằng int(seed). Danh sách và fingerprint vẫn đúng.",
+      "failure_scenario": "pair = TargetGenerator(model, cfg).generate(np.int64(7)); json.dumps(pair.to_dict()) => TypeError 'Object of type int64 is not JSON serializable'; hồ sơ thí nghiệm cho seed lấy từ numpy RNG không ghi được. Test: test_inv002_numpy_seed_record_is_json_serialisable (xfail không strict, F-005).",
+      "parked": false
+    },
+    {
+      "id": "F-006",
+      "severity": "OPTIONAL",
+      "file": "src/mma_ai/environment/observation.py",
+      "line": 293,
+      "claim": "INV-004: validate_observation dung sai 1e-5 cho phép trả observation vượt cận khai báo mà không lỗi; vector đó không thuộc observation_space (Box.contains = False). Với trạng thái tự nhiên không đạt được; chỉ đạt khi nhiễu trạng thái.",
+      "failure_scenario": "obs[0] = 1.500005 (cận 1.5) => validate_observation trả về mảng, env.observation_space.contains(obs) == False. Test: test_inv004_validate_observation_rejects_value_outside_declared_bounds (xfail không strict, F-006).",
+      "parked": false
+    },
+    {
+      "id": "F-007",
+      "severity": "OPTIONAL",
+      "file": "src/mma_ai/physics/simulator.py",
+      "line": 61,
+      "claim": "INV-004 (phía hành động): ndarray kiểu complex qua được kiểm tra (np.number) và float(x) bỏ phần ảo âm thầm (chỉ ComplexWarning) thay vì ActivationError.",
+      "failure_scenario": "env.step(np.array([0.5+9j]*6)) chạy bình thường như hành động 0.5. Policy thực không xuất số phức nên chỉ là vệ sinh đầu vào. Test: test_inv004_complex_action_is_rejected (xfail không strict, F-007).",
+      "parked": false
+    }
+  ]
+}

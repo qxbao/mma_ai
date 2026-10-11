@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "run-20261011-3b6743",
+  "task_id": "T425",
+  "round": 2,
+  "sha_reviewed": "9cb551e9ab7a72d7a88d6ed5a979398f0bb93ab4",
+  "verdict": "APPROVE",
+  "findings": [
+    {
+      "id": "F-008",
+      "severity": "OPTIONAL",
+      "file": "src/mma_ai/evaluation/rollout.py",
+      "line": 190,
+      "claim": "INV-003: nhánh object-dtype mới của rollout chỉ nhận diện `complex` thuần Python; np.complex64 (không kế thừa complex) trong mảng object bị `astype(float64)` cắt phần ảo nên NaN ảo tới env.step. Biến thể của F-007 ở nhánh mới; chỉ policy tuỳ biến qua run_policy_on_targets chạm được (LearnedPolicy ép float32), không chặn.",
+      "failure_scenario": "policy trả np.empty(6, dtype=object) với mỗi phần tử np.complex64(0.5+nan·j) ⇒ env.seen có 3 hành động [0.5]*6 thay vì rỗng. Test: test_inv003_object_array_of_numpy_complex64_nan_imag_not_dropped (xfail không strict, F-008; --runxfail ⇒ AssertionError). Đối chứng đã chặn đúng: mảng complex128/complex64 dtype thuần, list lẫn complex, object chứa complex Python/np.complex128, None.",
+      "parked": false
+    }
+  ]
+}

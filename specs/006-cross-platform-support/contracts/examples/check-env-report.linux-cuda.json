@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0.0",
+  "os": { "kind": "linux", "release": "6.8.0-45-generic", "machine": "x86_64", "is_wsl": false, "tested": true },
+  "python": { "version": "3.12.3", "supported": true, "required_range": ">=3.11,<3.13" },
+  "packages": { "mujoco": "3.15.0", "myo_sim": "0.2.3", "gymnasium": "1.4.0", "numpy": "2.3.0", "torch": "2.14.1" },
+  "torch_device": { "kind": "cuda", "name": "NVIDIA GeForce RTX 5060 Laptop GPU" },
+  "capabilities": {
+    "display": { "available": true, "reason": null },
+    "symlink": { "available": true, "reason": null },
+    "long_paths": { "available": true, "reason": null },
+    "ram_peak": { "available": true, "reason": null },
+    "utf8_stdio": { "available": true, "reason": null }
+  },
+  "checks": [
+    { "id": "python_version", "status": "ok", "message": "Python 3.12.3 nằm trong khoảng yêu cầu >=3.11,<3.13." },
+    { "id": "package_torch", "status": "ok", "message": "torch 2.14.1 (CUDA: NVIDIA GeForce RTX 5060 Laptop GPU)." },
+    { "id": "display", "status": "ok", "message": "Màn hình khả dụng." }
+  ],
+  "overall": "ok"
+}

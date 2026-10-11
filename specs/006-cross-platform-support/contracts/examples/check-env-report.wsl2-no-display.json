@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0.0",
+  "os": { "kind": "wsl2", "release": "5.15.153.1-microsoft-standard-WSL2", "machine": "x86_64", "is_wsl": true, "tested": true },
+  "python": { "version": "3.11.9", "supported": true, "required_range": ">=3.11,<3.13" },
+  "packages": { "mujoco": "3.15.0", "myo_sim": "0.2.3", "gymnasium": "1.4.0", "numpy": "2.3.0", "torch": null },
+  "torch_device": null,
+  "capabilities": {
+    "display": { "available": false, "reason": "Không phát hiện màn hình hiển thị: cả hai biến môi trường DISPLAY và WAYLAND_DISPLAY đều chưa được thiết lập. Dùng chế độ không màn hình (--headless)." },
+    "symlink": { "available": true, "reason": null },
+    "long_paths": { "available": true, "reason": null },
+    "ram_peak": { "available": true, "reason": null },
+    "utf8_stdio": { "available": true, "reason": null }
+  },
+  "checks": [
+    { "id": "python_version", "status": "ok", "message": "Python 3.11.9 nằm trong khoảng yêu cầu >=3.11,<3.13." },
+    { "id": "package_torch", "status": "warn", "message": "Chưa cài torch (extra rl): không huấn luyện được; cài bằng uv sync --extra rl." },
+    { "id": "display", "status": "warn", "message": "Không có màn hình: viewer 3D không mở được, dùng --headless." }
+  ],
+  "overall": "ok"
+}

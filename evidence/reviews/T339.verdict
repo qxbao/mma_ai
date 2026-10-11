@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "run-20261011-fd8ef1",
+  "task_id": "T339",
+  "round": 1,
+  "sha_reviewed": "5822023667aedcdfe3a83f011fd34da499b0c047",
+  "verdict": "APPROVE",
+  "findings": [
+    {
+      "id": "F-001",
+      "severity": "MINOR",
+      "file": "tests/integration/test_train_script.py",
+      "line": 6,
+      "claim": "scripts/train.py mới (9 dòng, vỏ gọi main của gói) chỉ có test `--help`; không test nào chạy đúng lệnh nguyên văn của AC-1/AC-5 qua vỏ này, và tasks.md:75 vẫn ghi 'CHƯA CÓ CHỦ: scripts/train.py…' trong khi watch_train.py / compare_runs.py / benchmark_train.py vẫn chưa có.",
+      "failure_scenario": "Hồi quy ở vỏ (đổi tên main, sai đường dẫn) vẫn qua test `--help` ít khả năng bắt nếu chỉ sai nhánh --stage; reviewer đã chạy tay `python scripts/train.py --stage balance --seed 42` ⇒ in 'chưa triển khai', mã thoát 3 (đúng AC-5) nên sản phẩm hiện đúng. Tài liệu tasks.md:75 còn lời khai cũ (stale-decision) về việc scripts/train.py chưa có chủ."
+    },
+    {
+      "id": "F-002",
+      "severity": "MINOR",
+      "file": "tests/e2e/test_train_acceptance.py",
+      "line": 276,
+      "claim": "Ảnh evidence/e2e/_integration/AC-7-dashboard-desktop-1280x800.png (đã mở): đủ 6 thẻ, bước 328/4096, 330.2 bước/giây, reward -11.796, nhưng Tổn thất (Loss) 'chưa có dữ liệu' cả 3 dòng, 6 cơ đều 0.000, checkpoint 0/'chưa có'; test chỉ đếm panel, không khẳng định loss/activation có giá trị.",
+      "failure_scenario": "Hồi quy làm dashboard mãi hiện 'chưa có dữ liệu' cho loss/activation vẫn qua e2e AC-7 vì ảnh chụp ở khoảng đầu run; giá trị thật chỉ được test_dashboard_resilience.py kiểm và test đó importorskip(torch) trong cổng `tests`. Bố cục không chữ đè/tràn; không phải lỗi sản phẩm ở đầu vào thực tế."
+    },
+    {
+      "id": "F-003",
+      "severity": "MINOR",
+      "file": "specs/003-ppo-train-repro/checklists/acceptance.md",
+      "line": 26,
+      "claim": "Dòng AC-1…AC-6 và NFR/INV ghi dấu vết máy 'capture E2E tên AC-1…AC-6' nhưng evidence/e2e chỉ có ảnh AC-7 và AC-3-*-headless; AC-1…AC-6 được chứng minh bằng test entrypoint CLI, không có tệp capture.",
+      "failure_scenario": "Người duyệt đi tìm capture tên AC-1 theo checklist và không thấy; câu chữ over-claim nhưng cổng trace_fit xanh và test entrypoint tồn tại nên không chặn."
+    },
+    {
+      "id": "F-004",
+      "severity": "MINOR",
+      "file": "specs/003-ppo-train-repro/checklists/acceptance.md",
+      "line": 39,
+      "claim": "Bằng chứng NFR-PERF-001/AC-7 (logs/m1/benchmark_train.json: ratio_median 0.974 ≥ 0.9, passed=true, repeats 5, created 2026-10-11T16:07:50Z) hiện CÓ ở gốc dự án nhưng không nằm trong git/worktree tích hợp (git ls-files logs rỗng), nên người duyệt chỉ xem được khi mở thư mục gốc.",
+      "failure_scenario": "Clone sạch hoặc worktree không có logs/ ⇒ tệp số đo không truy cập được, lặp lại lỗi 'không thấy bằng chứng' của vòng review trước (F-001 cũ, nay đã được số đo thật đóng lại). Số đo là của máy đích nên không nên commit tự động; chỉ cần ghi rõ đường dẫn gốc trong tài liệu bàn giao."
+    }
+  ]
+}

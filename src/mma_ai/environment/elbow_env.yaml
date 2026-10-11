@@ -1,0 +1,20 @@
+schema_version: "1.0.0"
+physics_timestep_s: 0.0025
+substeps_per_action: 16
+fingertip_site: "wrist"
+target_split: "train"
+reward:
+  w_dist: 1.0
+  w_effort: 0.01
+  d_ref_m: 0.5
+tolerance_m: 0.02
+max_actions: 100
+obs:
+  qvel_scale_rad_s: 25.0
+targets:
+  n_train: 200
+  n_test: 50
+  min_separation_m: 0.02
+  split_block_m: 0.05
+  angle_margin_rad: 0.05
+  default_seed: 42

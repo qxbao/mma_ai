@@ -1,0 +1,90 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "run-20261011-7eeeac",
+  "task_id": "T523",
+  "round": 1,
+  "sha_reviewed": "b66dea34b19c6d2518170cfd4ced5ae749f5c266",
+  "verdict": "APPROVE",
+  "findings": [
+    {
+      "id": "F-001",
+      "severity": "MINOR",
+      "file": "specs/005-replay-3d-muscle-demo/checklists/acceptance.md",
+      "line": 0,
+      "claim": "Checklist nghiệm thu vẫn khai mọi dòng AC-1…AC-5, INV-001…INV-006, NFR là `[ ]` + `THIẾU` (entrypoint, test, capture `evidence/e2e/T521/AC-*`) và dẫn verdict T523 cũ là REQUEST_CHANGES; đó là ảnh chụp trước khi commit 35130c7 khôi phục cli.py/replay.py/episode.schema.json và 15 tệp test. Trên head b66dea3 mọi tệp test và entrypoint được liệt kê đều TỒN TẠI (kiểm bằng `git diff --stat` và chạy). Spec/plan/tasks không đòi ảnh chụp cho CLI không màn hình nên các dòng `capture … THIẾU` là không áp dụng chứ không phải AC hụt.",
+      "failure_scenario": "Người duyệt đọc checklist thấy 100% THIẾU và cho rằng feature chưa nghiệm thu, trong khi `python -m mma_ai.visualization.cli` đã chạy được; cổng trace_fit AC↔checklist có thể đỏ oan. Cần qa sinh lại checklist trên cây hiện tại (reviewer không được sửa specs/**)."
+    },
+    {
+      "id": "F-002",
+      "severity": "MINOR",
+      "file": "tests/integration/test_demo_cli.py",
+      "line": 85,
+      "claim": "Cổng tests/e2e chạy `--with pytest --with pytest-playwright` không cài extra `rl` (torch) nên `_create_test_checkpoint` gọi `pytest.importorskip(\"torch\")` và SKIP âm thầm: AC-2 (`test_ac_2_demo_from_checkpoint`), `test_demo_cli.py`, INV-002 phía demo, NFR-REPRO-001 không có bằng chứng cổng nào chạy thật (gate T522 ghi 91 skipped). Reviewer đã tự chạy hẹp `uv run --extra rl … pytest tests/integration/test_demo_cli.py tests/e2e/test_replay_acceptance.py` ⇒ 11 passed, 0 skipped nên sản phẩm đúng; vấn đề nằm ở bằng chứng cổng.",
+      "failure_scenario": "Nếu demo-từ-checkpoint hồi quy (ví dụ record_episode ném lỗi), cổng vẫn xanh vì các test liên quan bị skip trong môi trường gate không có torch. Khắc phục: đưa torch vào môi trường cổng (hoặc extra dev) để AC-2 không skip."
+    },
+    {
+      "id": "F-003",
+      "severity": "MINOR",
+      "file": "evidence/reviews/T522.challenge",
+      "line": 0,
+      "claim": "⚠️ Không kiểm được từ diff: verdict challenger `evidence/reviews/T522.challenge` KHÔNG có trên nhánh tích hợp (84007a0 xoá, 35130c7 ghi rõ chưa khôi phục vì do vai challenger ghi) trong khi plan.md đặt cổng 'reviewer VÀ challenger cùng duyệt'. Bản cũ ở d2d49c5 (APPROVE, 1 MINOR F-003 TOCTOU) ứng với SHA 4f819ac, không phải head hiện tại. Phía mã: reviewer chạy lại `tests/challenge/test_replay_invariants.py` cùng unit run_replay/episode/script_exit ⇒ 387 passed, 1 xfailed (đúng F-003).",
+      "failure_scenario": "Cổng nhất trí hai vai không tìm thấy tệp challenger cho cây hiện tại ⇒ không thể coi đã có phiếu thứ hai; cần challenger sinh lại T522.challenge."
+    },
+    {
+      "id": "F-004",
+      "severity": "MINOR",
+      "file": "src/mma_ai/visualization/replay.py",
+      "line": 189,
+      "claim": "plan-mandated: kích thước đo sẵn +891/-239 mã sản phẩm ⇒ OVERSIZED (>600). Nguyên nhân: diff là commit khôi phục gộp ba đầu ra của T504/T514/T515 (replay.py 646 dòng, episode.py 318, cli.py 68, schema 91); T514 khai MỘT tệp output replay.py nên không tách được, và `run_replay` dài ~460 dòng trong một hàm. Mã này đã qua review từng task ở run trước; không có thay đổi hành vi mới ngoài phần khôi phục.",
+      "failure_scenario": "Khó review/bảo trì: một hàm 460 dòng với 7 bước, sửa một bước dễ chạm bước khác. Nên tách thành hàm từng bước trong lần refactor sau; không chặn merge vì plan bắt buộc."
+    },
+    {
+      "id": "F-005",
+      "severity": "MINOR",
+      "file": "src/mma_ai/visualization/replay.py",
+      "line": 473,
+      "claim": "boundary/ordering: contracts/cli.md và T514 xếp 'chỉ số mục tiêu trong phạm vi ⇒ mã 2' ở bước (1) tham số, nhưng mã kiểm khoảng của --target-index sau khi đã nạp checkpoint (bước 2) và dựng ElbowReachEnv (bước 5); ở bước 1 chỉ kiểm âm (dòng 283).",
+      "failure_scenario": "`--checkpoint hỏng --target-index 9999` trả mã 4 thay vì 2; `--checkpoint hợp lệ --target-index 9999` trả mã 2 nhưng chỉ sau khi nạp torch và dựng môi trường (chậm, và `env` không được đóng). Không ghi đĩa, không mở viewer nên INV-004 vẫn giữ."
+    },
+    {
+      "id": "F-006",
+      "severity": "MINOR",
+      "file": "src/mma_ai/visualization/episode.py",
+      "line": 549,
+      "claim": "Mã sản phẩm rẽ nhánh theo việc test có thay `os.replace` hay không (`if os.replace is not _REAL_OS_REPLACE` ⇒ dùng os.replace ghi đè được, bỏ đường os.link chống TOCTOU); đây là seam chỉ phục vụ test nằm trong mã chạy thật, và chính test `test_inv005_file_created_between_check_and_replace_is_not_overwritten` (xfail F-003) chạy qua nhánh seam nên không chứng minh được đường os.link thật.",
+      "failure_scenario": "Người dùng thật luôn đi đường os.link nên không bị ghi đè (đã đọc mã), nhưng nhánh seam nếu bị kích hoạt bởi monkeypatch hay wrapper bên thứ ba sẽ ghi đè êm tệp xuất hiện giữa kiểm tra và hoán đổi. Nên thay seam bằng tiêm phụ thuộc rõ ràng."
+    },
+    {
+      "id": "F-007",
+      "severity": "MINOR",
+      "file": "src/mma_ai/visualization/replay.py",
+      "line": 633,
+      "claim": "Dọn dẹp khi Ctrl-C tìm `<đích>.tmp` nhưng write_episode đặt tên tạm là `<tên>.tmp.<pid>_<uuid8>` (episode.py:538) nên nhánh dọn này không bao giờ khớp; việc xoá thật do `except BaseException` trong write_episode đảm nhiệm (episode.py:563).",
+      "failure_scenario": "Nếu ngắt xảy ra ngoài khối try của write_episode thì không có tệp tạm nào để xoá nên vô hại; nhưng mã chết gây hiểu lầm về cơ chế INV-004. Nên xoá khối này hoặc dùng cùng quy ước tên."
+    },
+    {
+      "id": "F-008",
+      "severity": "MINOR",
+      "file": "src/mma_ai/visualization/replay.py",
+      "line": 211,
+      "claim": "comment-narration: các comment kể lại việc đoạn mã kế tiếp làm, xoá đi không mất thông tin: biểu ngữ `# BƯỚC 1…7` (dòng 211-213, 315-317, 418-420, 448-450, 460-462, 502-504, 547-549), `# Chế độ 2.1: Đọc tệp episode đã ghi` (338), `# Khởi tạo môi trường mô phỏng cánh tay khuỷu` (467), `# 7.1 Chế độ không màn hình` (563), `# Dọn dẹp tệp tạm dở dang…` (631); cli.py:47 `# Luôn xả bộ đệm…`. Giữ nguyên các comment VÌ SAO như cli.py:50 (SIGSEGV của MuJoCo) và `# Nhập lười … (FR-015)`.",
+      "failure_scenario": "Nhiễu khi đọc, comment lệch dần khỏi mã khi sửa; không ảnh hưởng hành vi."
+    },
+    {
+      "id": "F-009",
+      "severity": "MINOR",
+      "file": "pyproject.toml",
+      "line": 69,
+      "claim": "Thêm `exclude = [\"^tests/e2e/\"]` vào cấu hình mypy strict nên cổng typecheck không còn soát tests/e2e (kể cả test_replay_acceptance.py); không có comment nêu vì sao loại trừ.",
+      "failure_scenario": "Lỗi kiểu trong tests/e2e không bị cổng `mypy --strict .` bắt. Nên ghi lý do (trùng tên module?) hoặc dùng override thay vì loại trừ."
+    },
+    {
+      "id": "F-010",
+      "severity": "OPTIONAL",
+      "file": "src/mma_ai/visualization/episode.py",
+      "line": 554,
+      "claim": "Đường ghi chống TOCTOU dùng `os.link(tmp, dest)`; hệ tệp không hỗ trợ hard link (FAT/exFAT, một số thư mục mạng) làm `--save-episode` luôn thất bại với mã 8 dù đích chưa tồn tại.",
+      "failure_scenario": "Người dùng lưu episode lên ổ exFAT/USB nhận lỗi 'Gặp sự cố khi ghi tệp episode'. Liên quan spec 006 (đa nền tảng); nên có đường dự phòng open(dest, 'x') + ghi trực tiếp rồi xoá khi lỗi."
+    }
+  ]
+}

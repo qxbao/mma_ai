@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "os": { "kind": "windows", "release": "10.0.26100", "machine": "AMD64", "is_wsl": false, "tested": true },
+  "python": { "version": "3.12.4", "supported": true, "required_range": ">=3.11,<3.13" },
+  "packages": { "mujoco": "3.15.0", "myo_sim": "0.2.3", "gymnasium": "1.4.0", "numpy": "2.3.0", "torch": "2.14.1" },
+  "torch_device": { "kind": "cpu", "name": null },
+  "capabilities": {
+    "display": { "available": true, "reason": null },
+    "symlink": { "available": false, "reason": "Không tạo được symlink: thiếu quyền (bật Developer Mode hoặc chạy bằng quyền quản trị nếu cần test symlink)." },
+    "long_paths": { "available": true, "reason": null },
+    "ram_peak": { "available": true, "reason": null },
+    "utf8_stdio": { "available": true, "reason": null }
+  },
+  "checks": [
+    { "id": "python_version", "status": "ok", "message": "Python 3.12.4 nằm trong khoảng yêu cầu >=3.11,<3.13." },
+    { "id": "package_mujoco", "status": "ok", "message": "mujoco 3.15.0." },
+    { "id": "package_myo_sim", "status": "ok", "message": "myo-sim 0.2.3." },
+    { "id": "package_torch", "status": "ok", "message": "torch 2.14.1 (CPU)." },
+    { "id": "display", "status": "ok", "message": "Màn hình khả dụng." },
+    { "id": "symlink", "status": "warn", "message": "Không tạo được symlink: test cần symlink sẽ bị loại có báo cáo; mã sản phẩm không cần symlink." }
+  ],
+  "overall": "ok"
+}

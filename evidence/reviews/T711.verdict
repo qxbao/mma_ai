@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "run-20261011-c83f8b",
+  "task_id": "T711",
+  "round": 1,
+  "sha_reviewed": "904a960a9bd8a7b5acb94c6d3e93ba6f2bebb5d4",
+  "verdict": "APPROVE",
+  "findings": [
+    {
+      "id": "F-001",
+      "severity": "MINOR",
+      "file": "specs/007-stabilize-viewer-tests/checklists/acceptance.md",
+      "line": 23,
+      "claim": "Checklist nghiệm thu còn nguyên các dòng THIẾU và chữ INV-003 cũ ('đúng hai tệp integration và không đổi src/') dù tests/e2e/test_007_viewer_entrypoint.py, test_replay_viewer_real.py, test_viewer3d_train.py đã tồn tại và spec.md đã lên 1.1.0 (T707) cho phép ngoại lệ viewer.py. Nhãn stale-decision: checklist (spec 779803c) mâu thuẫn với spec.md INV-003/FR-007 hiện hành.",
+      "failure_scenario": "Người đọc checklist thấy 'THIẾU' cho AC-1…AC-5 và 'INV-003: không đổi src/' trong khi diff đã gộp sửa src/mma_ai/visualization/viewer.py; hai tài liệu cho hai câu trả lời khác nhau về vùng ghi hợp lệ. Không ảnh hưởng sản phẩm; checklist là tệp của vai qa nên reviewer không sửa."
+    },
+    {
+      "id": "F-002",
+      "severity": "MINOR",
+      "file": "tests/e2e/test_train_acceptance.py",
+      "line": 216,
+      "claim": "T710 (nối mã 003/AC-5 vào docstring test_ac_5_stage_not_implemented) CHƯA có trong phạm vi đã gộp: docstring dòng 216 vẫn là 'AC-5, SC-005' trần; grep '003/AC-5' trong tệp này trả 0 kết quả (trong tests/integration/test_train_stage.py thì có 4, đúng T708).",
+      "failure_scenario": "Cổng nhận diện mã rủi ro 003/AC-5 vẫn không thấy tệp e2e, nên task T710 khi chấm riêng sẽ đỏ nếu không bổ sung. ⚠️ Không kiểm được từ diff: T710 chỉ đổi chuỗi docstring, không đổi khẳng định (chưa có diff để đối chiếu). Không chặn vì chỉ là chuỗi truy vết trong test, không phải hành vi sản phẩm."
+    },
+    {
+      "id": "F-003",
+      "severity": "MINOR",
+      "file": "src/mma_ai/visualization/viewer.py",
+      "line": 174,
+      "claim": "Nguyên nhân gốc của T706 (set_texts/clear_texts gọi trong khối lock_ctx) chỉ được chứng minh bằng tay cầm giả có khoá không tái nhập: test mới ĐỎ trên bản 83eb7e6 (tôi chạy lại: AssertionError 'set_texts() bị gọi trong khi đang giữ khoá') và XANH trên bản đã sửa, nhưng chưa có bằng chứng trên tay cầm mujoco thật (sim.set_texts nhận mutex nội bộ) và không tìm thấy báo cáo builder với kết quả ≥5 lượt -n auto theo yêu cầu T706.",
+      "failure_scenario": "Nếu cơ chế treo thật nằm chỗ khác (ví dụ GLFW/ngữ cảnh GL), test_real_viewer_plays_or_reports_no_display vẫn có thể treo ngắt quãng dù test đơn vị xanh. Cổng tests của T706 xanh (evidence/gates/T706.json: tests, tdd_red, tests_not_reduced passed=true) nên không chặn; ⚠️ Không kiểm được từ diff: 'treo hết, 5/5 lượt' trên viewer thật."
+    },
+    {
+      "id": "F-004",
+      "severity": "MINOR",
+      "file": "scripts/train.py",
+      "line": 1,
+      "claim": "Docstring tiếng Anh ('Training command entry point.') và docstring test_train_script_help tiếng Anh ('Verify the training script help...') trái quy ước tiếng Việt của dự án; scripts/train.py + tests/integration/test_train_script.py thuộc 003/T339 (đã APPROVE ở lượt trước) nhưng nằm trong khoảng diff này. Nhãn comment-narration không áp dụng; đây là lệch ngôn ngữ.",
+      "failure_scenario": "Chỉ ảnh hưởng nhất quán tài liệu trong mã, không có đầu vào người dùng nào bị sai."
+    }
+  ]
+}
