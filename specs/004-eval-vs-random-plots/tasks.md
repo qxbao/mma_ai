@@ -96,16 +96,16 @@ Bảng vùng ghi hiệu lực KHÔNG phủ `scripts/**` và `configs/**` (và `t
 - [x] T412 [US1] Điều phối `evaluate_checkpoint` và ánh xạ ngoại lệ → mã thoát — src/mma_ai/evaluation/runner.py
 - [x] T413 [US1] CLI mỏng `cli.py` (`main`) — src/mma_ai/evaluation/cli.py
 - [x] T414 [US1] Fixture run mẫu cho test tích hợp — tests/integration/eval_fixtures.py
-- [ ] T415 [US1] Test đánh giá qua CLI — tests/integration/test_evaluate_cli.py
-- [ ] T416 [US1] Test hợp đồng báo cáo và ví dụ hợp schema — tests/integration/test_report_contract.py
-- [ ] T421 [US1] Test tái lập theo seed — tests/integration/test_eval_determinism.py
+- [x] T415 [US1] Test đánh giá qua CLI — tests/integration/test_evaluate_cli.py
+- [x] T416 [US1] Test hợp đồng báo cáo và ví dụ hợp schema — tests/integration/test_report_contract.py
+- [x] T421 [US1] Test tái lập theo seed — tests/integration/test_eval_determinism.py
 
 <a id="user-story-us2-ket-luan-tot-hon-random-theo-tieu-chi-khai-truoc-p1"></a>
 ## User story US2 — kết luận "tốt hơn random" theo tiêu chí khai trước (P1)
 
 **Mục tiêu**: kết luận đúng cơ chế trên policy có chất lượng đã biết, kèm hiệu và khoảng tin cậy (AC-2, KQ-2); logic ở T404, T411.
 
-- [ ] T417 [US2] Test kết luận bằng policy chất lượng đã biết — tests/integration/test_verdict_known_policies.py
+- [x] T417 [US2] Test kết luận bằng policy chất lượng đã biết — tests/integration/test_verdict_known_policies.py
 
 <a id="user-story-us3-ba-bieu-do-tu-nhat-ky-cua-run-p1"></a>
 ## User story US3 — ba biểu đồ từ nhật ký của run (P1)
@@ -113,21 +113,21 @@ Bảng vùng ghi hiệu lực KHÔNG phủ `scripts/**` và `configs/**` (và `t
 **Mục tiêu**: ba tệp ảnh loss, reward, activation 6 cơ, headless, thiếu nhật ký thì báo rõ (AC-3, KQ-3).
 
 - [x] T410 [US3] Vẽ biểu đồ `render_charts` — src/mma_ai/evaluation/charts.py
-- [ ] T418 [US3] Test headless và nhật ký thiếu — tests/integration/test_evaluate_headless.py
+- [x] T418 [US3] Test headless và nhật ký thiếu — tests/integration/test_evaluate_headless.py
 
 <a id="user-story-us4-tap-danh-gia-khong-giao-tap-train-p1"></a>
 ## User story US4 — tập đánh giá không giao tập train (P1)
 
 **Mục tiêu**: giao rỗng và seed khác seed train, kiểm mỗi lần trước episode đầu (AC-4); logic ở T409.
 
-- [ ] T419 [US4] Test rò rỉ qua CLI — tests/integration/test_evaluate_leakage.py
+- [x] T419 [US4] Test rò rỉ qua CLI — tests/integration/test_evaluate_leakage.py
 
 <a id="user-story-us5-ket-qua-luu-cung-ho-so-run-p2"></a>
 ## User story US5 — kết quả lưu cùng hồ sơ run (P2)
 
 **Mục tiêu**: bản ghi trong `eval/<eval_id>/`, không ghi đè, không sửa tệp con 2 (AC-1, KQ-4).
 
-- [ ] T420 [US5] Test lưu trữ và chỉ-đọc — tests/integration/test_evaluate_storage.py
+- [x] T420 [US5] Test lưu trữ và chỉ-đọc — tests/integration/test_evaluate_storage.py
 - [x] T423 [US5] Test ràng buộc nhập (không `learning.trainer`/`learning.ppo`) — tests/integration/test_evaluation_imports.py
 
 <a id="user-story-us6-checkpoint-loi-thi-bao-loi-khong-ket-qua-gia-p2"></a>
@@ -135,14 +135,14 @@ Bảng vùng ghi hiệu lực KHÔNG phủ `scripts/**` và `configs/**` (và `t
 
 **Mục tiêu**: AC-5 — logic ở T412; kiểm ở:
 
-- [ ] T422 [US6] Test checkpoint không tồn tại/hỏng/lệch hash qua CLI — tests/integration/test_evaluate_bad_checkpoint.py
+- [x] T422 [US6] Test checkpoint không tồn tại/hỏng/lệch hash qua CLI — tests/integration/test_evaluate_bad_checkpoint.py
 
 <a id="qa-va-review-doc-lap"></a>
 ## QA và review độc lập
 
-- [ ] T424 QA: E2E AC-1…AC-5 trên entrypoint thật `python -m mma_ai.evaluation.cli` — tests/e2e/test_evaluate_acceptance.py
-- [ ] T425 Challenger: dựng vector đánh sập INV-001…INV-006 — tests/challenge/test_evaluate_invariants.py, evidence/reviews/T425.challenge
-- [ ] T426 Reviewer: đối chiếu bằng chứng, ghi verdict — evidence/reviews/T426.verdict
+- [x] T424 QA: E2E AC-1…AC-5 trên entrypoint thật `python -m mma_ai.evaluation.cli` — tests/e2e/test_evaluate_acceptance.py
+- [x] T425 Challenger: dựng vector đánh sập INV-001…INV-006 — tests/challenge/test_evaluate_invariants.py, evidence/reviews/T425.challenge
+- [x] T426 Reviewer: đối chiếu bằng chứng, ghi verdict — evidence/reviews/T426.verdict
 
 <a id="quyet-dinh-ve-vai-challenger"></a>
 ### Quyết định về vai `challenger`
