@@ -216,13 +216,6 @@ def test_inv004_failure_at_each_save_step_keeps_dir_consistent(
         assert not leftovers, f"lỗi ghi để lại tệp tạm: {leftovers}"
 
 
-@pytest.mark.xfail(  # type: ignore[untyped-decorator]
-    strict=False,
-    reason=(
-        "F-004: torch.save ném RuntimeError (đĩa đầy) không bị bắt: để lại ckpt_*.pt.tmp "
-        "nửa vời, lỗi thô không phải CheckpointIOError (INV-004/FR-006)"
-    ),
-)
 def test_inv004_partial_write_raising_runtimeerror_leaves_no_tmp_file(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -281,13 +274,6 @@ def test_inv004_nonfinite_in_any_component_never_reaches_disk(
     assert list((run_dir / "checkpoints").iterdir()) == []
 
 
-@pytest.mark.xfail(  # type: ignore[untyped-decorator]
-    strict=False,
-    reason=(
-        "F-001: rng_state numpy trong checkpoint là trạng thái sinh từ seed "
-        "gốc, không phải _rng thực của agent (INV-004/FR-009)"
-    ),
-)
 def test_inv004_checkpoint_stores_agent_numpy_rng_state(tmp_path: Path) -> None:
     """Checkpoint MUST chứa trạng thái sinh số ngẫu nhiên THỰC của agent (không phải seed gốc)."""
     agent = _agent(seed=7)
@@ -302,13 +288,6 @@ def test_inv004_checkpoint_stores_agent_numpy_rng_state(tmp_path: Path) -> None:
     )
 
 
-@pytest.mark.xfail(  # type: ignore[untyped-decorator]
-    strict=False,
-    reason=(
-        "F-001: train tiếp khôi phục RNG numpy về seed gốc nên xáo "
-        "minibatch lệch quỹ đạo chạy liền (INV-004/FR-009)"
-    ),
-)
 def test_inv004_resume_continues_same_trajectory_as_uninterrupted(tmp_path: Path) -> None:
     """Train tiếp từ checkpoint cho đúng quỹ đạo như chạy liền (xáo minibatch liên tục)."""
     buffers = [_buffer(seed=s) for s in range(3)]
@@ -393,13 +372,6 @@ def test_inv004_truncated_checkpoint_raises_checkpoint_error_with_cause(tmp_path
         assert str(pt_file.name) in str(err.value) or "hỏng" in str(err.value)
 
 
-@pytest.mark.xfail(  # type: ignore[untyped-decorator]
-    strict=False,
-    reason=(
-        "F-003: load_checkpoint không kiểm sha256 đã ghi nên lật bit nạp "
-        "thành công với trọng số khác (INV-004/FR-008)"
-    ),
-)
 def test_inv004_random_bitflip_never_loads_silently_different(tmp_path: Path) -> None:
     """Lật bit tại vị trí ngẫu nhiên: hoặc lỗi CheckpointError, hoặc nạp được dữ liệu y hệt."""
     run_dir, pt_file = _saved_checkpoint(tmp_path)
@@ -434,10 +406,6 @@ def _locate_float32(blob: bytes, value: torch.Tensor) -> int:
 
 
 @pytest.mark.parametrize("bits", [0x7FC00000, 0x7F800000, 0xFF800000], ids=["nan", "+inf", "-inf"])  # type: ignore[untyped-decorator]
-@pytest.mark.xfail(  # type: ignore[untyped-decorator]
-    strict=False,
-    reason="F-002: load_checkpoint không quét hữu hạn: tệp có NaN/Inf nạp thành công (INV-004)",
-)
 def test_inv004_load_rejects_nonfinite_weights_in_corrupt_file(tmp_path: Path, bits: int) -> None:
     """Tệp bị hỏng thành NaN/Inf (lật bit mũ): nạp MUST lỗi, không trao NaN cho policy."""
     run_dir, pt_file = _saved_checkpoint(tmp_path)
@@ -452,12 +420,6 @@ def test_inv004_load_rejects_nonfinite_weights_in_corrupt_file(tmp_path: Path, b
         load_checkpoint(pt_file)
 
 
-@pytest.mark.xfail(  # type: ignore[untyped-decorator]
-    strict=False,
-    reason=(
-        "F-003: sha256 trong latest.json/meta.json không bao giờ được kiểm khi nạp (INV-004/FR-008)"
-    ),
-)
 def test_inv004_load_verifies_sha256_recorded_in_pointer(tmp_path: Path) -> None:
     """latest.json ghi sha256: tệp trỏ tới bị sửa thì nạp qua con trỏ MUST từ chối."""
     run_dir, pt_file = _saved_checkpoint(tmp_path)
@@ -1135,13 +1097,6 @@ def test_inv005_killing_ui_process_mid_train_does_not_stop_training(tmp_path: Pa
     assert finals, "train không lưu được checkpoint cuối sau khi giao diện bị giết"
 
 
-@pytest.mark.xfail(  # type: ignore[untyped-decorator]
-    strict=False,
-    reason=(
-        "F-006: trạng thái run_dir/html là thuộc tính lớp dùng "
-        "chung, serve() thứ hai ghi đè máy chủ thứ nhất"
-    ),
-)
 def test_inv005_two_servers_in_one_process_keep_their_own_run_dir(tmp_path: Path) -> None:
     servers: list[dashboard.Server] = []
     try:
@@ -1155,3 +1110,166 @@ def test_inv005_two_servers_in_one_process_keep_their_own_run_dir(tmp_path: Path
     finally:
         for server in servers:
             server.close()
+
+
+# --------------------------------------------------------------------------------------
+# Vòng 2 — vector mới mở ra bởi bản vá F-001/F-002/F-003 (đối chiếu sha256, quét hữu hạn,
+# RNG numpy thực): đường nạp qua Trainer, qua meta.json, và tệp bị sửa NHẤT QUÁN với sha
+# --------------------------------------------------------------------------------------
+
+
+def _train_cfg_steps(total: int) -> TrainConfig:
+    return _cfg(
+        **{
+            "schedule.total_timesteps": total,
+            "schedule.n_steps": 8,
+            "schedule.batch_size": 8,
+            "schedule.n_epochs": 2,
+            "paths.runs_dir": "runs",
+            "ui.mode": "none",
+        }
+    )
+
+
+def _run_trainer(
+    tmp_path: Path, name: str, total: int, resume: Path | None = None
+) -> tuple[Trainer, Path]:
+    run_dir = tmp_path / name
+    run_dir.mkdir()
+    env = _StubEnv([{"target_split": "train"}], split="train")
+    torch.manual_seed(5)
+    trainer = Trainer(_train_cfg_steps(total), env, run_dir, resume_checkpoint=resume)
+    trainer.run()
+    return trainer, run_dir
+
+
+def test_inv004_trainer_checkpoints_store_live_agent_rng_state(tmp_path: Path) -> None:
+    """AC-2: checkpoint do Trainer thật ghi (periodic và final) chứa RNG numpy THỰC của agent."""
+    trainer, run_dir = _run_trainer(tmp_path, "run", 24)
+    final = sorted((run_dir / "checkpoints").glob("*_final.pt"))
+    assert final, "Trainer không lưu checkpoint cuối"
+    loaded = load_checkpoint(final[-1])
+    assert loaded.rng_state["numpy"] == trainer.agent._rng.bit_generator.state  # noqa: SLF001
+
+
+def test_inv004_trainer_resume_matches_uninterrupted_run(tmp_path: Path) -> None:
+    """AC-2: chạy 2 lượt, lưu, train tiếp 1 lượt (qua Trainer thật) khớp chạy liền 3 lượt."""
+    straight, _ = _run_trainer(tmp_path, "straight", 24)
+    first, first_dir = _run_trainer(tmp_path, "first", 16)
+    final = sorted((first_dir / "checkpoints").glob("*_final.pt"))[-1]
+    resumed, _ = _run_trainer(tmp_path, "resumed", 24, resume=final)
+    for name, tensor in straight.agent.model.state_dict().items():
+        other = resumed.agent.model.state_dict()[name]
+        assert torch.allclose(tensor, other, atol=1e-5), f"tham số {name} lệch sau khi train tiếp"
+
+
+def _rewrite_consistently(pt_file: Path, mutate: Callable[[dict[str, Any]], None]) -> None:
+    """Sửa nội dung tệp rồi cập nhật sha256 ở meta.json và latest.json cho khớp (kẻ sửa tinh vi)."""
+    data = dict(torch.load(pt_file, weights_only=True))
+    mutate(data)
+    torch.save(data, pt_file)
+    digest = hashlib.sha256(pt_file.read_bytes()).hexdigest()
+    for sidecar in (
+        pt_file.with_name(f"{pt_file.stem}.meta.json"),
+        pt_file.parent / "latest.json",
+    ):
+        info = json.loads(sidecar.read_text(encoding="utf-8"))
+        info["sha256"] = digest
+        sidecar.write_text(json.dumps(info), encoding="utf-8")
+
+
+def _poison_optimizer(data: dict[str, Any]) -> None:
+    state = data["optimizer"]["state"]
+    first = next(iter(state.values()))
+    first["exp_avg"] = first["exp_avg"].clone()
+    first["exp_avg"].view(-1)[0] = float("nan")
+
+
+def _poison_normalizer(data: dict[str, Any]) -> None:
+    norm = dict(data["obs_normalizer"])
+    for key, value in norm.items():
+        if isinstance(value, np.ndarray):
+            bad = value.astype(float).copy()
+            bad.reshape(-1)[0] = float("inf")
+            norm[key] = bad
+            break
+        if isinstance(value, torch.Tensor) and value.is_floating_point():
+            bad_t = value.clone()
+            bad_t.view(-1)[0] = float("inf")
+            norm[key] = bad_t
+            break
+        if isinstance(value, float):
+            norm[key] = float("nan")
+            break
+    data["obs_normalizer"] = norm
+
+
+def _poison_log_std(data: dict[str, Any]) -> None:
+    bad = data["log_std"].clone()
+    bad.view(-1)[0] = float("-inf")
+    data["log_std"] = bad
+
+
+@pytest.mark.parametrize(  # type: ignore[untyped-decorator]
+    "mutate",
+    [_poison_optimizer, _poison_normalizer, _poison_log_std],
+    ids=["optimizer-nan", "normalizer-inf", "log_std-neginf"],
+)
+def test_inv004_consistent_sha_but_nonfinite_component_is_rejected(
+    tmp_path: Path, mutate: Callable[[dict[str, Any]], None]
+) -> None:
+    """Sha khớp nhưng thành phần (optimizer/normalizer/log_std) chứa NaN/Inf: nạp MUST lỗi."""
+    run_dir, pt_file = _saved_checkpoint(tmp_path)
+    _rewrite_consistently(pt_file, mutate)
+    for target in (pt_file, run_dir / "checkpoints" / "latest.json"):
+        with pytest.raises(CheckpointError):
+            load_checkpoint(target, for_training=True)
+
+
+def test_inv004_meta_json_path_also_verifies_sha256(tmp_path: Path) -> None:
+    """Nạp qua *.meta.json (không phải latest.json): lật bit vẫn MUST bị từ chối."""
+    run_dir, pt_file = _saved_checkpoint(tmp_path)
+    blob = bytearray(pt_file.read_bytes())
+    first = load_checkpoint(pt_file).actor_state_dict["0.weight"].reshape(-1)[:4]
+    offset = _locate_float32(bytes(blob), first)
+    blob[offset : offset + 4] = np.float32(0.654321).tobytes()
+    pt_file.write_bytes(bytes(blob))
+    meta = pt_file.with_name(f"{pt_file.stem}.meta.json")
+    with pytest.raises(CheckpointError):
+        load_checkpoint(meta)
+
+
+def test_inv004_pointer_with_wrong_sha_rejects_even_valid_file(tmp_path: Path) -> None:
+    """Con trỏ ghi sha sai (tệp .pt còn nguyên): không được nạp như thể hợp lệ."""
+    run_dir, pt_file = _saved_checkpoint(tmp_path)
+    latest = run_dir / "checkpoints" / "latest.json"
+    info = json.loads(latest.read_text(encoding="utf-8"))
+    info["sha256"] = "0" * 64
+    latest.write_text(json.dumps(info), encoding="utf-8")
+    with pytest.raises(CheckpointError):
+        load_checkpoint(latest)
+
+
+@pytest.mark.parametrize("how", ["flip", "nan"])  # type: ignore[untyped-decorator]
+def test_inv004_trainer_resume_rejects_corrupt_checkpoint_with_checkpoint_error(
+    tmp_path: Path, how: str
+) -> None:
+    """Resume qua Trainer: tệp hỏng phải báo CheckpointError (mã 4), không train tiếp."""
+    agent = _agent()
+    agent.update(_buffer(64))
+    run_dir = _run_layout(tmp_path)
+    ctx = _trainer_ctx(agent, _norm(), 1)
+    ctx["model_sha256"] = "b" * 64
+    meta = save_checkpoint(agent, run_dir, kind="final", ctx=ctx)
+    pt_file = run_dir / meta.path
+    blob = bytearray(pt_file.read_bytes())
+    first = load_checkpoint(pt_file).actor_state_dict["0.weight"].reshape(-1)[:4]
+    offset = _locate_float32(bytes(blob), first)
+    bits = np.float32(0.5).tobytes() if how == "flip" else (0x7FC00000).to_bytes(4, "little")
+    blob[offset : offset + 4] = bits
+    pt_file.write_bytes(bytes(blob))
+    env = _StubEnv([{"target_split": "train"}], split="train")
+    resume_run = tmp_path / "resume_run"
+    resume_run.mkdir()
+    with pytest.raises(CheckpointError):
+        Trainer(_train_cfg_steps(24), env, resume_run, resume_checkpoint=pt_file)

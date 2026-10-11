@@ -1,64 +1,38 @@
 {
   "schema_version": "1.0.0",
-  "run_id": "run-20261010-641635",
+  "run_id": "run-20261011-64c55f",
   "task_id": "T338",
-  "round": 1,
-  "sha_reviewed": "1671eeb8f050c5fe2a34a05d313fc0188ca86234",
-  "verdict": "REQUEST_CHANGES",
+  "round": 2,
+  "sha_reviewed": "c401cd1b680649a6b40d0548aa8ab9b26c63b539",
+  "verdict": "APPROVE",
   "findings": [
-    {
-      "id": "F-001",
-      "severity": "CRITICAL",
-      "file": "src/mma_ai/learning/checkpoint.py",
-      "line": 240,
-      "claim": "INV-004/FR-009: checkpoint không lưu trạng thái RNG numpy THỰC của PPOAgent; Trainer truyền ctx không có khoá 'rng_state' nên save_checkpoint ghi trạng thái của np.random.default_rng(seed) mới tạo (seed gốc), rồi Trainer._restore_from_checkpoint nạp đúng trạng thái đó vào agent._rng. Train tiếp quay lại đầu chuỗi xáo minibatch của seed gốc một cách im lặng.",
-      "failure_scenario": "agent = PPOAgent(seed=7); agent.update(buf) hai lần; save_checkpoint(agent, run_dir, ctx={update_idx, env_steps, model_sha256, seed, config, obs_normalizer}) (đúng khuôn Trainer.run); load_checkpoint(latest.json).rng_state['numpy'] != agent._rng.bit_generator.state (state 2087…≠169…; has_uint32/uinteger lệch). Hệ quả: chạy liền 3 lượt cập nhật và 'chạy 2 lượt, lưu, nạp, chạy thêm 1' cho log_std/trọng số khác nhau (ca đối chứng khôi phục đúng _rng thì khớp ≤1e-6). Test: tests/challenge/test_train_invariants.py::test_inv004_checkpoint_stores_agent_numpy_rng_state và ::test_inv004_resume_continues_same_trajectory_as_uninterrupted (xfail không strict, F-001); đối chứng xanh ::test_inv004_control_restoring_true_rng_state_restores_trajectory.",
-      "parked": false
-    },
-    {
-      "id": "F-002",
-      "severity": "MINOR",
-      "file": "src/mma_ai/learning/checkpoint.py",
-      "line": 376,
-      "claim": "INV-004: load_checkpoint không quét tính hữu hạn; checkpoint có NaN/Inf (tệp hỏng/lật bit mũ) nạp thành công thay vì CheckpointError nêu nguyên nhân, lỗi chỉ lộ muộn và sai loại (NonFiniteError từ PPOAgent.load_state_dict hoặc từ model.act khi suy luận).",
-      "failure_scenario": "Ghi đè 4 byte của actor.0.weight[0..] trong ckpt_u000001.pt bằng 0x7FC00000 / 0x7F800000 / 0xFF800000 rồi load_checkpoint(tệp) => trả LoadedCheckpoint, không ném CheckpointError (mong đợi theo INV-004 'MUST NOT chứa NaN/Inf' và FR-008 'checkpoint hỏng MUST báo lỗi nêu nguyên nhân'). Tác động giới hạn: đường train tiếp bắt NaN ở tham số qua _reject_nonfinite, đường suy luận fail-closed; nhưng NaN trong optimizer/normalizer var không bị chặn tại biên nạp. Test: test_inv004_load_rejects_nonfinite_weights_in_corrupt_file[nan|+inf|-inf] (xfail không strict, F-002).",
-      "parked": false
-    },
-    {
-      "id": "F-003",
-      "severity": "CRITICAL",
-      "file": "src/mma_ai/learning/checkpoint.py",
-      "line": 407,
-      "claim": "INV-004/FR-008: sha256 ghi trong *.meta.json và latest.json không bao giờ được đối chiếu khi nạp; zip của torch.save không bắt được lật bit trong dữ liệu tensor. Lật bit ở tệp .pt nạp thành công với trọng số khác gốc mà không có lỗi — đúng rủi ro 'checkpoint hỏng âm thầm' làm hỏng đánh giá ở con 3 và replay ở con 4.",
-      "failure_scenario": "Lưu checkpoint, lật 1 bit tại 60 vị trí ngẫu nhiên (rng seed 2024) trong ckpt_u000001.pt: 11/60 ca load_checkpoint trả về thành công với actor/critic state_dict khác bản gốc (byte 8717, 7735, 11465, 11169, 7312, …). Ca trực tiếp: thay float32 đầu tiên của actor.0.weight bằng 0.123456 rồi load_checkpoint(checkpoints/latest.json) (con trỏ còn ghi sha256 cũ) => không ném CheckpointError. Test: test_inv004_random_bitflip_never_loads_silently_different và test_inv004_load_verifies_sha256_recorded_in_pointer (xfail không strict, F-003). Cắt cụt tệp thì ĐÃ bị bắt (test_inv004_truncated_checkpoint_raises_checkpoint_error_with_cause xanh).",
-      "parked": false
-    },
-    {
-      "id": "F-004",
-      "severity": "MINOR",
-      "file": "src/mma_ai/learning/checkpoint.py",
-      "line": 309,
-      "claim": "INV-004/FR-006: khối bắt lỗi ghi chỉ bắt OSError/IOError; torch.save thật ném RuntimeError ('PytorchStreamWriter failed writing file … file write failed') khi đĩa đầy nên tệp tạm nửa vời không bị dọn và lỗi lộ ra dạng thô thay vì CheckpointIOError (CLI trả mã 1 'Lỗi không xác định' thay vì thông điệp I/O).",
-      "failure_scenario": "torch.save ghi dở rồi ném RuntimeError => checkpoints/ckpt_u000001.pt.tmp còn lại với nội dung dở dang. Bản đích và latest.json không bị đụng (bất biến chính còn giữ), nhưng 'không tệp nửa vời' vỡ ở mức tệp tạm. Test: test_inv004_partial_write_raising_runtimeerror_leaves_no_tmp_file (xfail không strict, F-004).",
-      "parked": false
-    },
     {
       "id": "F-005",
       "severity": "OPTIONAL",
       "file": "src/mma_ai/learning/run_dir.py",
       "line": 29,
-      "claim": "INV-001: create_run_dir ghép stage vào tên thư mục không kiểm; stage có dấu phân cách đường dẫn ném FileNotFoundError thô hoặc, khi tiền tố trùng một run đang có, tạo thư mục NGOÀI runs_dir. Chỉ chạm được qua API vì CLI/TrainConfig ép stage == 'elbow'.",
-      "failure_scenario": "Với run '<stamp>_x_s1' đã tồn tại cùng giây: create_run_dir(root, 'x_s1/../../escape', 1) tạo '<root>/../escape_s1' (ngoài runs_dir); create_run_dir(root, 'a/b', 1) ném FileNotFoundError không phải RunDirError. Test: test_inv001_stage_with_path_separators_cannot_leave_runs_dir[a/b|x_s1/../../escape] (xfail không strict, F-005).",
-      "parked": false
-    },
-    {
-      "id": "F-006",
-      "severity": "OPTIONAL",
-      "file": "src/mma_ai/monitoring/dashboard.py",
-      "line": 531,
-      "claim": "INV-005 (chất lượng chỉ-đọc, không vi phạm ghi): run_dir và html_content là thuộc tính LỚP của _DashboardHandler dùng chung, nên serve() thứ hai trong cùng tiến trình khiến máy chủ thứ nhất phục vụ progress.json của run thứ hai. Không ghi gì vào run, không ảnh hưởng train; CLI chỉ chạy một máy chủ mỗi tiến trình.",
-      "failure_scenario": "serve(dirA); serve(dirB); GET /api/progress trên máy chủ A trả {\"run\": \"b\"}. Test: test_inv005_two_servers_in_one_process_keep_their_own_run_dir (xfail không strict, F-006).",
+      "claim": "INV-001: create_run_dir ghép stage vào tên thư mục không kiểm; stage có dấu phân cách đường dẫn ném FileNotFoundError thô hoặc, khi tiền tố trùng một run đang có, tạo thư mục NGOÀI runs_dir. Chỉ chạm được qua API vì CLI/TrainConfig ép stage == 'elbow'. Còn đỏ ở vòng 2, không chặn merge.",
+      "failure_scenario": "Với run '<stamp>_x_s1' đã tồn tại cùng giây: create_run_dir(root, 'x_s1/<hai cấp lên>/escape', 1) tạo thư mục escape_s1 ngoài runs_dir; create_run_dir(root, 'a/b', 1) ném FileNotFoundError không phải RunDirError. Test: test_inv001_stage_with_path_separators_cannot_leave_runs_dir (xfail không strict, F-005); chạy pytest --runxfail vẫn đỏ.",
       "parked": false
     }
+  ],
+  "round2_resolved": {
+    "F-001": "đã vá (4d1a289): rng_state numpy là trạng thái thực của agent; test_inv004_checkpoint_stores_agent_numpy_rng_state và test_inv004_resume_continues_same_trajectory_as_uninterrupted XPASS, đã gỡ xfail",
+    "F-002": "đã vá (4d1a289): load_checkpoint quét hữu hạn, ném CheckpointError; 3 ca nan/+inf/-inf XPASS, đã gỡ xfail",
+    "F-003": "đã vá (4d1a289): sha256 từ latest.json/meta.json được đối chiếu khi nạp; các ca lật bit trước đây lọt nay đều bị từ chối, đã gỡ xfail",
+    "F-004": "đã vá (4d1a289): RuntimeError của torch.save được bắt và dọn tệp tạm; đã gỡ xfail",
+    "F-006": "đã vá (bdc9911): run_dir/html tách theo từng máy chủ; đã gỡ xfail"
+  },
+  "vectors_tried_round2": [
+    "Trainer thật chạy 3 lượt: rng_state numpy của checkpoint cuối == _rng thực (không lách được)",
+    "Trainer thật: 2 lượt + lưu + resume 1 lượt khớp chạy liền 3 lượt (atol 1e-5)",
+    "Sửa nhất quán (cập nhật cả sha256 ở meta.json và latest.json) với NaN trong optimizer.exp_avg, Inf trong obs_normalizer, -Inf trong log_std: nạp qua .pt và qua latest.json đều CheckpointError",
+    "Nạp qua *.meta.json (đường vào mới của bản vá) sau khi đổi giá trị trọng số: CheckpointError",
+    "Con trỏ latest.json ghi sha sai trên tệp .pt còn nguyên: CheckpointError",
+    "Trainer(resume_checkpoint=<tệp bị lật/NaN>): CheckpointError, không train tiếp"
+  ],
+  "notes": [
+    "Nạp trực tiếp .pt khi KHÔNG có meta.json thì không có sha để đối chiếu (theo thiết kế, không phải finding).",
+    "Trainer._restore_from_checkpoint nuốt mọi Exception khi gán rng numpy; chỉ chạm được bằng tệp được dựng tinh vi với sha nhất quán, ghi chú không chặn."
   ]
 }
