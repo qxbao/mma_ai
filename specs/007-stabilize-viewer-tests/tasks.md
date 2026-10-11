@@ -4,9 +4,9 @@ title: "Sửa gốc 2 test hiển thị/tiến trình làm đỏ cổng tests �
 doc_type: tasks
 owner_agent: spec
 status: draft
-updated: "2026-10-11"
+updated: "2026-10-12"
 feature: "007-stabilize-viewer-tests"
-version: "1.0.0"
+version: "1.1.0"
 ---
 
 # Nhiệm vụ: Sửa gốc 2 test hiển thị/tiến trình làm đỏ cổng tests
@@ -21,26 +21,26 @@ version: "1.0.0"
 - [Dependencies và wave](#dependencies-va-wave)
 - [Điều kiện hoàn thành](#dieu-kien-hoan-thanh)
 
-> Đích: `specs/007-stabilize-viewer-tests/tasks.md`. Sinh từ `spec.md` + `plan.md` + `research.md` + `data-model.md` HIỆN TẠI (viết lại hoàn toàn ở lượt này). Feature không có `contracts/` (không có giao diện bên ngoài) và không có màn hình ⇒ không có mã `API-*`, `UI-*`; không có kế hoạch hạ tầng ⇒ không có task `platform`.
+> Đích: `specs/007-stabilize-viewer-tests/tasks.md`. Sinh từ `spec.md` + `plan.md` + `research.md` + `data-model.md` HIỆN TẠI (viết lại hoàn toàn ở lượt 2026-10-12; spec 1.1.0, plan 1.1.0). Feature không có `contracts/` (không có giao diện bên ngoài) và không có màn hình ⇒ không có mã `API-*`, `UI-*`; không có kế hoạch hạ tầng ⇒ không có task `platform`.
 
 <a id="dau-vao"></a>
 ## Đầu vào
 
 - `spec.md` (FR-001…FR-008 · NFR-REL-001 · NFR-PERF-001 · NFR-QUAL-001 · INV-001…003 · AC-1…AC-5 của 007), `plan.md`, `research.md` (Q1 nguyên nhân T-B, Q2 giả thuyết H1…H5 và cây quyết định của T-A), `data-model.md`, `quickstart.md`.
 - Mã AC-1, AC-2, FR-011, FR-014 **của 005** luôn viết kèm "của 005" / "005 AC-n" để không lẫn với AC-n của feature này (spec, Clarifications).
-- Số đo "ĐÃ ĐO" chỉ nằm ở `research.md` của 005; nguyên nhân T-A **CHƯA ĐO** — task T702 đo trước rồi mới sửa (FR-005).
+- Trạng thái nguyên nhân (theo mã đã gộp và verdict T704/T711): T-B (`T701`) — cuộc đua giữa "tạo đối tượng" và `.start()`, nguyên nhân ở kiểm thử, đã sửa; T-A (`T702`) — đo treo 2/5 lần chạy lệnh trực tiếp, nguyên nhân gốc ở `ViewerSink.show` (`src/mma_ai/visualization/viewer.py`, `set_texts` gọi trong khối `lock_ctx`), nên theo AC-5 phần `src/` thuộc task sửa gốc riêng `T706`, không thuộc task sửa kiểm thử. Môi trường cổng tests có hay không có cửa sổ GL dùng được vẫn **CHƯA KIỂM**.
 
 <a id="quy-uoc-task"></a>
 ## Quy ước task
 
 - **Dải mã `T701`…**: id task duy nhất toàn dự án; 007 dùng dải `T7xx` để không va với `T2xx`…`T5xx` của 001–005 và dải của 006. Mô tả task KHÔNG viết id task của feature khác; phụ thuộc chéo nằm ở cột `depends_on`.
-- **Vùng ghi của lượt sửa là hai tệp kiểm thử hiện có** `tests/integration/test_replay_viewer_real.py` và `tests/integration/test_viewer3d_train.py` (INV-003), cộng MỘT tệp kiểm thử E2E mới `tests/e2e/test_007_viewer_entrypoint.py` do `T705` (qa) thêm; `src/` KHÔNG đổi. Mỗi tệp một task chủ.
-- Tự chốt: thêm task `T705` sinh `tests/e2e/**` chạy trên entrypoint thật — luật lint NO_E2E bắt buộc; tệp mới chỉ là kiểm thử, không đụng `src/`, giữ tinh thần INV-003 (không đổi mã sản phẩm).
+- **Vùng ghi của feature (FR-007, INV-003)**: hai tệp integration `tests/integration/test_replay_viewer_real.py` và `tests/integration/test_viewer3d_train.py`, MỘT tệp E2E mới `tests/e2e/test_007_viewer_entrypoint.py` do `T705` (qa) thêm; `src/` KHÔNG đổi, TRỪ `src/mma_ai/visualization/viewer.py` (kèm `tests/unit/test_viewer.py`) và CHỈ qua task sửa gốc riêng `T706` khi đo chứng minh nguyên nhân ở đó (AC-5). Mỗi tệp một task chủ. Các task hội tụ `T708`/`T710` chỉ đổi chuỗi docstring ở test của 003 (xem mục Phase 4), `T709` đưa khung gói lên cây gốc.
+- Tự chốt: task `T705` sinh `tests/e2e/**` chạy trên entrypoint thật — luật lint NO_E2E bắt buộc; tệp mới chỉ là kiểm thử, không đụng `src/` (INV-003). Task `T706` là ngoại lệ `src/` duy nhất, đã được spec 1.1.0 cho phép theo AC-5.
 - **Không `skip`/`skipif`/`xfail`/`importorskip` mới**, không giảm số kiểm thử, không nới khẳng định nghiệm thu (FR-004, FR-006, INV-001); dấu `pytest.mark.display` đã có trên T-A giữ nguyên.
 - **Đo trước, sửa sau** (hiến chương II): task ghi mục `Nguyên nhân gốc` (kèm lệnh, số lần chạy, kết quả, thời gian, đầu ra lỗi, môi trường đo — có/không cửa sổ GL dùng được) và `BÀI HỌC` vào báo cáo `.ai/runs/*/reports/builder-*.md` TRƯỚC khi đổi tệp kiểm thử.
 - **Mỗi lượt chạy test chỉ 1–2 lần** (giới hạn thời gian của yêu cầu); số lần còn lại để đủ ngưỡng NFR-REL-001 cộng dồn qua các lượt vào bằng chứng, không dồn vào một lượt.
 - **Lệnh chung** (trong worktree của task, môi trường có `mujoco`, `myo-sim`, và `torch` nếu muốn chạy phần huấn luyện thật của T-B): `uv run --isolated --with pytest pytest -q -p no:cacheprovider <nodeid>`; lint `uv run --isolated --with ruff ruff check <hai tệp>`; kiểu `uv run --isolated --with mypy mypy --strict <hai tệp>`.
-- **Nếu nguyên nhân nằm ở `src/`** (H1/H2 của research.md Q2): DỪNG sửa kiểm thử đó, KHÔNG đổi `src/`, báo tệp, hàm, bằng chứng đo và đề xuất trong báo cáo (AC-5); phần độ cứng chẩn đoán của FR-002 vẫn được giữ.
+- **Nếu nguyên nhân nằm ở `src/`** (H1/H2 của research.md Q2): task sửa kiểm thử DỪNG, KHÔNG đổi `src/`, báo tệp, hàm, bằng chứng đo và đề xuất trong báo cáo (AC-5); phần độ cứng chẩn đoán của FR-002 vẫn được giữ; việc sửa `src/` chỉ qua task sửa gốc riêng có kiểm thử đỏ-trước-sửa (`T706`).
 
 <a id="phu-thuoc-cheo-feature"></a>
 ### Phụ thuộc chéo feature
@@ -80,13 +80,16 @@ Không có hành vi sản phẩm nào đổi (chỉ sửa kiểm thử) nên kh�
 <a id="quyet-dinh-ve-vai-challenger"></a>
 ### Quyết định về vai `challenger`
 
-**KHÔNG DÙNG** vai `challenger`. Ba bất biến `INV-001…003` của spec là bất biến về **quy trình sửa kiểm thử** (không giảm số kiểm thử/độ chặt khẳng định, kiểm thử độc lập thứ tự và không để tiến trình mồ côi, vùng ghi đúng hai tệp), không phải bất biến của hàm nhận đầu vào người dùng nên không có vector/fuzz nào "đánh sập" được; chúng được kiểm tất định bằng quét `skip`/`xfail`/`importorskip`, `pytest --collect-only`, so diff với `outputs` và chạy lặp — việc của `T703` và `T704`. Dùng challenger chỉ thêm một lượt mà không thêm bằng chứng, và đổi cổng review thành nhất trí hai vai. Quyết định cũng được ghi ở `plan.md`.
+**KHÔNG DÙNG** vai `challenger`. Ba bất biến `INV-001…003` của spec là bất biến về **quy trình sửa kiểm thử** (không giảm số kiểm thử/độ chặt khẳng định, kiểm thử độc lập thứ tự và không để tiến trình mồ côi, vùng ghi đúng hai tệp), không phải bất biến của hàm nhận đầu vào người dùng nên không có vector/fuzz nào "đánh sập" được; chúng được kiểm tất định bằng quét `skip`/`xfail`/`importorskip`, `pytest --collect-only`, so diff với `outputs` và chạy lặp — việc của `T703` và `T704`. Dùng challenger chỉ thêm một lượt mà không thêm bằng chứng, và đổi cổng review thành nhất trí hai vai. Quyết định cũng được ghi ở `plan.md`. Lượt 2026-10-12 rà lại: hai task hội tụ mới (`T706` sửa `viewer.py`, `T707` sửa spec) không thêm bất biến nào, nên quyết định giữ nguyên — `T706` có ca thử đơn vị đỏ-trước-sửa của chính nó, `T711` là bằng chứng độc lập.
 
 <a id="dependencies-va-wave"></a>
 ## Dependencies và wave
 
+- Wave 0: `T709` (khung gói trên cây gốc; `T701`, `T702`, `T705`, `T706`, `T708`, `T710` đều `depends_on` nó).
 - Wave 1 (song song, độc lập — hai tệp, hai nguyên nhân): `T701`, `T702`.
 - Wave 2: `T703`, `T705` (song song). Wave 3: `T704`.
+- Hội tụ: `T706` (sau `T702`, `T707`), `T707` (sau `T704`), `T708`, `T710` (song song, sau `T709`), cuối cùng `T711` (reviewer, phụ thuộc bắc cầu mọi task hội tụ).
+- Không có task đổi hành vi mà test của feature trước đang khẳng định (`T706` chỉ đưa `set_texts`/`clear_texts` ra khỏi khối khoá, giữ nguyên hành vi HUD của 005) ⇒ không cần task "cập nhật test cũ"; ca thử hồi quy của `T706` nằm cùng task. Kiểm thử E2E (`T705`) viện dẫn lệnh thật thay cho bảng chuyển màn vì feature không có giao diện.
 
 | id | mô tả | outputs | depends_on | role | độ khó |
 |---|---|---|---|---|---|
@@ -107,8 +110,8 @@ Không có hành vi sản phẩm nào đổi (chỉ sửa kiểm thử) nên kh�
 
 - Mỗi kiểm thử có đúng một mục `Nguyên nhân gốc` kèm số lần chạy, kết quả đo trước/sau và môi trường đo (SC-004); môi trường chưa đo ghi "CHƯA KIỂM".
 - `test_view3d_process_separate` xanh 5/5 (và 5/5 có tải nền); `test_real_viewer_plays_or_reports_no_display` xanh 5/5 **hoặc** ghi rõ "còn đỏ vì nguyên nhân ở `src/`" kèm bằng chứng và đề xuất (AC-5) — không có đường làm xanh bằng nới khẳng định, `skip`/`xfail`.
-- Diff chỉ gồm hai tệp kiểm thử; 0 thay đổi trong `src/`; số kiểm thử trong hai tệp không giảm; `ruff` và `mypy --strict` xanh trên hai tệp.
-- Trace: `docs/05-tracing/trace/007-stabilize-viewer-tests.md` — mỗi AC/FR/INV/NFR có task và test mức entrypoint.
+- Diff nằm trong vùng FR-007: hai tệp integration, tệp E2E mới, và (chỉ vì nguyên nhân T-A đo ở đó) `src/mma_ai/visualization/viewer.py` + `tests/unit/test_viewer.py`; 0 thay đổi ở tệp `src/` khác; số kiểm thử trong hai tệp không giảm; `ruff` và `mypy --strict` xanh.
+- Trace: `docs/05-tracing/trace/007-stabilize-viewer-tests.md` — mỗi AC/FR/INV/NFR/SC có task và test mức entrypoint.
 - Mọi verdict chặn merge (reviewer) đã được giải quyết.
 
 ## Phase 4: Convergence

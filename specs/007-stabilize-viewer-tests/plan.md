@@ -4,9 +4,9 @@ title: "Sửa gốc 2 test hiển thị/tiến trình — Kế hoạch triển k
 doc_type: plan
 owner_agent: spec
 status: draft
-updated: "2026-10-11"
+updated: "2026-10-12"
 feature: "007-stabilize-viewer-tests"
-version: "1.0.0"
+version: "1.1.0"
 ---
 
 # Implementation Plan: Sửa gốc 2 test hiển thị/tiến trình làm đỏ cổng tests
@@ -36,7 +36,7 @@ version: "1.0.0"
 <a id="summary"></a>
 ## Summary
 
-Feature **chỉ sửa hai tệp kiểm thử** để cổng tests cho kết quả tất định; không đổi `src/`, không thêm hành vi sản phẩm. Hai kiểm thử có hai nguyên nhân độc lập và hai hướng sửa khác nhau (chi tiết và căn cứ ở [research.md](research.md)):
+Feature sửa hai tệp kiểm thử integration (cộng một tệp e2e mới của QA) để cổng tests cho kết quả tất định; `src/` chỉ đổi ở `src/mma_ai/visualization/viewer.py` khi đo chứng minh nguyên nhân T-A nằm ở đó (spec 1.1.0, INV-003, AC-5); không thêm hành vi sản phẩm. Hai kiểm thử có hai nguyên nhân độc lập và hai hướng sửa khác nhau (chi tiết và căn cứ ở [research.md](research.md)):
 
 - **T-B `test_view3d_process_separate` (US2, AC-2)** — nguyên nhân đã xác định được từ mã (đọc, chưa chạy): hàm tạo tiến trình thay thế của kiểm thử đưa tiến trình vào danh sách ngay khi **tạo**, còn `.start()` do `mma_ai.monitoring.cli` gọi **sau đó** ở luồng khác; vòng chờ của kiểm thử chỉ đợi "danh sách không rỗng" rồi kiểm `pid` ngay ⇒ khi luồng chưa kịp `.start()` (máy bận) thì `pid is None`. Sửa: chờ có hạn mức cho tới khi tiến trình **thực sự có PID** (hoặc đã thoát sớm), rồi mới khẳng định. Lỗi nằm ở kiểm thử, không ở `src/`.
 - **T-A `test_real_viewer_plays_or_reports_no_display` (US1, AC-1)** — nguyên nhân **CHƯA ĐO** (môi trường dựng được ở lượt đặc tả không có `mujoco`). Giả thuyết xếp theo khả năng và cách phân biệt ở research.md Q2. Việc đầu tiên của builder là **đo, không đoán** (FR-005): chạy riêng, có dấu vết ngăn xếp khi treo. Có cây quyết định: nguyên nhân ở kiểm thử (hạn mức/độ chịu tải/tranh chấp giữa các cửa sổ song song) ⇒ sửa kiểm thử; nguyên nhân ở `src/` (viewer treo lúc mở/đóng, hoặc `display_available()` báo "có" mà không có cửa sổ GL dùng được — khoảng trống so với 005 FR-011/FR-014) ⇒ **DỪNG và báo** (AC-5), không sửa `src/`, không che.
@@ -137,7 +137,10 @@ specs/007-stabilize-viewer-tests/
 tests/integration/
 ├── test_replay_viewer_real.py    # T-A: thêm _run_cli_bounded; hiệu chỉnh theo số đo (nếu nguyên nhân ở kiểm thử)
 └── test_viewer3d_train.py        # T-B: thêm _wait_until_started; sửa đoạn "Chờ tiến trình 3D được khởi chạy"
-src/                              # KHÔNG đổi (INV-003)
+tests/e2e/test_007_viewer_entrypoint.py   # QA: kịch bản trên entrypoint thật (task T705)
+src/mma_ai/visualization/viewer.py        # CHỈ đổi qua task sửa gốc T706 (AC-5): set_texts/clear_texts ra khỏi lock_ctx
+tests/unit/test_viewer.py                 # ca thử hồi quy của T706
+src/                                      # mọi tệp khác KHÔNG đổi (INV-003)
 ```
 
 <a id="lenh-build-test"></a>
@@ -187,7 +190,8 @@ uv run --isolated --with mypy mypy --strict tests/integration/test_replay_viewer
 <a id="quyet-dinh-o-buoc-tasks"></a>
 ## Quyết định ở bước tasks
 
-- Hai task kiểm thử độc lập (T-B nhanh, có thể làm trước; T-A đo trước rồi mới sửa); mỗi task có `outputs` đúng một tệp; không dùng `depends_on` giữa hai task.
+- Hai task kiểm thử độc lập (T-B nhanh, có thể làm trước; T-A đo trước rồi mới sửa); mỗi task có `outputs` đúng một tệp; không dùng `depends_on` giữa hai task. Hai task này `depends_on` task chủ cũ của tệp (003/005) và khung gói `T709`.
+- Task hội tụ: `T706` (builder, sửa `viewer.py` theo AC-5 sau khi `T702` đo), `T707` (spec, chỉnh INV-003/FR-007), `T708`/`T710` (nối mã `003/AC-5` vào docstring test của 003: integration do builder, e2e do qa vì builder không ghi được `tests/e2e/**`), `T709` (khung gói), `T711` (reviewer). `T705` (qa, e2e) và `T704` (reviewer) đứng sau `T701`/`T702`.
 - Task T-A gồm hai bước ghi trong mô tả: (1) đo và ghi nguyên nhân; (2) sửa hoặc dừng-và-báo theo cây quyết định. Nếu dừng-và-báo thì task kết thúc với báo cáo, không tạo diff ngoài phần độ cứng FR-002.
 - Task cuối: chạy lặp theo NFR-REL-001 và gom bằng chứng (không có tệp mã; chỉ evidence do cổng sinh).
 - Không có task giao diện, hạ tầng hay khách duyệt.
@@ -202,7 +206,7 @@ uv run --isolated --with mypy mypy --strict tests/integration/test_replay_viewer
 
 - Phản biện: kế hoạch có thể bị coi là "né" T-A bằng hạn mức lớn hơn. Đáp: hạn mức chỉ được đổi khi số đo chứng minh lệnh con **kết thúc** nhưng chậm hơn hạn cũ; lệnh con treo thật thì kiểm thử vẫn đỏ có chẩn đoán và áp dụng AC-5 — không có đường nào làm xanh bằng cách nới.
 - Phản biện: `_wait_until_started` có thể che lỗi "tiến trình không bao giờ khởi chạy". Đáp: hết hạn thì kiểm thử đỏ với thông điệp riêng (Acceptance Scenario 4 của US2); hạn mức hữu hạn.
-- Phản biện: máy báo `NO_E2E` (không task `qa` nào sinh `tests/e2e/**`). Đáp: có chủ ý, `lý do`: feature chỉ sửa hai tệp kiểm thử tích hợp (INV-003, SC-005) — hai kiểm thử đó đã chạy lệnh thật `python -m mma_ai.visualization.cli` / `python -m mma_ai.monitoring.cli` bằng tiến trình con, tức đã ở mức entrypoint; thêm một tệp `tests/e2e/**` là ghi ngoài hai tệp được phép và lặp lại chính hai kiểm thử đó. Vai `qa` vẫn có task (chạy lặp độc lập theo NFR-REL-001, ghi báo cáo). Dòng `NO_E2E` còn lại là khoảng trống đã biết, không phải thiếu bằng chứng.
+- Phản biện: máy báo `NO_E2E` (không task `qa` nào sinh `tests/e2e/**`). Đáp (đã đổi so với bản 1.0.0): có task `T705` của `qa` sinh `tests/e2e/test_007_viewer_entrypoint.py` chạy lệnh thật `python -m mma_ai.visualization.cli` / `python -m mma_ai.monitoring.cli` bằng tiến trình con; tệp này nằm trong vùng ghi FR-007/INV-003 của spec 1.1.0 nên `NO_E2E` không còn. `lý do` bản cũ (không thêm tệp e2e) bị thay vì mã đã gộp có tệp đó.
 - Phản biện: một tệp khoá chung giữa các kiểm thử làm kiểm thử phụ thuộc thứ tự. Đáp: chỉ thêm khi số đo chứng minh tranh chấp; khoá nối tiếp chứ không đổi thứ tự, và kiểm thử vẫn độc lập (INV-002).
 
 <a id="complexity-tracking"></a>
