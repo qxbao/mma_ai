@@ -259,6 +259,7 @@ def evaluate_checkpoint(
     update_idx = loaded_ckpt.update_idx
     env_steps = loaded_ckpt.env_steps
     checkpoint_saved_with = loaded_ckpt.library_versions
+    ckpt_seed = getattr(loaded_ckpt, "seed", None)
 
     learned_policy = LearnedPolicy(pt_path)
 
@@ -291,6 +292,13 @@ def evaluate_checkpoint(
     run_seed = int(manifest_data.get("seed", 0))
     manifest_model_sha256 = str(manifest_data.get("model", {}).get("sha256", ""))
     muscle_names_from_manifest = manifest_data.get("model", {}).get("muscle_names")
+
+    # Đối chiếu hạt giống huấn luyện nhúng trong checkpoint với hồ sơ run (INV-001, AC-4, F-003)
+    if ckpt_seed is not None and "seed" in manifest_data and int(ckpt_seed) != run_seed:
+        raise CheckpointUnusable(
+            f"Hạt giống huấn luyện (seed={ckpt_seed}) nhúng trong checkpoint không khớp "
+            f"với hạt giống trong hồ sơ run ({run_seed}) (mã thoát 4)."
+        )
 
     body_model = load_muscle_model("myoelbow")
     current_model_sha256 = body_model.info.sha256
@@ -374,6 +382,8 @@ def evaluate_checkpoint(
     # Khởi tạo thư mục tạm trước khi thực hiện các tác vụ tạo tệp (INV-004, FR-013)
     try:
         eval_base_dir.mkdir(parents=True, exist_ok=True)
+        if tmp_dir.exists():
+            shutil.rmtree(tmp_dir, ignore_errors=True)
         tmp_dir.mkdir(parents=True, exist_ok=True)
     except OSError as err:
         raise EvalWriteError(
@@ -480,10 +490,7 @@ def evaluate_checkpoint(
             verdict=verdict,
         )
 
-    except KeyboardInterrupt:
-        shutil.rmtree(tmp_dir, ignore_errors=True)
-        raise
-    except Exception:
+    except BaseException:
         shutil.rmtree(tmp_dir, ignore_errors=True)
         raise
 

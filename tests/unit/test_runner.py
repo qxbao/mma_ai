@@ -157,6 +157,7 @@ def _setup_mock_run_environment(
 
 def _get_mock_loaded_checkpoint(
     model_sha256: str = "384dcb555561287fe39d960aba6496db8b825bebd21df3873bb07920a886066f",
+    seed: int = 42,
 ) -> _DummyLoadedCheckpoint:
     """Khởi tạo đối tượng LoadedCheckpoint mẫu."""
     return _DummyLoadedCheckpoint(
@@ -164,7 +165,7 @@ def _get_mock_loaded_checkpoint(
         critic_state_dict={},
         obs_normalizer_state_dict={},
         optimizer_state_dict={},
-        seed=42,
+        seed=seed,
         rng_state={},
         update_idx=1,
         env_steps=2048,
@@ -195,7 +196,8 @@ def test_step_order_leak_check_before_first_episode(tmp_path: Path) -> None:
     cfg = replace(base_cfg, seeds=replace(base_cfg.seeds, random_policy=12345))
 
     with patch(
-        "mma_ai.learning.checkpoint.load_checkpoint", return_value=_get_mock_loaded_checkpoint()
+        "mma_ai.learning.checkpoint.load_checkpoint",
+        return_value=_get_mock_loaded_checkpoint(seed=12345),
     ):
         with patch("mma_ai.evaluation.runner.LearnedPolicy", _MockLearnedPolicy):
             with patch("mma_ai.evaluation.runner.run_policy_on_targets") as mock_rollout:
@@ -401,3 +403,97 @@ def test_no_training_imports() -> None:
         elif isinstance(node, ast.ImportFrom):
             mod = node.module or ""
             assert mod not in forbidden_modules, f"runner.py không được phép nhập từ '{mod}'"
+
+
+def test_checkpoint_seed_mismatch_manifest_raises_checkpoint_unusable(tmp_path: Path) -> None:
+    """AC-4/INV-001: seed nhúng trong checkpoint không khớp seed manifest
+    ném CheckpointUnusable (F-003)."""
+    run_dir, pt_file = _setup_mock_run_environment(tmp_path, seed=42)
+    cfg = EvalConfig.load()
+
+    # Checkpoint có hạt giống huấn luyện 12345 nhưng manifest ghi 42
+    with patch(
+        "mma_ai.learning.checkpoint.load_checkpoint",
+        return_value=_get_mock_loaded_checkpoint(seed=12345),
+    ):
+        with patch("mma_ai.evaluation.runner.LearnedPolicy", _MockLearnedPolicy):
+            with pytest.raises(CheckpointUnusable) as exc_info:
+                evaluate_checkpoint(pt_file, cfg=cfg)
+
+            assert exc_info.value.exit_code == 4
+            assert "12345" in str(exc_info.value)
+            assert "42" in str(exc_info.value)
+
+
+def test_baseexception_cleans_up_tmp_dir(tmp_path: Path) -> None:
+    """INV-004: ngoại lệ BaseException (SystemExit) ở bước 5 không để lại
+    thư mục tạm .tmp-* (F-004)."""
+    run_dir, pt_file = _setup_mock_run_environment(tmp_path, seed=42)
+    cfg = EvalConfig.load()
+
+    with patch(
+        "mma_ai.learning.checkpoint.load_checkpoint", return_value=_get_mock_loaded_checkpoint()
+    ):
+        with patch("mma_ai.evaluation.runner.LearnedPolicy", _MockLearnedPolicy):
+            with patch(
+                "mma_ai.evaluation.runner.run_policy_on_targets",
+                side_effect=SystemExit(3),
+            ):
+                with pytest.raises(SystemExit):
+                    evaluate_checkpoint(pt_file, cfg=cfg)
+
+    eval_dir = run_dir / "eval"
+    if eval_dir.exists():
+        tmp_dirs = [p.name for p in eval_dir.iterdir() if p.name.startswith(".tmp-")]
+        assert tmp_dirs == [], f"Thư mục tạm còn sót lại sau SystemExit: {tmp_dirs}"
+
+
+def test_stale_tmp_dir_is_cleaned_before_run(tmp_path: Path) -> None:
+    """INV-004/INV-005: thư mục .tmp-* cũ từ lượt trước bị hủy được
+    làm sạch trước khi chạy (F-005)."""
+    run_dir, pt_file = _setup_mock_run_environment(tmp_path, seed=42)
+    cfg = EvalConfig.load()
+
+    eval_dir = run_dir / "eval"
+    eval_dir.mkdir(parents=True, exist_ok=True)
+
+    dummy_chart_res = ChartResult(
+        status="complete",
+        files={
+            "loss": "charts/loss.png",
+            "reward": "charts/reward.png",
+            "activation": "charts/activation.png",
+        },
+        points_plotted={"loss": 2, "reward": 2, "activation": 12},
+        points_dropped=0,
+        reason=None,
+        log_source="jsonl",
+        data=ChartData([], {}),
+    )
+
+    with patch(
+        "mma_ai.evaluation.runner.generate_eval_id", return_value="20261011T010203Z_e42"
+    ):
+        stale_tmp = eval_dir / ".tmp-20261011T010203Z_e42"
+        stale_tmp.mkdir(parents=True, exist_ok=True)
+        stale_file = stale_tmp / "STALE_FROM_KILLED_RUN.txt"
+        stale_file.write_text("dữ liệu cũ", encoding="utf-8")
+
+        with patch(
+            "mma_ai.learning.checkpoint.load_checkpoint",
+            return_value=_get_mock_loaded_checkpoint(),
+        ):
+            with patch("mma_ai.evaluation.runner.LearnedPolicy", _MockLearnedPolicy):
+                with patch("mma_ai.evaluation.runner.read_training_log", return_value=MagicMock()):
+                    with patch(
+                        "mma_ai.evaluation.runner.render_charts",
+                        return_value=dummy_chart_res,
+                    ):
+                        res = evaluate_checkpoint(pt_file, cfg=cfg)
+
+    published = res.eval_dir
+    assert published.is_dir()
+    assert not (published / "STALE_FROM_KILLED_RUN.txt").exists(), (
+        "Tệp cũ trong thư mục tạm không được phép xuất hiện trong thư mục công bố"
+    )
+
