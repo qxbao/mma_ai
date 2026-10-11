@@ -1,9 +1,9 @@
 {
   "schema_version": "1.0.0",
-  "run_id": "run-20261011-64c55f",
+  "run_id": "run-20261011-0df231",
   "task_id": "T338",
-  "round": 2,
-  "sha_reviewed": "c401cd1b680649a6b40d0548aa8ab9b26c63b539",
+  "round": 1,
+  "sha_reviewed": "db93175811e8394b6435ea93268fde6a1d4bab28",
   "verdict": "APPROVE",
   "findings": [
     {
@@ -11,8 +11,8 @@
       "severity": "OPTIONAL",
       "file": "src/mma_ai/learning/run_dir.py",
       "line": 29,
-      "claim": "INV-001: create_run_dir ghép stage vào tên thư mục không kiểm; stage có dấu phân cách đường dẫn ném FileNotFoundError thô hoặc, khi tiền tố trùng một run đang có, tạo thư mục NGOÀI runs_dir. Chỉ chạm được qua API vì CLI/TrainConfig ép stage == 'elbow'. Còn đỏ ở vòng 2, không chặn merge.",
-      "failure_scenario": "Với run '<stamp>_x_s1' đã tồn tại cùng giây: create_run_dir(root, 'x_s1/<hai cấp lên>/escape', 1) tạo thư mục escape_s1 ngoài runs_dir; create_run_dir(root, 'a/b', 1) ném FileNotFoundError không phải RunDirError. Test: test_inv001_stage_with_path_separators_cannot_leave_runs_dir (xfail không strict, F-005); chạy pytest --runxfail vẫn đỏ.",
+      "claim": "INV-001: create_run_dir ghép stage vào tên thư mục không kiểm; stage có dấu phân cách đường dẫn ném lỗi thô hoặc tạo thư mục NGOÀI runs_dir. Chỉ chạm được qua API vì CLI/TrainConfig ép stage == 'elbow'. Còn đỏ, không chặn merge.",
+      "failure_scenario": "Với run '<stamp>_x_s1' đã tồn tại cùng giây: create_run_dir(root, 'x_s1/../../escape', 1) trả RunDir trỏ tới escape_s1 ngoài runs_dir; create_run_dir(root, 'a/b', 1) cũng không ở trực tiếp dưới runs_dir. Test: test_inv001_stage_with_path_separators_cannot_leave_runs_dir (xfail không strict, F-005); pytest --runxfail vẫn đỏ cả 2 tham số.",
       "parked": false
     }
   ]

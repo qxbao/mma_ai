@@ -1273,3 +1273,23 @@ def test_inv004_trainer_resume_rejects_corrupt_checkpoint_with_checkpoint_error(
     resume_run.mkdir()
     with pytest.raises(CheckpointError):
         Trainer(_train_cfg_steps(24), env, resume_run, resume_checkpoint=pt_file)
+
+
+class _PickleBomb:
+    """Đối tượng mà unpickle sẽ ghi tệp đánh dấu — mô phỏng checkpoint độc hại."""
+
+    def __init__(self, marker: Path) -> None:
+        self.marker = marker
+
+    def __reduce__(self) -> tuple[Callable[..., Any], tuple[Any, ...]]:
+        return (Path.write_text, (self.marker, "đã thực thi", "utf-8"))
+
+
+def test_inv004_malicious_pickle_checkpoint_is_rejected_without_executing(tmp_path: Path) -> None:
+    """Checkpoint là pickle có `__reduce__` độc hại: MUST là CheckpointError, không chạy mã."""
+    marker = tmp_path / "marker.txt"
+    evil = tmp_path / "evil.pt"
+    torch.save({"actor": _PickleBomb(marker)}, evil)
+    with pytest.raises(CheckpointError):
+        load_checkpoint(evil)
+    assert not marker.exists()
