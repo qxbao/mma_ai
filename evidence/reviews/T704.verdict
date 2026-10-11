@@ -1,0 +1,66 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "run-20261011-2b741d",
+  "task_id": "T704",
+  "round": 1,
+  "sha_reviewed": "0a064b2137271ee4b276321908066ca9da9ec2c3",
+  "verdict": "APPROVE",
+  "findings": [
+    {
+      "id": "F-001",
+      "severity": "MINOR",
+      "file": "src/mma_ai/visualization/viewer.py",
+      "line": 179,
+      "claim": "Nguyên nhân gốc của T-A (test_real_viewer_plays_or_reports_no_display) nằm ở src/: ViewerSink.show gọi set_texts bên trong khối khoá của handle, builder T702 đo treo 2/5 lần chạy CLI trực tiếp; theo AC-5 feature 007 dừng-và-báo đúng quy trình, nhưng chưa có task/câu hỏi nào nhận việc sửa nên lỗi vẫn còn.",
+      "failure_scenario": "Cổng tests của T705 ghi 'FLAKY: đỏ lần 1, xanh lần 2' đúng ở test này (log: lệnh con bị SIGKILL sau 25 s, stdout rỗng); khi chạy -n auto trên máy có màn hình, mọi cổng tương lai vẫn có thể đỏ ngẫu nhiên, và người dùng chạy `python -m mma_ai.visualization.cli` trên màn hình thật có thể gặp treo. Reviewer chạy 6 lần nodeid + 10 lần CLI trực tiếp trên DISPLAY=:0 đều xanh/mã 0 (~1,1 s) nên KHÔNG tái hiện được ⇒ không nâng CRITICAL. Cần giao task sửa src (đề xuất của builder: đưa set_texts ra ngoài lock_ctx) ở feature khác."
+    },
+    {
+      "id": "F-002",
+      "severity": "MINOR",
+      "file": ".ai/runs/run-20261011-d51db4/reports/qa-007-reliability.md",
+      "line": 25,
+      "claim": "Báo cáo QA T703 tuyên bố T-A 'xanh 5/5' và NFR-REL-001 đạt, không nhắc phép đo 2/5 treo của T702 (builder-T702.md, Quan sát 2–4) lẫn ghi chú FLAKY của cổng T705 trên cùng test; 5 lần chạy tuần tự không phủ điều kiện song song -n auto nơi lỗi xuất hiện.",
+      "failure_scenario": "Người đọc báo cáo QA kết luận 'T-A ổn định' trong khi bằng chứng ngoài (cổng T705) cho thấy lỗi ngắt quãng còn nguyên; không ai biết cần theo dõi/sửa src. Nên bổ sung một dòng 'còn rủi ro treo ngắt quãng do nguyên nhân ở src (xem F-001)' vào báo cáo hoặc vào chú thích test."
+    },
+    {
+      "id": "F-003",
+      "severity": "MINOR",
+      "file": "tests/e2e/test_007_viewer_entrypoint.py",
+      "line": 231,
+      "claim": "Kịch bản AC-2 trên entrypoint monitoring.cli --view3d chỉ khẳng định PID View3D khác PID chính khi quan sát được tiến trình con; không có tiến trình con và không có DISPLAY thì test đi qua mà không chứng minh gì về tách tiến trình (nhánh rỗng về khẳng định).",
+      "failure_scenario": "Trên runner không màn hình, nếu View3D bị bỏ khỏi entrypoint hoàn toàn, test vẫn xanh; AC-2 ở mức entrypoint chỉ thật sự được kiểm trên máy có màn hình. Ghi rõ giới hạn này trong docstring (hiện có comment nhưng không nói đây là khoảng trống bằng chứng)."
+    },
+    {
+      "id": "F-004",
+      "severity": "MINOR",
+      "file": "specs/007-stabilize-viewer-tests/checklists/acceptance.md",
+      "line": 23,
+      "claim": "Checklist nghiệm thu còn nguyên các dòng THIẾU/'chưa tồn tại' cho test T701/T702/T705 và cổng T701–T705 vốn đã có (tests/e2e/test_007_viewer_entrypoint.py, evidence/gates/T70{1,2,3,5}.json) — nội dung lỗi thời so với nhánh tích hợp (stale-decision).",
+      "failure_scenario": "Người duyệt đọc checklist thấy mọi AC 'THIẾU' dù đã có test và cổng xanh, hoặc ngược lại không phân biệt được dòng thật sự còn thiếu; reviewer phải đối chiếu bằng chứng cổng (đã làm) thay vì dựa checklist. Cần qa sinh lại checklist sau khi T701–T705 xong."
+    },
+    {
+      "id": "F-005",
+      "severity": "MINOR",
+      "file": "specs/007-stabilize-viewer-tests/tasks.md",
+      "line": 45,
+      "claim": "plan-mandated: INV-003/FR-007 (spec) ghi vùng sửa là ĐÚNG hai tệp test, nhưng tasks.md thêm tệp thứ ba tests/e2e/test_007_viewer_entrypoint.py (T705) và vùng ghi báo cáo QA; hai tài liệu dùng hai phép đếm khác nhau (boundary-mismatch).",
+      "failure_scenario": "Quét INV-003 bằng 'git diff --name-only chỉ hai tệp' sẽ báo vi phạm giả; tiêu chí cần được sửa trong spec thành 'hai tệp integration + một tệp e2e mới, 0 tệp src'. Thực tế diff 007 (ac3063b..0a064b2) không đổi src nên bất biến cốt lõi còn nguyên."
+    },
+    {
+      "id": "F-006",
+      "severity": "MINOR",
+      "file": ".ai/runs/run-20261011-d51db4/reports/qa-007-reliability.md",
+      "line": 71,
+      "claim": "QA ghi 5 tiến trình mma_ai.monitoring.cli sống >5 giờ trong môi trường chia sẻ nhưng không chứng minh chúng không phải mồ côi của test T-B (INV-002); không có hành động nào được giao cho chủ sở hữu.",
+      "failure_scenario": "Nếu các tiến trình đó là rò rỉ từ bản test cũ (trước d6453e3) thì INV-002 đã từng bị vi phạm và có thể lặp lại; nếu là của phiên khác thì không liên quan. ⚠️ Không kiểm được từ diff: nguồn gốc 5 tiến trình đó."
+    },
+    {
+      "id": "F-007",
+      "severity": "OPTIONAL",
+      "file": "src/mma_ai/visualization/replay.py",
+      "line": 0,
+      "claim": "Số đo kích thước +891/-239 của kit tính trên dải base..head gồm mã sản phẩm của feature 005 (replay.py +646, episode.py, cli.py, episode.schema.json) đã được verdict T523 APPROVE; riêng feature 007 đổi 0 dòng mã sản phẩm (git diff ac3063b..0a064b2 -- src rỗng), chỉ +401/-24 mã test/báo cáo (không tính vào ngân sách).",
+      "failure_scenario": "Nếu đọc nhãn OVERSIZED máy gán cho dải này như thể đo lát 007 sẽ yêu cầu chia lát sai chỗ; 005 là plan-mandated đã được chấm riêng nên không chặn T704."
+    }
+  ]
+}
