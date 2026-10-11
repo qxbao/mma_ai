@@ -129,16 +129,27 @@ def _collect_train_seeds(
     train_seeds: list[int] = [seed]
     curr_manifest = manifest_data
     depth = 0
+    visited_run_ids: set[str] = set()
+    initial_run_id = manifest_data.get("run_id")
+    if initial_run_id and isinstance(initial_run_id, str):
+        visited_run_ids.add(initial_run_id)
 
     while curr_manifest.get("resumed_from") is not None and depth < 100:
         depth += 1
         resumed = curr_manifest["resumed_from"]
         if not isinstance(resumed, dict):
-            break
+            raise TrainSetUnknown(
+                f"Hồ sơ resumed_from không phải mapping hợp lệ: {resumed!r} (FR-009, INV-001)."
+            )
 
         parent_run_id = resumed.get("run_id")
         if not parent_run_id or not isinstance(parent_run_id, str):
             raise TrainSetUnknown("Hồ sơ resumed_from thiếu run_id của run cha.")
+
+        if parent_run_id in visited_run_ids:
+            # Dừng nếu gặp chu trình tham chiếu, tránh lặp vô tận (INV-001)
+            break
+        visited_run_ids.add(parent_run_id)
 
         candidates: list[Path] = []
         if run_dir is not None:
@@ -163,6 +174,11 @@ def _collect_train_seeds(
             raise TrainSetUnknown(
                 f"Không thể đọc hồ sơ run cha tại '{parent_file}': {err}"
             ) from err
+
+        if not isinstance(parent_manifest, dict):
+            raise TrainSetUnknown(
+                f"Nội dung hồ sơ run cha tại '{parent_file}' không hợp lệ (không phải mapping)."
+            )
 
         parent_seed = parent_manifest.get("seed")
         if (
@@ -193,73 +209,104 @@ def _resolve_target_set_pair(
     if pair is not None:
         eval_pair = pair
         min_required_m = float(eval_pair.config.get("min_separation_m", 0.03))
-    else:
-        # Lấy đường dẫn cấu hình môi trường từ ghi đè hoặc hồ sơ run
-        if cfg.paths.env_config_override:
-            env_cfg_path_str = cfg.paths.env_config_override
+
+        # Xác định nguồn gốc và đối chiếu mã băm fingerprint nếu hồ sơ có ghi nhận
+        manifest_fp = (
+            manifest_data.get("target_fingerprint_sha256")
+            or manifest_data.get("env", {}).get("target_fingerprint_sha256")
+        )
+        if manifest_fp:
+            if manifest_fp != eval_pair.fingerprint_sha256:
+                raise LeakageError(
+                    f"Mã băm fingerprint của tập mục tiêu ({eval_pair.fingerprint_sha256}) "
+                    f"không khớp với fingerprint trong hồ sơ run ({manifest_fp})."
+                )
+            provenance = "manifest_fingerprint"
         else:
-            env_cfg_path_str = manifest_data.get("config", {}).get("env_config")
-            if not env_cfg_path_str:
-                raise TrainSetUnknown(
-                    "Hồ sơ run thiếu cấu hình môi trường (config.env_config) và không có pair."
+            provenance = "rebuilt_from_config"
+            warnings.warn(
+                "Hồ sơ run không chứa target_fingerprint_sha256; tập mục tiêu được dựng lại.",
+                UserWarning,
+                stacklevel=2,
+            )
+
+        # Kiểm tra ràng buộc ghim expect_fingerprint_sha256
+        if cfg.paths.expect_fingerprint_sha256 is not None:
+            if cfg.paths.expect_fingerprint_sha256 != eval_pair.fingerprint_sha256:
+                raise LeakageError(
+                    f"Mã băm fingerprint của tập mục tiêu ({eval_pair.fingerprint_sha256}) "
+                    f"không khớp với expect_fingerprint_sha256 "
+                    f"({cfg.paths.expect_fingerprint_sha256})."
                 )
 
-        candidate_paths: list[Path] = [Path(env_cfg_path_str)]
-        if run_dir is not None:
-            candidate_paths.append(run_dir / env_cfg_path_str)
+        return eval_pair, min_required_m, provenance
 
-        resolved_path: Path | None = None
-        for cand in candidate_paths:
-            if cand.is_file():
-                resolved_path = cand
-                break
+    # 1. Tái dựng tập mục tiêu huấn luyện của chính run (bắt buộc phải có cấu hình run)
+    run_env_cfg_path_str = manifest_data.get("config", {}).get("env_config")
+    if not run_env_cfg_path_str:
+        raise TrainSetUnknown(
+            "Hồ sơ run thiếu cấu hình môi trường (config.env_config) và không có pair."
+        )
 
-        if resolved_path is None:
-            raise TrainSetUnknown(
-                f"Không tìm thấy tệp cấu hình môi trường tại '{env_cfg_path_str}'."
-            )
+    repo_root = Path(__file__).resolve().parents[3]
+    candidate_paths: list[Path] = [Path(run_env_cfg_path_str)]
+    if run_dir is not None:
+        candidate_paths.append(run_dir / run_env_cfg_path_str)
+    candidate_paths.append(repo_root / run_env_cfg_path_str)
 
-        try:
-            loaded_env = ElbowEnvConfig.load(resolved_path)
-        except Exception as err:
-            raise TrainSetUnknown(
-                f"Không thể nạp cấu hình môi trường từ '{resolved_path}': {err}"
-            ) from err
+    resolved_run_path: Path | None = None
+    for cand in candidate_paths:
+        if cand.is_file():
+            resolved_run_path = cand
+            break
 
-        from mma_ai.physics.body_model import load_muscle_model
+    if resolved_run_path is None:
+        raise TrainSetUnknown(
+            f"Không tìm thấy tệp cấu hình môi trường của run tại '{run_env_cfg_path_str}'."
+        )
 
-        try:
-            loaded_body = load_muscle_model("myoelbow")
-            model_obj = loaded_body.model
-        except Exception as err:
-            raise TrainSetUnknown(
-                f"Không thể nạp mô hình cơ bắp myoelbow: {err}"
-            ) from err
+    try:
+        loaded_run_env = ElbowEnvConfig.load(resolved_run_path)
+    except Exception as err:
+        raise TrainSetUnknown(
+            f"Không thể nạp cấu hình môi trường từ '{resolved_run_path}': {err}"
+        ) from err
 
-        model_sha256 = manifest_data.get("model", {}).get("sha256")
-        if model_sha256 and model_sha256 != loaded_body.info.sha256:
-            raise LeakageError(
-                f"Mã băm XML của mô hình ({loaded_body.info.sha256}) không khớp "
-                f"với hồ sơ run ({model_sha256}) (INV-002)."
-            )
+    from mma_ai.physics.body_model import load_muscle_model
 
-        gen = TargetGenerator(model=model_obj, cfg=loaded_env, model_sha256=model_sha256)
-        eval_pair = gen.generate(seed=loaded_env.targets.default_seed)
-        min_required_m = float(loaded_env.targets.min_separation_m)
+    try:
+        loaded_body = load_muscle_model("myoelbow")
+        model_obj = loaded_body.model
+    except Exception as err:
+        raise TrainSetUnknown(
+            f"Không thể nạp mô hình cơ bắp myoelbow: {err}"
+        ) from err
 
-    # Xác định nguồn gốc và đối chiếu mã băm fingerprint
+    model_sha256 = manifest_data.get("model", {}).get("sha256")
+    if model_sha256 and model_sha256 != loaded_body.info.sha256:
+        raise LeakageError(
+            f"Mã băm XML của mô hình ({loaded_body.info.sha256}) không khớp "
+            f"với hồ sơ run ({model_sha256}) (INV-002)."
+        )
+
+    gen_run = TargetGenerator(model=model_obj, cfg=loaded_run_env, model_sha256=model_sha256)
+    run_pair = gen_run.generate(seed=loaded_run_env.targets.default_seed)
+
+    # Xác định nguồn gốc và đối chiếu fingerprint của môi trường huấn luyện của run
     manifest_fp = (
         manifest_data.get("target_fingerprint_sha256")
         or manifest_data.get("env", {}).get("target_fingerprint_sha256")
     )
     if manifest_fp:
-        if manifest_fp != eval_pair.fingerprint_sha256:
+        if manifest_fp != run_pair.fingerprint_sha256:
             raise LeakageError(
-                f"Mã băm fingerprint của tập mục tiêu ({eval_pair.fingerprint_sha256}) "
+                f"Mã băm fingerprint của tập mục tiêu ({run_pair.fingerprint_sha256}) "
                 f"không khớp với fingerprint trong hồ sơ run ({manifest_fp})."
             )
+        expected_run_fp = manifest_fp
         provenance = "manifest_fingerprint"
     else:
+        expected_run_fp = run_pair.fingerprint_sha256
         provenance = "rebuilt_from_config"
         warnings.warn(
             "Hồ sơ run không chứa target_fingerprint_sha256; tập mục tiêu được dựng lại.",
@@ -267,12 +314,58 @@ def _resolve_target_set_pair(
             stacklevel=2,
         )
 
+    # 2. Xử lý ghi đè cấu hình môi trường nếu được chỉ định qua cfg.paths.env_config_override
+    if cfg.paths.env_config_override:
+        override_cfg_str = cfg.paths.env_config_override
+        cand_overrides: list[Path] = [Path(override_cfg_str)]
+        if run_dir is not None:
+            cand_overrides.append(run_dir / override_cfg_str)
+        cand_overrides.append(repo_root / override_cfg_str)
+
+        resolved_override_path: Path | None = None
+        for cand in cand_overrides:
+            if cand.is_file():
+                resolved_override_path = cand
+                break
+
+        if resolved_override_path is None:
+            raise TrainSetUnknown(
+                f"Không tìm thấy tệp cấu hình môi trường override tại '{override_cfg_str}'."
+            )
+
+        try:
+            loaded_override_env = ElbowEnvConfig.load(resolved_override_path)
+        except Exception as err:
+            raise TrainSetUnknown(
+                f"Không thể nạp cấu hình môi trường override từ '{resolved_override_path}': {err}"
+            ) from err
+
+        gen_override = TargetGenerator(
+            model=model_obj, cfg=loaded_override_env, model_sha256=model_sha256
+        )
+        override_pair = gen_override.generate(seed=loaded_override_env.targets.default_seed)
+
+        # Đối chiếu với môi trường huấn luyện của chính run (F-001, INV-001, INV-002)
+        if override_pair.fingerprint_sha256 != expected_run_fp:
+            raise LeakageError(
+                f"Tập mục tiêu dựng từ env_config_override ({override_pair.fingerprint_sha256}) "
+                f"không khớp với môi trường huấn luyện của run ({expected_run_fp}) "
+                "(INV-001, INV-002)."
+            )
+
+        eval_pair = override_pair
+        min_required_m = float(loaded_override_env.targets.min_separation_m)
+    else:
+        eval_pair = run_pair
+        min_required_m = float(loaded_run_env.targets.min_separation_m)
+
     # Kiểm tra ràng buộc ghim expect_fingerprint_sha256
     if cfg.paths.expect_fingerprint_sha256 is not None:
         if cfg.paths.expect_fingerprint_sha256 != eval_pair.fingerprint_sha256:
             raise LeakageError(
                 f"Mã băm fingerprint của tập mục tiêu ({eval_pair.fingerprint_sha256}) "
-                f"không khớp với expect_fingerprint_sha256 ({cfg.paths.expect_fingerprint_sha256})."
+                f"không khớp với expect_fingerprint_sha256 "
+                f"({cfg.paths.expect_fingerprint_sha256})."
             )
 
     return eval_pair, min_required_m, provenance
@@ -286,18 +379,43 @@ def _check_target_disjointness(
     train_targets = eval_pair.train
     test_targets = eval_pair.test
 
+    if len(train_targets) == 0:
+        raise LeakageError(
+            "Tập mục tiêu huấn luyện rỗng; không thể xác minh tính không giao cắt (INV-001)."
+        )
+
+    if len(test_targets) == 0:
+        raise LeakageError(
+            "Tập mục tiêu đánh giá rỗng; không thể xác minh tính không giao cắt (INV-001)."
+        )
+
     min_dist = float("inf")
     n_checked = 0
 
     for t_eval in test_targets:
         pos_e = t_eval.position_m
+        if not all(math.isfinite(x) for x in pos_e):
+            raise LeakageError(
+                f"Mục tiêu kiểm thử #{t_eval.index} chứa toạ độ không hữu hạn: {pos_e} (INV-001)."
+            )
         for t_train in train_targets:
-            n_checked += 1
             pos_t = t_train.position_m
+            if not all(math.isfinite(x) for x in pos_t):
+                raise LeakageError(
+                    f"Mục tiêu huấn luyện #{t_train.index} chứa toạ độ không hữu hạn: "
+                    f"{pos_t} (INV-001)."
+                )
+            n_checked += 1
             dx = pos_e[0] - pos_t[0]
             dy = pos_e[1] - pos_t[1]
             dz = pos_e[2] - pos_t[2]
             dist = math.sqrt(dx * dx + dy * dy + dz * dz)
+
+            if not math.isfinite(dist):
+                raise LeakageError(
+                    f"Khoảng cách giữa mục tiêu kiểm thử #{t_eval.index} và "
+                    f"huấn luyện #{t_train.index} không hữu hạn: {dist} (INV-001)."
+                )
 
             if dist < min_dist:
                 min_dist = dist
@@ -308,6 +426,11 @@ def _check_target_disjointness(
                     f"test #{t_eval.index} và train #{t_train.index} cách nhau {dist:.6f}m "
                     f"< ngưỡng yêu cầu {min_required_m:.6f}m."
                 )
+
+    if n_checked == 0 or not math.isfinite(min_dist):
+        raise LeakageError(
+            "Không có cặp mục tiêu hợp lệ nào được kiểm tra giao rỗng (INV-001)."
+        )
 
     return min_dist, n_checked
 

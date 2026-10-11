@@ -364,3 +364,90 @@ def test_manifest_fingerprint_provenance_matched() -> None:
     assert report.passed is True
     assert report.train_target_provenance == "manifest_fingerprint"
     assert report.provenance == "manifest_fingerprint"
+
+
+def test_env_config_override_mismatched_run_env_rejected(tmp_path: Path) -> None:
+    """F-001, INV-001, INV-002: env_config_override có fingerprint lệch với run bị từ chối."""
+    import yaml
+
+    # Đọc cấu hình môi trường gốc và đổi default_seed sang 7
+    repo_root = Path(__file__).resolve().parents[2]
+    env_yaml_path = repo_root / "src" / "mma_ai" / "environment" / "elbow_env.yaml"
+    env_data = yaml.safe_load(env_yaml_path.read_text(encoding="utf-8"))
+    env_data["targets"]["default_seed"] = 7
+    override_file = tmp_path / "env_override_s7.yaml"
+    override_file.write_text(yaml.safe_dump(env_data), encoding="utf-8")
+
+    manifest_data = {
+        "run_id": "20261010T080000Z_elbow_s42",
+        "status": "done",
+        "seed": 42,
+        "resumed_from": None,
+        "config": {"env_config": "src/mma_ai/environment/elbow_env.yaml"},
+        "model": {"sha256": "384dcb555561287fe39d960aba6496db8b825bebd21df3873bb07920a886066f"},
+    }
+
+    base_cfg = EvalConfig.load()
+    bad_cfg = EvalConfig(
+        schema_version=base_cfg.schema_version,
+        seeds=base_cfg.seeds,
+        episodes=base_cfg.episodes,
+        criterion=base_cfg.criterion,
+        stats=base_cfg.stats,
+        logs=base_cfg.logs,
+        charts=base_cfg.charts,
+        paths=type(base_cfg.paths)(
+            runs_dir=base_cfg.paths.runs_dir,
+            env_config_override=str(override_file),
+            expect_fingerprint_sha256=base_cfg.paths.expect_fingerprint_sha256,
+        ),
+    )
+
+    with pytest.raises(LeakageError, match="không khớp với môi trường"):
+        check_disjoint(manifest_data, bad_cfg, pair=None)
+
+
+@pytest.mark.parametrize("bad_resumed", ["run1", 7, ["run1"]])
+def test_malformed_resumed_from_rejected(bad_resumed: object) -> None:
+    """F-002, FR-009, INV-001: resumed_from sai cấu trúc ném TrainSetUnknown."""
+    pair = _create_sample_target_pair()
+    manifest_data = {
+        "run_id": "20261010T080000Z_elbow_s42",
+        "status": "done",
+        "seed": 42,
+        "resumed_from": bad_resumed,
+        "config": {"env_config": "src/mma_ai/environment/elbow_env.yaml"},
+    }
+    cfg = EvalConfig.load()
+    with pytest.raises(TrainSetUnknown, match="không phải mapping"):
+        check_disjoint(manifest_data, cfg, pair)
+
+
+@pytest.mark.parametrize("degenerate_kind", ["train_empty", "test_empty", "nan_coord"])
+def test_degenerate_pairs_raise_leakage_error(degenerate_kind: str) -> None:
+    """F-006, INV-001: Tập train/test rỗng hoặc toạ độ NaN bị từ chối với LeakageError."""
+    import dataclasses
+    import math
+
+    pair = _create_sample_target_pair()
+    if degenerate_kind == "train_empty":
+        pair = dataclasses.replace(pair, train=TargetSet(role="train", targets=()))
+    elif degenerate_kind == "test_empty":
+        pair = dataclasses.replace(pair, test=TargetSet(role="test", targets=()))
+    else:
+        nan_target = Target(index=0, angle_rad=0.0, position_m=(math.nan, 0.0, 0.0))
+        pair = dataclasses.replace(
+            pair, test=TargetSet(role="test", targets=(nan_target, *pair.test.targets[1:]))
+        )
+
+    manifest_data = {
+        "run_id": "20261010T080000Z_elbow_s42",
+        "status": "done",
+        "seed": 42,
+        "resumed_from": None,
+        "config": {"env_config": "src/mma_ai/environment/elbow_env.yaml"},
+    }
+    cfg = EvalConfig.load()
+    with pytest.raises(LeakageError):
+        check_disjoint(manifest_data, cfg, pair)
+
