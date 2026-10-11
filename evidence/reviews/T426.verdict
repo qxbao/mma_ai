@@ -1,0 +1,82 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "run-20261011-3b6743",
+  "task_id": "T426",
+  "round": 1,
+  "sha_reviewed": "f6ba692c617a3a1b1731b3bc6e9937fc655fbd8e",
+  "verdict": "APPROVE",
+  "findings": [
+    {
+      "id": "F-001",
+      "severity": "MINOR",
+      "file": "src/mma_ai/evaluation/cli.py",
+      "line": 109,
+      "claim": "_format_stat in cứng nhãn '95% CI' trong khi khoảng tin cậy của từng policy tính theo cfg.criterion.confidence_level (metrics.py:174) — dòng 'Hiệu số' ở cli.py:148 thì dùng đúng mức cấu hình, nên hai dòng trên cùng một màn hình mâu thuẫn nhau.",
+      "failure_scenario": "Người dùng chạy `--config` với criterion.confidence_level = 0.99: stdout ghi 'Tỷ lệ thành công ... [95% CI: a ; b]' nhưng a, b là khoảng 99%; report.json vẫn đúng. Chỉ nhãn trên stdout sai, không ảnh hưởng kết luận better ⇔ ci_low > 0."
+    },
+    {
+      "id": "F-002",
+      "severity": "MINOR",
+      "file": "src/mma_ai/evaluation/runner.py",
+      "line": 347,
+      "claim": "Runner tự dựng lại TargetSetPair đánh giá (runner.py:357-361) thay vì truyền `pair=` cho check_disjoint, và chỉ thử hai ứng viên đường dẫn env_config (CWD, run_dir) trong khi split_guard.py:252-254 thử thêm repo_root; hai nơi suy ra tập mục tiêu độc lập nên có thể lệch nhau (suy từ mã, chưa tái hiện).",
+      "failure_scenario": "Chạy CLI từ thư mục khác gốc repo với manifest.config.env_config là đường dẫn tương đối kiểu `src/mma_ai/environment/elbow_env.yaml`: check_disjoint qua nhờ fallback repo_root, rồi runner ném TrainSetUnknown (mã 5) 'Không tìm thấy tệp cấu hình môi trường' dù phép kiểm rò rỉ đã đạt. Hỏng theo hướng an toàn (không rò rỉ) nhưng thông báo gây hiểu nhầm."
+    },
+    {
+      "id": "F-003",
+      "severity": "MINOR",
+      "file": "specs/004-eval-vs-random-plots/checklists/acceptance.md",
+      "line": 31,
+      "claim": "NFR-STAT-001 vẫn ghi 'THIẾU test mức entrypoint': độ đúng của khoảng tin cậy/kết luận chỉ được chứng minh ở mức unit (test_stats.py, đáp án tay) và tổng hợp (test_verdict_known_policies.py); e2e AC-2 chỉ khẳng định cấu trúc ci_low ≤ difference ≤ ci_high và better ⇔ ci_low > 0.",
+      "failure_scenario": "Một hồi quy làm CLI nối sai đầu vào cho decide() (ví dụ đảo learned/random) vẫn qua e2e AC-2 vì chỉ kiểm bất biến nội tại của báo cáo, không kiểm giá trị so với đáp án biết trước ở entrypoint."
+    },
+    {
+      "id": "F-004",
+      "severity": "MINOR",
+      "file": "pyproject.toml",
+      "line": 25,
+      "claim": "Cổng `tests` chạy `uv run --isolated --with pytest ...` không kèm extras rl/eval nên toàn bộ test tích hợp đánh giá (leakage, bad_checkpoint, storage, determinism, headless, cli) bị importorskip: log cổng T425 ghi 861 passed, 111 skipped. Bằng chứng cổng cho INV-001/INV-004/INV-005/INV-007 chỉ đến từ e2e (T424: 17 passed) và không phủ ca checkpoint hỏng, seed run cha, tái lập.",
+      "failure_scenario": "Hồi quy ở split_guard/report/storage chỉ có test tích hợp bắt được sẽ không làm cổng `tests` đỏ. Reviewer đã chạy hẹp 4 tệp tích hợp (leakage, bad_checkpoint, storage, determinism) với extras rl+eval: 24 passed — nên kết luận hiện tại đứng vững, nhưng cổng tự động không giữ được."
+    },
+    {
+      "id": "F-005",
+      "severity": "MINOR",
+      "file": "src/mma_ai/evaluation/runner.py",
+      "line": 394,
+      "claim": "comment-narration: dòng 394 '# Thực hiện các tập phim đánh giá cho cả hai chính sách' (cũng 323 và 382) chỉ kể lại việc mã ngay dưới đang làm, trùng nhãn '# BƯỚC n' và docstring; xoá đi không mất thông tin. Ngược lại, thứ tự thử hai ứng viên đường dẫn ở dòng 347 (CWD trước, run_dir sau) không có comment giải thích VÌ SAO.",
+      "failure_scenario": "Không gây lỗi chạy; chỉ làm nhiễu khi bảo trì và che mất chỗ cần comment thật."
+    },
+    {
+      "id": "F-006",
+      "severity": "OPTIONAL",
+      "file": "src/mma_ai/evaluation/rollout.py",
+      "line": 190,
+      "claim": "plan-mandated/mang từ T425: finding F-008 của challenger còn mở — mảng object chứa np.complex64 có phần ảo NaN bị astype(float64) cắt phần ảo nên không bị chặn trước env.step (INV-003).",
+      "failure_scenario": "Chỉ policy tuỳ biến gọi trực tiếp run_policy_on_targets chạm được; LearnedPolicy ép float32 và CLI không có đường nhận hành động thô, nên người dùng CLI không gặp. Test tái hiện nằm ở test_inv003_object_array_of_numpy_complex64_nan_imag_not_dropped (xfail không strict)."
+    },
+    {
+      "id": "F-007",
+      "severity": "OPTIONAL",
+      "file": "src/mma_ai/evaluation/charts.py",
+      "line": 0,
+      "claim": "Ảnh e2e AC-3 (activation, loss): trục 'Bước huấn luyện (step)' hiện nhãn thập phân 1.25/1.50/1.75 dù step là số nguyên; ở ảnh activation sáu đường trùng khít (dữ liệu fixture giống nhau cho mọi cơ) nên chỉ thấy một màu cuối cùng.",
+      "failure_scenario": "Chỉ ảnh hưởng độ rõ của ảnh; nhãn tên sáu cơ và hai trục đều có, ảnh không trống, không chữ đè. Đã mở activation-headless.png và loss-headless.png; chưa mở reward-headless.png."
+    },
+    {
+      "id": "F-008",
+      "severity": "OPTIONAL",
+      "file": "src/mma_ai",
+      "line": 0,
+      "claim": "plan-mandated, kích thước: diff đo sẵn +14865 dòng, riêng src/ +14773 trên 63 tệp ⇒ vượt trần 600. Đây là tổng gộp hơn 100 commit task đã qua cổng riêng; tệp lớn nhất của feature 004 là eval_config.py 588 dòng (dưới 600), nên không có lát đơn lẻ nào của 004 vượt cỡ.",
+      "failure_scenario": "Không có hành động chia lại khả thi ở mức tích hợp; ghi nhận để người duyệt biết phần đọc sâu của reviewer tập trung vào spec 004."
+    },
+    {
+      "id": "F-009",
+      "severity": "OPTIONAL",
+      "file": "specs/005-replay-3d-muscle-demo/checklists/acceptance.md",
+      "line": 0,
+      "claim": "Ngoài phạm vi T426 nhưng nằm trong diff tích hợp: spec 005 (các task T501…T522 đã gộp) và spec 006 không có thư mục checklists/ nên không có checklist chấp nhận để đối chiếu.",
+      "failure_scenario": "Reviewer của spec 005 không đối chiếu được AC/INV với checklist; để reviewer task nghiệm thu của 005 xử lý — T426 không chấm 005/006."
+    }
+  ]
+}
