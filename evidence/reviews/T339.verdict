@@ -1,18 +1,58 @@
 {
   "schema_version": "1.0.0",
-  "run_id": "run-20261010-641635",
+  "run_id": "run-20261011-0df231",
   "task_id": "T339",
-  "round": 2,
-  "sha_reviewed": "bdc99112305f1074e04a02fd7588d24565c44280",
-  "verdict": "APPROVE",
+  "round": 1,
+  "sha_reviewed": "70373d1d74638cf136eb6527d58b88699b5b3aed",
+  "verdict": "REQUEST_CHANGES",
   "findings": [
     {
       "id": "F-001",
+      "severity": "CRITICAL",
+      "file": "specs/003-ppo-train-repro/checklists/acceptance.md",
+      "line": 0,
+      "claim": "NFR-PERF-001 / AC-7: checklist và tasks.md T339 chỉ nhận số đo chi phí giao diện từ `logs/m1/benchmark_train.json`, nhưng tệp này KHÔNG tồn tại trong cây tích hợp lẫn ở gốc dự án (`logs/m1` không có; `git ls-files logs/` rỗng). Cổng `tests` chỉ chạy test_benchmark_train.py trên mẫu giả/đối chiếu công thức (importorskip torch ⇒ bỏ qua test CLI thật), không sinh tệp số đo.",
+      "failure_scenario": "Người duyệt tìm bằng chứng ≥ 90% env steps/s bật/tắt giao diện ở đúng đường dẫn checklist nêu và không thấy gì ⇒ NFR-PERF-001 chưa được chứng minh bằng số đo chạy ngoài. Reviewer chạy hẹp `python -m mma_ai.learning.benchmark --seed 42 --repeats 5` (ghi ra scratchpad, KHÔNG phải bằng chứng chính thức): off 293.60, on 294.73 bước/giây, ratio_median 1.0039, passed=true ⇒ sản phẩm có vẻ đạt, thiếu là bằng chứng. Cần một lượt benchmark do script ngoài/cổng ghi `logs/m1/benchmark_train.json`."
+    },
+    {
+      "id": "F-002",
+      "severity": "CRITICAL",
+      "file": "specs/003-ppo-train-repro/tasks.md",
+      "line": 75,
+      "claim": "plan-mandated: lệnh nguyên văn của AC-1…AC-5 / FR-001 / SC-001 là `python scripts/train.py --stage elbow --seed 42` nhưng `scripts/train.py` (và `scripts/` nói chung, `configs/`) không tồn tại ở bất kỳ commit nào của repo (`git log --diff-filter=A -- scripts/train.py` rỗng); tasks.md:75 tự ghi 'CHƯA CÓ CHỦ … chưa có test riêng'. Toàn bộ e2e/integration gọi `python -m mma_ai.learning.cli`.",
+      "failure_scenario": "Nhà nghiên cứu làm đúng spec/quickstart: `python scripts/train.py --stage elbow --seed 42` ⇒ 'can't open file scripts/train.py' (mã 2), không huấn luyện được; tương tự `scripts/benchmark_train.py` ở quickstart.md:75 và `--stage balance` của AC-5 qua lệnh nguyên văn. Mã trong gói chạy đúng qua `-m`, nên sửa là thêm vỏ 5 dòng gọi `main()` (cần mở vùng ghi `scripts/**`) kèm test entrypoint cho đúng lệnh spec, hoặc người sửa lại AC/FR sang lệnh `-m` bằng Clarifications."
+    },
+    {
+      "id": "F-003",
+      "severity": "MINOR",
+      "file": "tests/e2e/test_train_acceptance.py",
+      "line": 276,
+      "claim": "Ảnh e2e/T337/AC-7-dashboard-desktop-1280x800.png (đã mở): thấy đủ 6 thẻ (bước 467/4096, 443.4 bước/giây, reward -13.505, checkpoint) nhưng Loss ghi 'chưa có dữ liệu' cả 3 dòng, 6 cơ đều 0.000, checkpoint 0/'chưa có'. Test chỉ chờ env-steps khác '-' rồi đếm 5 panel/≥6 dòng cơ, không khẳng định loss/activation có giá trị sau lần cập nhật đầu (n_steps).",
+      "failure_scenario": "Hồi quy làm dashboard mãi hiện 'chưa có dữ liệu'/0.000 cho loss và kích hoạt vẫn qua e2e AC-7 (ảnh chụp ở khoảng đầu run). Giá trị thật chỉ được test_dashboard_resilience.py kiểm qua /api/progress, mà test đó bị importorskip(torch) trong cổng `tests`. Không phải lỗi sản phẩm: trainer.py:241 khởi tạo activation = 0 đến hết rollout đầu."
+    },
+    {
+      "id": "F-004",
+      "severity": "MINOR",
+      "file": "pyproject.toml",
+      "line": 18,
+      "claim": "Cổng `tests` chạy `--with pytest` không kèm extra rl ⇒ 116 test skipped (log T338: 1267 passed, 116 skipped, 11 xfailed), gồm test_resume, test_train_determinism, test_dashboard_resilience, test_benchmark_train CLI thật. Bằng chứng ngoài cho AC-2/AC-4/INV-004/INV-005/NFR-REPRO-001 chỉ đến từ cổng e2e (12 passed, test_train_acceptance dùng `uv run --extra rl`).",
+      "failure_scenario": "Hồi quy chỉ test tích hợp bắt được (khôi phục RNG/optimizer, sha256 checkpoint) không làm cổng `tests` đỏ. Reviewer chạy hẹp tests/challenge/test_train_invariants.py với --extra rl: 226 passed, 8 skipped, 2 xfailed (đúng hai ca F-005) ⇒ kết luận hiện tại đứng vững nhưng cổng tự động không giữ được."
+    },
+    {
+      "id": "F-005",
       "severity": "OPTIONAL",
-      "file": "src/mma_ai/learning/checkpoint.py",
-      "line": 467,
-      "claim": "Vòng 1 F-001/F-002/F-004/F-005/F-006 đã sửa ở gốc; riêng create_run_dir chưa kiểm stage chứa dấu phân cách đường dẫn (chỉ chạm được qua API).",
-      "failure_scenario": "Gọi API create_run_dir với stage chứa '/' hoặc '..' có thể tạo thư mục ngoài dự kiến; người dùng cuối không gặp được."
+      "file": "src/mma_ai/learning/run_dir.py",
+      "line": 29,
+      "claim": "Mang từ challenger T338 (F-005, đã đối chiếu, xfail không strict, 2 ca vẫn XFAIL khi chạy với extra rl): create_run_dir không kiểm stage chứa dấu phân cách đường dẫn (INV-001).",
+      "failure_scenario": "Chỉ chạm được qua API: CLI/TrainConfig ép stage == 'elbow'; người dùng cuối không gặp."
+    },
+    {
+      "id": "F-006",
+      "severity": "OPTIONAL",
+      "file": "src/mma_ai/visualization/replay.py",
+      "line": 0,
+      "claim": "plan-mandated, kích thước: diff đo sẵn +891/-239 trên 5 tệp mã (OVERSIZED, >600), nhưng toàn bộ là commit khôi phục 35130c7 mã spec 005 (replay.py +646, episode.py, cli.py, episode.schema.json, pyproject.toml) — không thuộc spec 003; mỗi tệp đã qua cổng riêng ở task T5xx và verdict T523. Không có mã sản phẩm nào của spec 003 trong diff base..head; T339 chỉ chấm bằng chứng 003.",
+      "failure_scenario": "Không có hành động chia lại khả thi ở mức tích hợp; ghi nhận để người duyệt biết reviewer không đọc sâu mã 005 trong lượt này."
     }
   ]
 }
