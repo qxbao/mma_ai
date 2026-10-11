@@ -407,7 +407,7 @@ def test_env_config_override_mismatched_run_env_rejected(tmp_path: Path) -> None
         check_disjoint(manifest_data, bad_cfg, pair=None)
 
 
-@pytest.mark.parametrize("bad_resumed", ["run1", 7, ["run1"]])
+@pytest.mark.parametrize("bad_resumed", ["run1", 7, ["run1"]])  # type: ignore[untyped-decorator]
 def test_malformed_resumed_from_rejected(bad_resumed: object) -> None:
     """F-002, FR-009, INV-001: resumed_from sai cấu trúc ném TrainSetUnknown."""
     pair = _create_sample_target_pair()
@@ -423,7 +423,7 @@ def test_malformed_resumed_from_rejected(bad_resumed: object) -> None:
         check_disjoint(manifest_data, cfg, pair)
 
 
-@pytest.mark.parametrize("degenerate_kind", ["train_empty", "test_empty", "nan_coord"])
+@pytest.mark.parametrize("degenerate_kind", ["train_empty", "test_empty", "nan_coord"])  # type: ignore[untyped-decorator]
 def test_degenerate_pairs_raise_leakage_error(degenerate_kind: str) -> None:
     """F-006, INV-001: Tập train/test rỗng hoặc toạ độ NaN bị từ chối với LeakageError."""
     import dataclasses
