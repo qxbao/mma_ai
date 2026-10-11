@@ -1,6 +1,8 @@
-"""Kiểm thử tích hợp hiển thị 3D không làm hỏng tiến trình huấn luyện (T333).
+"""Kiểm thử tích hợp hiển thị 3D không làm hỏng tiến trình huấn luyện (T333, T701).
 
 Hiện thực và kiểm chứng các yêu cầu và bất biến:
+- 007 AC-1, AC-2, AC-3, AC-4: Quản lý hiển thị 3D độc lập, chờ khởi chạy có hạn mức
+  và không làm gián đoạn tiến trình huấn luyện chính trong cả môi trường có hoặc không có màn hình.
 - FR-022: Hiển thị 3D khuỷu tay chạy ở tiến trình riêng (separate process), bật/tắt được
   và mặc định tắt; huấn luyện mặc định không giao diện (headless); nạp chính sách (policy)
   mới nhất từ checkpoints/latest.json.
@@ -249,7 +251,7 @@ def test_view3d_process_separate(tmp_path: Path) -> None:
     """Hiển thị 3D ở tiến trình riêng, kết thúc không ảnh hưởng train.
 
     Truy vết yêu cầu:
-    - 007 AC-2, 007 AC-3, 007 AC-4, FR-003, FR-004, FR-005, FR-006, FR-007, FR-008
+    - 007 AC-1, 007 AC-2, 007 AC-3, 007 AC-4, FR-003, FR-004, FR-005, FR-006, FR-007, FR-008
     - INV-001, INV-002, INV-003, NFR-PERF-001, NFR-QUAL-001, NFR-REL-001
     - FR-022, INV-005, AC-7, US5, US2.
 
