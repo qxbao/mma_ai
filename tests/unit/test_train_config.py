@@ -141,6 +141,6 @@ def teardown_module() -> None:
     """Dọn import trì hoãn để bảo toàn kiểm thử ranh giới gói."""
     import sys
 
-    sys.modules.pop("mma_ai.learning.train_config", None)
-    sys.modules.pop("mma_ai.learning.errors", None)
-    sys.modules.pop("mma_ai.learning", None)
+    for mod in list(sys.modules):
+        if mod == "mma_ai.learning" or mod.startswith("mma_ai.learning."):
+            sys.modules.pop(mod, None)

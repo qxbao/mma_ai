@@ -35,5 +35,6 @@ def teardown_module() -> None:
     """Dọn import trì hoãn để các test ranh giới độc lập với thứ tự collection."""
     import sys
 
-    sys.modules.pop("mma_ai.learning.metrics_log", None)
-    sys.modules.pop("mma_ai.learning", None)
+    for mod in list(sys.modules):
+        if mod == "mma_ai.learning" or mod.startswith("mma_ai.learning."):
+            sys.modules.pop(mod, None)

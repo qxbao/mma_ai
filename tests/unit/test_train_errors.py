@@ -56,5 +56,6 @@ def teardown_module() -> None:
     """Dọn module được nhập trì hoãn để giữ độc lập cho boundary test kế tiếp."""
     import sys
 
-    sys.modules.pop("mma_ai.learning.errors", None)
-    sys.modules.pop("mma_ai.learning", None)
+    for mod in list(sys.modules):
+        if mod == "mma_ai.learning" or mod.startswith("mma_ai.learning."):
+            sys.modules.pop(mod, None)

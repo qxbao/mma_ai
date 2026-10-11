@@ -36,6 +36,16 @@ def _get_validator() -> Draft202012Validator:
     )
 
 
+def setup_module() -> None:
+    """Dọn dẹp triệt để không gian tên mma_ai.learning trước khi kiểm thử để tránh phân mảnh lớp."""
+    import sys
+
+    for mod in list(sys.modules):
+        if mod == "mma_ai.learning" or mod.startswith("mma_ai.learning."):
+            sys.modules.pop(mod, None)
+
+
+
 def _dummy_config() -> dict[str, Any]:
     return {
         "schema_version": "1.0.0",
@@ -403,5 +413,6 @@ def teardown_module() -> None:
     """Dọn dẹp các mô-đun trì hoãn để bảo vệ ranh giới kiểm thử."""
     import sys
 
-    sys.modules.pop("mma_ai.learning.manifest", None)
-    sys.modules.pop("mma_ai.learning", None)
+    for mod in list(sys.modules):
+        if mod == "mma_ai.learning" or mod.startswith("mma_ai.learning."):
+            sys.modules.pop(mod, None)
