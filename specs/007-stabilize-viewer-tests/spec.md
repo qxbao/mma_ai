@@ -6,7 +6,7 @@ owner_agent: spec
 status: draft
 updated: "2026-10-11"
 feature: "007-stabilize-viewer-tests"
-version: "1.0.0"
+version: "1.1.0"
 ---
 
 # Feature Specification: Sửa gốc 2 test hiển thị/tiến trình làm đỏ cổng tests
@@ -17,7 +17,7 @@ version: "1.0.0"
   - [User Story 1 - Kiểm thử viewer thật cho kết quả tất định ở cả hai môi trường (Priority: P1)](#user-story-1-kiem-thu-viewer-that-cho-ket-qua-tat-dinh-o-ca-hai-moi-truong-priority-p1)
   - [User Story 2 - Kiểm thử tiến trình View3D tách riêng không chập chờn khi máy bận (Priority: P1)](#user-story-2-kiem-thu-tien-trinh-view3d-tach-rieng-khong-chap-chon-khi-may-ban-priority-p1)
   - [User Story 3 - Nguyên nhân thật được đo và ghi lại, không đoán (Priority: P1)](#user-story-3-nguyen-nhan-that-duoc-do-va-ghi-lai-khong-doan-priority-p1)
-  - [User Story 4 - Không che lỗi, không nới nghiệm thu, không đụng `src/` (Priority: P1)](#user-story-4-khong-che-loi-khong-noi-nghiem-thu-khong-dung-src-priority-p1)
+  - [User Story 4 - Không che lỗi, không nới nghiệm thu, `src/` chỉ đổi khi đo chứng minh (Priority: P1)](#user-story-4-khong-che-loi-khong-noi-nghiem-thu-src-chi-doi-khi-do-chung-minh-priority-p1)
   - [Edge Cases](#edge-cases)
 - [Requirements *(mandatory)*](#requirements-mandatory)
   - [Functional Requirements](#functional-requirements)
@@ -53,6 +53,7 @@ Người dùng của feature này là **nhà nghiên cứu / kỹ sư dự án**
 ## Clarifications
 
 - Tự chốt: Số hiệu feature → `007`, không phải `006` — lý do: nhánh tích hợp đã có `specs/006-cross-platform-support` (chưa có trên nhánh hiện hành); dùng `007` để hai thư mục không trùng khi gộp.
+- Tự chốt: Vùng ghi sau khi gộp T705/T706 → sửa INV-003/FR-007/SC-005 từ "đúng hai tệp kiểm thử, 0 thay đổi `src/`" thành "hai tệp integration + một tệp e2e mới; `src/` chỉ đổi ở `src/mma_ai/visualization/viewer.py` khi đo chứng minh nguyên nhân ở đó (AC-5)"; AC/FR khác giữ nguyên — lý do: mã đã gộp có `tests/e2e/test_007_viewer_entrypoint.py` (T705) và bản sửa gốc `viewer.py` (T706, nguyên nhân T-A đo ở `ViewerSink.show`, verdict T704 F-001/F-005); giữ câu cũ sẽ mâu thuẫn với diff thật.
 - Tự chốt: Mã tiêu chí → yêu cầu gốc không đánh mã AC; tự đặt AC-1…AC-5 theo năm điều kiện của yêu cầu (hai kiểm thử, nguyên nhân thật, không nới nghiệm thu, dừng nếu nguyên nhân ở `src/`). Các mã AC-1, AC-2, FR-011, FR-014 **của 005** luôn được viết kèm "của 005" hoặc "005 AC-n" để không lẫn với AC-n của feature này.
 - Tự chốt: Q-0001 và Q-0002 trong khối "Câu trả lời của người dùng" của lượt này → không áp dụng cho feature này: Q-0001 đã được ghi ở `specs/003-ppo-train-repro/spec.md` và `specs/005-replay-3d-muscle-demo/spec.md`; Q-0002 thuộc `specs/006-cross-platform-support`, thư mục này không tồn tại ở nhánh hiện hành — lý do: không sao chép câu trả lời của người sang spec không bị chúng ảnh hưởng.
 - Tự chốt: Hai kiểm thử là hai nguyên nhân độc lập → xử lý riêng từng kiểm thử, bằng chứng riêng; không giả định chung gốc — lý do: triệu chứng khác nhau (quá hạn vs. `pid is None`).
@@ -123,12 +124,12 @@ Người sửa chạy riêng từng kiểm thử, nhiều lần, ghi lại bằn
 
 ---
 
-<a id="user-story-4-khong-che-loi-khong-noi-nghiem-thu-khong-dung-src-priority-p1"></a>
-### User Story 4 - Không che lỗi, không nới nghiệm thu, không đụng `src/` (Priority: P1)
+<a id="user-story-4-khong-che-loi-khong-noi-nghiem-thu-src-chi-doi-khi-do-chung-minh-priority-p1"></a>
+### User Story 4 - Không che lỗi, không nới nghiệm thu, `src/` chỉ đổi khi đo chứng minh (Priority: P1)
 
 **Tần suất**: hiếm — kiểm một lần cho mỗi lượt sửa, bởi vai reviewer/challenger.
 
-Reviewer so diff với nghiệm thu gốc: các khẳng định còn nguyên, không skip/xfail mới, chỉ hai tệp kiểm thử bị sửa. Nếu nguyên nhân nằm ở `src/`, lượt làm việc dừng và báo, không tự sửa.
+Reviewer so diff với nghiệm thu gốc: các khẳng định còn nguyên, không skip/xfail mới, vùng ghi đúng như khai ở FR-007 (hai tệp kiểm thử integration, một tệp e2e mới, `src/` chỉ đổi ở `viewer.py` khi đo chứng minh). Nếu nguyên nhân nằm ở `src/`, kiểm thử không được che bằng việc sửa kiểm thử: báo nguyên nhân kèm bằng chứng, và chỉ một task sửa gốc riêng, có kiểm thử đỏ-trước-sửa, mới được đổi `src/` (AC-5).
 
 **Why this priority**: Hiến chương II cấm giảm test và thêm cơ chế bỏ qua; hiến chương III giới hạn vùng ghi; vi phạm làm xanh giả.
 
@@ -137,7 +138,7 @@ Reviewer so diff với nghiệm thu gốc: các khẳng định còn nguyên, kh
 **Acceptance Scenarios**:
 
 1. **Given** diff của lượt sửa, **When** quét hai tệp kiểm thử, **Then** không có `skip`, `skipif`, `xfail` hay `pytest.importorskip` mới; các khẳng định của 005 AC-1/AC-2, 005 FR-001/FR-004/FR-005/FR-011/FR-014 và khẳng định tách tiến trình của 003 có mặt nguyên văn hoặc chặt hơn. (AC-4)
-2. **Given** diff của lượt sửa, **When** so với vùng ghi, **Then** chỉ `tests/integration/test_replay_viewer_real.py` và `tests/integration/test_viewer3d_train.py` bị đổi; không có tệp nào trong `src/`. (AC-4)
+2. **Given** diff của lượt sửa, **When** so với vùng ghi khai ở FR-007, **Then** các tệp kiểm thử bị đổi chỉ gồm `tests/integration/test_replay_viewer_real.py`, `tests/integration/test_viewer3d_train.py`, tệp e2e mới `tests/e2e/test_007_viewer_entrypoint.py` và (khi sửa gốc ở `src/`) `tests/unit/test_viewer.py`; tệp trong `src/` chỉ có thể là `src/mma_ai/visualization/viewer.py`, kèm bằng chứng đo ở báo cáo. (AC-4, AC-5)
 3. **Given** phép đo cho thấy nguyên nhân của một kiểm thử nằm ở `src/`, **When** người sửa kết luận, **Then** lượt làm việc dừng việc sửa kiểm thử đó, không đổi `src/`, và báo cáo nêu nguyên nhân (tệp, hàm, bằng chứng đo) cùng đề xuất sửa để người/vai khác quyết. (AC-5)
 4. **Given** nguyên nhân của một kiểm thử nằm ở `src/` còn kiểm thử kia ở chính kiểm thử, **When** kết thúc lượt, **Then** kiểm thử nằm ở chính nó vẫn được sửa và chứng minh; kiểm thử nằm ở `src/` được ghi là "còn đỏ vì nguyên nhân ở `src/`" kèm bằng chứng — không bị che. (AC-5)
 
@@ -169,7 +170,7 @@ Reviewer so diff với nghiệm thu gốc: các khẳng định còn nguyên, kh
 - **FR-004**: Mọi khẳng định nghiệm thu hiện có MUST còn nguyên hoặc chặt hơn: 005 AC-1, AC-2, FR-001, FR-004, FR-005, FR-011, FR-014 (kể cả mã thoát 0, các mục tóm tắt tiếng Việt, mã thoát 7 trong ≤ 5 s, gợi ý `--headless`) và, ở T-B, đúng 1 tiến trình View3D, PID khác PID chính, tiến trình đang sống, `terminate()` không làm mất `ui.json`, huấn luyện thật với `--view3d` vẫn mã 0 và có `latest.json` (003 FR-022, INV-005). (AC-4)
 - **FR-005**: Nguyên nhân thật của từng kiểm thử MUST được xác định bằng cách chạy riêng từng kiểm thử nhiều lần và MUST được ghi lại cùng bằng chứng (lệnh, số lần chạy, kết quả, thời gian, đầu ra lỗi, môi trường đo) trước khi sửa; bản sửa MUST tác động đúng nguyên nhân đã ghi. (AC-3)
 - **FR-006**: Bản sửa MUST NOT dùng `skip`, `skipif`, `xfail`, `importorskip` mới hay bất kỳ cơ chế bỏ qua nào để che lỗi, và MUST NOT làm giảm số kiểm thử hay nới ngưỡng của khẳng định nghiệm thu. Dấu `pytest.mark.display` đã có trên T-A giữ nguyên. (AC-4)
-- **FR-007**: Chỉ hai tệp `tests/integration/test_replay_viewer_real.py` và `tests/integration/test_viewer3d_train.py` được sửa. Khi đo cho thấy nguyên nhân của một kiểm thử nằm ở `src/`, lượt làm việc MUST dừng sửa kiểm thử đó, MUST NOT sửa `src/`, và MUST báo nguyên nhân (tệp, hàm, bằng chứng đo, đề xuất) trong báo cáo. (AC-4, AC-5)
+- **FR-007**: Vùng sửa của feature MUST gồm hai tệp integration `tests/integration/test_replay_viewer_real.py` và `tests/integration/test_viewer3d_train.py` cộng một tệp e2e mới `tests/e2e/test_007_viewer_entrypoint.py` (QA, chạy trên entrypoint thật). `src/` MUST NOT bị đổi, TRỪ `src/mma_ai/visualization/viewer.py` (kèm ca thử đơn vị `tests/unit/test_viewer.py`) và CHỈ khi phép đo chứng minh nguyên nhân của kiểm thử nằm ở đó. Khi đo cho thấy nguyên nhân của một kiểm thử nằm ở `src/`, task sửa kiểm thử đó MUST dừng, MUST NOT sửa `src/`, và MUST báo nguyên nhân (tệp, hàm, bằng chứng đo, đề xuất) trong báo cáo; việc sửa `src/` thuộc một task sửa gốc riêng. (AC-4, AC-5)
 - **FR-008**: Thông báo lỗi do kiểm thử sinh ra MUST bằng tiếng Việt, nêu giá trị và ngữ cảnh (lệnh, hạn mức, mã thoát, đầu ra), cùng văn phong với các kiểm thử hiện có. (AC-1, AC-2)
 
 <a id="yeu-cau-phi-chuc-nang-non-functional-requirements"></a>
@@ -190,7 +191,7 @@ Reviewer so diff với nghiệm thu gốc: các khẳng định còn nguyên, kh
 
 - **INV-001**: Số kiểm thử và độ chặt của các khẳng định nghiệm thu trong hai tệp MUST NOT giảm sau khi sửa; MUST NOT thêm cơ chế bỏ qua (hiến chương II). (AC-4)
 - **INV-002**: Kiểm thử MUST độc lập với thứ tự chạy và với trạng thái còn lại của lần chạy trước: không để tiến trình, luồng hay tệp mồ côi ngoài `tmp_path`. (AC-1, AC-2)
-- **INV-003**: Vùng ghi của lượt sửa MUST là đúng hai tệp kiểm thử; `src/` MUST NOT bị đổi trong feature này. (AC-4, AC-5)
+- **INV-003**: Vùng ghi của feature MUST là hai tệp integration + một tệp e2e mới (xem FR-007); `src/` MUST NOT bị đổi, trừ `src/mma_ai/visualization/viewer.py` khi phép đo chứng minh nguyên nhân của T-A nằm ở đó (AC-5). Không ràng buộc "đúng hai tệp" ở tiêu chí `git diff --name-only`. (AC-4, AC-5)
 
 <a id="success-criteria-mandatory"></a>
 ## Success Criteria *(mandatory)*
@@ -202,13 +203,13 @@ Reviewer so diff với nghiệm thu gốc: các khẳng định còn nguyên, kh
 - **SC-002**: 0 lần kiểm thử T-A treo tới quá hạn mà không có chẩn đoán; quá hạn (nếu còn) luôn đi kèm lệnh, hạn mức và đầu ra. (AC-1)
 - **SC-003**: 100% khẳng định nghiệm thu nêu ở FR-004 còn nguyên hoặc chặt hơn; 0 `skip`/`xfail` mới; số kiểm thử trong hai tệp không giảm. (AC-4)
 - **SC-004**: Mỗi kiểm thử có đúng một mục nguyên nhân thật trong báo cáo, kèm số lần chạy và kết quả đo trước/sau; mỗi mục đo ghi rõ môi trường (có/không màn hình dùng được). (AC-3)
-- **SC-005**: Diff của lượt sửa chỉ chứa hai tệp kiểm thử; 0 thay đổi trong `src/`. Nếu có nguyên nhân ở `src/`, báo cáo nêu tệp, hàm, bằng chứng và đề xuất, và kiểm thử liên quan được ghi là còn đỏ vì nguyên nhân đó. (AC-4, AC-5)
+- **SC-005**: `git diff --name-only` chỉ chứa hai tệp integration, tệp e2e mới, báo cáo QA và (khi nguyên nhân ở `src/`) `src/mma_ai/visualization/viewer.py` + `tests/unit/test_viewer.py`; 0 thay đổi ở tệp `src/` khác. Nếu có nguyên nhân ở `src/`, báo cáo nêu tệp, hàm, bằng chứng và đề xuất; kiểm thử liên quan được ghi là còn đỏ vì nguyên nhân đó cho tới khi task sửa gốc được chứng minh bằng lần chạy ngoài. (AC-4, AC-5)
 
 <a id="out-of-scope"></a>
 ## Out of Scope
 
-- Sửa `src/` (kể cả `mma_ai.visualization.*` và `mma_ai.monitoring.*`): nếu nguyên nhân ở đó thì dừng và báo, không tự sửa.
-- Sửa các kiểm thử khác ngoài hai tệp `test_replay_viewer_real.py` và `test_viewer3d_train.py`.
+- Sửa `src/` ngoài `src/mma_ai/visualization/viewer.py` (kể cả các mô-đun còn lại của `mma_ai.visualization.*` và `mma_ai.monitoring.*`); với `viewer.py` chỉ sửa khi phép đo chứng minh nguyên nhân ở đó (AC-5), qua task sửa gốc riêng, không qua task sửa kiểm thử.
+- Sửa các kiểm thử khác ngoài `test_replay_viewer_real.py`, `test_viewer3d_train.py`, tệp e2e mới `test_007_viewer_entrypoint.py` và ca thử `tests/unit/test_viewer.py` đi kèm bản sửa gốc ở `viewer.py`.
 - `xfail`, `skip` hay bất kỳ cách bỏ qua nào để che lỗi hai kiểm thử.
 - Nới khẳng định nghiệm thu: AC-1, AC-2, FR-011, FR-014 của 005 và yêu cầu tách tiến trình của 003.
 - Thêm hành vi sản phẩm mới, màn hình mới, endpoint mới hay thực thể dữ liệu mới.
