@@ -7,7 +7,10 @@ Các kiểm thử chứng minh các yêu cầu và bất biến:
 - INV-004: Mọi lỗi thuộc phân hệ phát lại đều mang mã thoát khác 0 (non-zero exit code).
 """
 
+import os
+import subprocess
 import sys
+from pathlib import Path
 from typing import Type
 
 import pytest
@@ -83,13 +86,21 @@ def test_fr_018_vietnamese_message_and_context() -> None:
 
 def test_fr_015_clean_import_boundary() -> None:
     """FR-015: Nhập mma_ai.visualization không kéo theo thư viện học máy hoặc viewer nặng."""
-    import mma_ai.visualization
-
-    assert mma_ai.visualization.__doc__ is not None
-    assert len(mma_ai.visualization.__doc__.strip()) > 0
-
-    # Tuyệt đối không nạp các thư viện ngoài ý muốn
-    assert "mujoco.viewer" not in sys.modules
-    assert "glfw" not in sys.modules
-    assert "torch" not in sys.modules
-    assert "mma_ai.learning" not in sys.modules
+    env = os.environ.copy()
+    src_dir = str(Path(__file__).resolve().parents[2] / "src")
+    env["PYTHONPATH"] = f"{src_dir}:{env.get('PYTHONPATH', '')}".rstrip(":")
+    subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import sys, mma_ai.visualization\n"
+            "assert mma_ai.visualization.__doc__ is not None\n"
+            "assert len(mma_ai.visualization.__doc__.strip()) > 0\n"
+            "assert 'mujoco.viewer' not in sys.modules\n"
+            "assert 'glfw' not in sys.modules\n"
+            "assert 'torch' not in sys.modules\n"
+            "assert 'mma_ai.learning' not in sys.modules\n",
+        ],
+        env=env,
+        check=True,
+    )
