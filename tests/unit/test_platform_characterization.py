@@ -37,6 +37,7 @@ def test_linux_kib_formula_matches_legacy(monkeypatch: pytest.MonkeyPatch) -> No
     assert snapshot["ram_peak_mb"] == 256.0
 
 
+@pytest.mark.display(reason="Kiểm tra trực tiếp thông điệp khi phép dò Linux không bị ép tắt.")  # type: ignore[untyped-decorator]
 def test_display_unset_message_matches_legacy(monkeypatch: pytest.MonkeyPatch) -> None:
     """INV-001, AC-3: thông điệp cũ giữ nguyên khi thiếu cả hai biến."""
     monkeypatch.delenv("DISPLAY", raising=False)
