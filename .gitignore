@@ -4,7 +4,12 @@
 !.ai/models.yml
 !.ai/profile.yml
 !.ai/questions/
+!.ai/decisions.md
 !.ai/lessons/
+!.ai/agents/
+!.ai/prompts/
+!.ai/skills/
+!.ai/steps/
 .ai/lessons/_refine.log
 evidence/gates/
 evidence/e2e/
@@ -55,3 +60,4 @@ graphify-out/
 .cursor
 .kiro
 .specify/
+evidence/
