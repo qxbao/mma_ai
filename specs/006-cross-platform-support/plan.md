@@ -44,7 +44,7 @@ Cách tiếp cận (chi tiết và số đo ở [research.md](research.md)):
 - **Dò màn hình một hàm, ba nơi dùng** (Q4): Linux/WSL2 giữ nguyên (biến môi trường rồi GLFW); Windows/macOS không đọc `DISPLAY`/`WAYLAND_DISPLAY`, dò bằng GLFW + màn hình chính; macOS cần `mjpython` cho viewer (NGUỒN TÀI LIỆU của MuJoCo) nên có thông báo tiếng Việt thay vì treo.
 - **Ghi nguyên tử dùng chung** (Q5): tệp tạm cùng thư mục, `fsync`, `os.replace`; chỉ Windows thử lại `PermissionError` (≤ 5 lần, ≤ 0,55 s theo lịch) rồi báo lỗi và giữ bản cũ; Linux một lần như cũ.
 - **Đường dẫn, UTF-8, LF** (Q6, Q7): `is_absolute_any_os` (ĐÃ ĐO: `is_absolute()` một mình bỏ sót dạng `\…` và ổ đĩa không dấu phân cách), `to_record_path`, `write_text(newline="\n")`, `reconfigure` UTF-8 ở đầu mọi `main()` (ĐÃ ĐO: `PYTHONIOENCODING=cp1252` tái hiện lỗi trên Linux).
-- **Test theo năng lực không dùng skip/xfail** (Q9): plugin `tests/capability_gate.py` loại khi thu thập, báo cáo từng test + lý do, thất bại nếu tỷ lệ > 5% (ĐÃ ĐO nguyên mẫu: `1 passed, 1 deselected`).
+- **Test theo năng lực không dùng skip/xfail** (Q9): plugin `tests/unit/capability_gate.py` loại khi thu thập, báo cáo từng test + lý do, thất bại nếu tỷ lệ > 5% (ĐÃ ĐO nguyên mẫu: `1 passed, 1 deselected`).
 - **Cài đặt** (Q8): không đổi `pyproject.toml`/`uv.lock`; CPU là mặc định từ khoá, CUDA là bước tuỳ chọn có tài liệu (`--torch-backend`), vì khoá đã có wheel `win_amd64`/`macosx_arm64` (ĐÃ ĐO).
 - **CI** (Q10): GitHub Actions, 3 OS × Python 3.11/3.12 = 6 ô; repo chưa có remote nên chỉ kiểm tĩnh tệp (CHƯA KIỂM chạy thật).
 - **Phạm vi**: không GPU AMD/Metal, không installer, không M2–M9, không sửa lỗi sản phẩm đã ghi bằng `xfail` hiện hữu.
@@ -135,7 +135,7 @@ Phụ thuộc một chiều: `learning · evaluation · visualization · monitor
 | `stdio` | `ensure_utf8_stdio` | FR-013 |
 | `env_report` | `build_environment_report`, `render_text`, `main` (= `CMD-PLT-0001`) | FR-017, FR-024 |
 
-Ngoài gói: `scripts/check_env.py` (vỏ 5 dòng gọi `env_report.main`), `tests/capability_gate.py` (plugin, nạp từ `conftest.py`), `.github/workflows/ci.yml`, `.gitattributes`, `docs/04-implementation/install-cross-platform.md`.
+Ngoài gói: `scripts/check_env.py` (vỏ 5 dòng gọi `env_report.main`), `tests/unit/capability_gate.py` (plugin, nạp từ `conftest.py`), `.github/workflows/ci.yml`, `.gitattributes`, `docs/04-implementation/install-cross-platform.md`.
 
 <a id="quyet-dinh-thiet-ke"></a>
 ### Quyết định thiết kế
@@ -181,8 +181,8 @@ src/mma_ai/
 scripts/
 └── check_env.py                    # MỚI — vỏ 5 dòng gọi mma_ai.compat.env_report.main (xem "Quyết định ở bước tasks")
 tests/
-├── capability_gate.py              # MỚI — plugin loại theo năng lực (không thuộc gói phân phối)
-├── unit/        # MỚI: test_compat_platform, test_compat_memory, test_compat_display, test_compat_capabilities,
+├── unit/        # MỚI: capability_gate.py (plugin loại theo năng lực, không thuộc gói phân phối; nạp từ conftest.py),
+│                #      test_compat_platform, test_compat_memory, test_compat_display, test_compat_capabilities,
 │                #      test_compat_fsio, test_compat_pathrules, test_compat_stdio, test_env_report,
 │                #      test_capability_gate, test_platform_characterization, test_no_new_skip_xfail
 ├── integration/ # MỚI: test_ram_real_measure, test_display_consumers_agree, test_atomic_replace_locked_windows,
@@ -245,7 +245,7 @@ Cổng máy (`gates:`) do bước plan_fix nháp từ tệp này; plan không kh
 | FR-018 | `docs/04-implementation/install-cross-platform.md` | `test_env_report::test_report_has_no_absolute_paths`; bộ quét cổng cho đường dẫn tuyệt đối trong `docs/`; kiểm tay trên Windows 11 (CHƯA KIỂM) |
 | FR-019 | giữ `pyproject.toml`, `uv.lock` | `uv lock --check` ở ô CI; `tests/integration/test_dependency_decision.py`, `test_dependency_train.py` (hiện có) |
 | FR-020, NFR-CI-001, AC-6 | `.github/workflows/ci.yml` | `test_ci_workflow::test_matrix_has_six_cells`, `::test_each_cell_runs_check_env_then_tests`, `::test_lockfile_is_checked_and_locked_sync`, `::test_no_failure_masking_in_workflow` |
-| FR-021, INV-006 | `tests/capability_gate.py`, `conftest.py` | `test_capability_gate::test_unsatisfied_marker_is_deselected_not_skipped`, `::test_missing_reason_is_collection_error`, `::test_ratio_over_limit_fails_session`, `::test_report_lists_each_deselected_with_reason`, `test_platform_invariants::test_inv006_deselect_always_reported` |
+| FR-021, INV-006 | `tests/unit/capability_gate.py`, `conftest.py` | `test_capability_gate::test_unsatisfied_marker_is_deselected_not_skipped`, `::test_missing_reason_is_collection_error`, `::test_ratio_over_limit_fails_session`, `::test_report_lists_each_deselected_with_reason`, `test_platform_invariants::test_inv006_deselect_always_reported` |
 | FR-022 | sửa 5 tệp test hiện có + `conftest.py` | `tests/challenge/test_env_invariants.py` (`linux_only`), `tests/challenge/test_train_invariants.py` (`requires_symlink`), `tests/integration/test_viewer3d.py` (`requires_display`), `tests/unit/test_display.py` (tiêm hồ sơ), `tests/unit/test_viewer.py` (tiêm hồ sơ macOS), `conftest.py` (cách ly theo OS) |
 | FR-023 | toàn bộ bộ test trên | `python -m pytest` + ô CI |
 | FR-024 | mọi mô-đun | `test_env_report::test_report_has_no_absolute_paths`, `test_check_env_cli::test_text_output_vietnamese_one_line_per_check`, `test_compat_fsio::test_failure_cases_keep_old_bytes_and_clean_tmp` (lỗi nêu đường dẫn đích) |
@@ -276,6 +276,10 @@ Cổng máy (`gates:`) do bước plan_fix nháp từ tệp này; plan không kh
 - **Phụ thuộc chéo feature**: dùng id task có sẵn của 002–005 khi khai `depends_on` (xem `specs/00N-*/tasks.md`); id của 006 dùng dải `T601`…; tệp trùng `outputs` với task cũ do máy xếp wave.
 - **Cổng E2E**: task `qa` chạy `uv run python -m pytest -q tests/e2e` (gồm `test_platform_acceptance`) trên entrypoint thật; cổng `e2e` do `plan_fix` nháp từ `tasks.md`.
 - **Kiểm tay trên máy người dùng**: một task `qa` cuối dải ghi kết quả kiểm tay Windows 11 (cài từ tài liệu, `check_env`, viewer 3D, CUDA) vào báo cáo; kết quả giữ nhãn CHƯA KIỂM cho tới khi có bằng chứng do cổng sinh (hiến chương I).
+- **Tự chốt (bước tasks, vùng ghi hiệu lực)**: bảng vùng ghi của các vai KHÔNG phủ `tests/*.py` (tệp gốc của `tests/`), `scripts/**`, `.gitattributes`, `docs/04-implementation/**` (chỉ `rbac.md`/`ui*`/`DESIGN.md`/`field-types.md` thuộc vai khác) và máy từ chối task ghi `deliverables/**` (tài liệu khách hàng đi đường `deliver`). Xử lý, không dồn sang `builder` bằng output ngoài vùng: (1) plugin loại theo năng lực chuyển từ `tests/capability_gate.py` sang **`tests/unit/capability_gate.py`** (builder ghi được `tests/unit/**`; `conftest.py` đã chèn `tests/integration` vào `sys.path` bằng cùng cách nên chèn thêm `tests/unit` và khai `pytest_plugins`); (2) workflow CI giao vai `platform` (`.github/workflows/**` đã nằm trong vùng của vai này); (3) **chưa có chủ**: vỏ `scripts/check_env.py` (5 dòng), `.gitattributes` và tài liệu cài đặt `docs/04-implementation/install-cross-platform.md` (FR-018) — ghi nhận khoảng trống năng lực, đề xuất: `ai-sdlc capability propose fighterl "vùng ghi cho scripts/** và .gitattributes và docs/04-implementation/install*.md (tài liệu cài đặt/vận hành)"`; nội dung tài liệu cài đặt vẫn có thể vào sách 07 (hướng dẫn sử dụng) của bước `deliver`. Hệ quả: AC-5 và CI dùng entrypoint module **`python -m mma_ai.compat.env_report`** (tương đương `CMD-PLT-0001`); mọi chỗ spec/quickstart nói `python scripts/check_env.py` đọc là lệnh module này cho tới khi vỏ script có chủ; test `test_check_env_cli` chạy lệnh module, KHÔNG skip khi thiếu script; FR-018 còn THIẾU task cho tới khi có chủ.
+- **Tự chốt (bước tasks, tệp evaluate/replay)**: khi lượt plan viết, `src/mma_ai/evaluation/{cli,runner,…}.py` và `src/mma_ai/visualization/{cli,replay}.py` đang xoá staged; ở lượt tasks cây sạch và các tệp CÓ MẶT ⇒ task sửa chúng là task thường (không còn "chờ phụ thuộc"); `replay.py`/`runner.py` rà bằng `rg` không có điểm gắn nền tảng (không `os.replace`, không biến hiển thị, không `lstrip("/")`) ⇒ KHÔNG có task sửa hai tệp đó.
+- **Tự chốt (bước tasks, phát hiện thêm F-021…F-023 khi rà `rg` lại)**: F-021 `evaluation/report.py:212,222` làm tương đối bằng `lstrip("/")` (cùng loại F-012) và `report.py:433` `write_text` không đặt `newline` ⇒ Windows ghi `\r\n` vào `report.json`; F-022 `learning/run_dir.py` khi `mkdir` thất bại vì đường dẫn quá dài chỉ ném `RunDirError` kèm ngoại lệ gốc, không nêu độ dài/gợi ý và không dọn thư mục dở dang (spec US4 kịch bản 8, AC-4); F-023 `visualization/viewer.py` và `monitoring/viewer3d.py` cùng gọi `mujoco.viewer.launch_passive` nên cùng cần thông báo `mjpython` (FR-007). Đều thuộc (d)/(c), không mở rộng phạm vi; có task riêng ở `tasks.md`.
+- **Tự chốt (bước tasks, cách ly hiển thị cho tiến trình con)**: biến `DISPLAY`/`WAYLAND_DISPLAY` không điều khiển phép dò ở Windows/macOS nên bộ cách ly của `conftest.py` không thể chỉ xoá hai biến; test chạy tiến trình con (`python -m …`) cũng không thừa hưởng bản vá trong tiến trình. Quyết định: `compat.display.probe_display` nhận thêm biến môi trường **`MMA_AI_FORCE_NO_DISPLAY`** (giá trị khác rỗng và khác `0` ⇒ không khả dụng, lý do nêu tên biến) — chỉ là công tắc ép "không màn hình" (an toàn, không mở thêm năng lực), mặc định không đặt nên Linux không đổi; `conftest.py` đặt biến này cho mọi test KHÔNG mang dấu `display`. Ghi vào `contracts/python-api.md` (API-PLT-0003, API-PLT-0010).
 - **Đề xuất (không làm trong feature)**: thêm `compat` vào `layer_rules` của preset; extras `rl-cpu`/`rl-cuda` trong `pyproject.toml` (research Q8-B); phép dò "tạo cửa sổ ẩn thử" nếu runner CI có GLFW khởi tạo được nhưng không mở được cửa sổ.
 
 <a id="phan-bien-plan-lint"></a>
