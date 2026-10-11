@@ -5,7 +5,7 @@ task_id: "T703"
 role: "qa"
 generation: "GEN-qa-1791728310728406-83450aab"
 status: DONE_WITH_CONCERNS
-sha: "9ef3cabf514a607f2fe8ee1415fae230287d4f24"
+sha: "0a1a846b30dc2d47b1d19533f79636105d3be3f4"
 commands_run:
   - {cmd: "pytest nodeid lặp T-A/T-B", exit_code: 0}
   - {cmd: "pytest suite", exit_code: 0}
@@ -18,7 +18,7 @@ concerns:
 ## Trạng thái
 
 STATUS: DONE_WITH_CONCERNS
-SHA: 9ef3cabf514a607f2fe8ee1415fae230287d4f24
+SHA: 0a1a846b30dc2d47b1d19533f79636105d3be3f4
 
 ## Kết quả
 
