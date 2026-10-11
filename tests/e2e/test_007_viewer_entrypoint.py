@@ -1,5 +1,8 @@
 """Kiểm thử đầu-cuối (end-to-end, E2E) cho các entrypoint Viewer của feature 007.
 
+Truy vết: AC-1, AC-2, AC-3, AC-4, FR-001, FR-003, INV-002, INV-003,
+NFR-PERF-001 và NFR-REL-001.
+
 Các kiểm thử này chỉ gọi entrypoint thật bằng tiến trình con, không mock (đối tượng giả
 trong test) và không gọi trực tiếp hàm nội bộ thay cho CLI.
 """
@@ -116,7 +119,10 @@ def _stop_monitor(proc: subprocess.Popen[str]) -> tuple[str, str]:
 
 
 def test_ac_1_ac_3_viewer_entrypoint_forced_no_display() -> None:
-    """AC-1, AC-3, FR-001, NFR-REL-001: viewer thật báo thiếu màn hình trong hạn mức."""
+    """AC-1, AC-3, AC-4, FR-001, NFR-PERF-001, NFR-REL-001.
+
+    Viewer thật báo thiếu màn hình trong hạn mức.
+    """
     started = time.monotonic()
     result = _run_bounded(
         [
@@ -139,7 +145,10 @@ def test_ac_1_ac_3_viewer_entrypoint_forced_no_display() -> None:
 
 
 def test_ac_1_ac_3_viewer_entrypoint_with_display_when_available() -> None:
-    """AC-1, AC-3, FR-001: viewer thật phát lại và in tóm tắt khi màn hình dùng được."""
+    """AC-1, AC-3, AC-4, FR-001, NFR-PERF-001.
+
+    Viewer thật phát lại và in tóm tắt khi màn hình dùng được.
+    """
     # CLI tự chọn nhánh theo khả dụng thực tế; không dùng skip/xfail trong môi trường headless.
     from mma_ai.visualization.display import display_available  # type: ignore[import-untyped]
 
@@ -182,7 +191,10 @@ def test_ac_1_ac_3_viewer_entrypoint_with_display_when_available() -> None:
 
 
 def test_ac_2_monitoring_entrypoint_view3d_separate_process_cleans_up(tmp_path: Path) -> None:
-    """AC-2, FR-003, INV-002: entrypoint quan sát dừng sạch sau khi gọi --view3d."""
+    """AC-2, AC-4, FR-003, INV-002, NFR-PERF-001.
+
+    Entrypoint quan sát dừng sạch sau khi gọi --view3d.
+    """
     run_dir = tmp_path / "run"
     run_dir.mkdir()
     proc = subprocess.Popen(
