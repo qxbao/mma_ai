@@ -1,0 +1,71 @@
+name: CI đa nền tảng
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+# Ma trận (matrix) chưa chạy trên dịch vụ CI thật vì kho chưa có kho từ xa (remote).
+jobs:
+  test:
+    name: Kiểm thử ${{ matrix.os }} / Python ${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python: ["3.11", "3.12"]
+    steps:
+      - name: Lấy mã nguồn
+        uses: actions/checkout@v4
+      - name: Cài uv và Python
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ matrix.python }}
+          enable-cache: true
+      - name: Kiểm tra tệp khóa
+        run: uv lock --check
+      - name: Đồng bộ phụ thuộc đã khóa
+        run: uv sync --locked --extra dev --extra rl --extra eval
+      - name: Kiểm tra môi trường
+        run: uv run python -m mma_ai.compat.env_report --json > env-report.json
+      - name: Tải báo cáo môi trường
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: env-report-${{ matrix.os }}-py${{ matrix.python }}
+          path: env-report.json
+          if-no-files-found: error
+      - name: Chạy bộ kiểm thử
+        run: uv run python -m pytest -q -p no:cacheprovider --ignore=tests/e2e --capability-report capability-report.json
+      - name: Tải báo cáo năng lực
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: capability-report-${{ matrix.os }}-py${{ matrix.python }}
+          path: capability-report.json
+          if-no-files-found: error
+      - name: Chạy kiểm thử đầu cuối
+        run: uv run python -m pytest -q -p no:cacheprovider tests/e2e
+
+  quality:
+    name: Kiểm tra mã / Python 3.12
+    runs-on: ubuntu-latest
+    steps:
+      - name: Lấy mã nguồn
+        uses: actions/checkout@v4
+      - name: Cài uv và Python
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - name: Kiểm tra tệp khóa
+        run: uv lock --check
+      - name: Đồng bộ phụ thuộc đã khóa
+        run: uv sync --locked --extra dev --extra rl --extra eval
+      - name: Kiểm tra quy tắc mã
+        run: uv run --isolated --with ruff ruff check .
+      - name: Kiểm tra kiểu nghiêm ngặt
+        run: uv run --isolated --with mypy mypy --strict .
