@@ -1,58 +1,66 @@
 {
   "schema_version": "1.0.0",
-  "run_id": "run-20261011-0df231",
+  "run_id": "run-20261011-7d4165",
   "task_id": "T339",
   "round": 1,
-  "sha_reviewed": "70373d1d74638cf136eb6527d58b88699b5b3aed",
+  "sha_reviewed": "0ee76f3f3a1c39be77f48ab5eef1846114e27b64",
   "verdict": "REQUEST_CHANGES",
   "findings": [
     {
       "id": "F-001",
       "severity": "CRITICAL",
       "file": "specs/003-ppo-train-repro/checklists/acceptance.md",
-      "line": 0,
-      "claim": "NFR-PERF-001 / AC-7: checklist và tasks.md T339 chỉ nhận số đo chi phí giao diện từ `logs/m1/benchmark_train.json`, nhưng tệp này KHÔNG tồn tại trong cây tích hợp lẫn ở gốc dự án (`logs/m1` không có; `git ls-files logs/` rỗng). Cổng `tests` chỉ chạy test_benchmark_train.py trên mẫu giả/đối chiếu công thức (importorskip torch ⇒ bỏ qua test CLI thật), không sinh tệp số đo.",
-      "failure_scenario": "Người duyệt tìm bằng chứng ≥ 90% env steps/s bật/tắt giao diện ở đúng đường dẫn checklist nêu và không thấy gì ⇒ NFR-PERF-001 chưa được chứng minh bằng số đo chạy ngoài. Reviewer chạy hẹp `python -m mma_ai.learning.benchmark --seed 42 --repeats 5` (ghi ra scratchpad, KHÔNG phải bằng chứng chính thức): off 293.60, on 294.73 bước/giây, ratio_median 1.0039, passed=true ⇒ sản phẩm có vẻ đạt, thiếu là bằng chứng. Cần một lượt benchmark do script ngoài/cổng ghi `logs/m1/benchmark_train.json`."
+      "line": 39,
+      "claim": "NFR-PERF-001 / AC-7: checklist dòng 32 và 39 và tasks.md T339 chỉ nhận số đo chi phí giao diện từ `logs/m1/benchmark_train.json`, nhưng thư mục `logs/` không tồn tại trong cây tích hợp lẫn ở gốc dự án (`ls logs` lỗi, `git ls-files logs` rỗng). Cổng `tests` không sinh tệp số đo; các test benchmark CLI thật bị bỏ qua khi thiếu torch.",
+      "failure_scenario": "Người duyệt mở đúng đường dẫn checklist nêu để tìm bằng chứng env steps/s bật/tắt giao diện ≥ 90% và không thấy tệp nào ⇒ NFR-PERF-001 và ý 'giảm không quá 10%' của AC-7 chưa được chứng minh bằng số đo chạy ngoài. Vòng review trước (run-20261011-0df231) chạy hẹp benchmark ở scratchpad thấy ratio_median 1.0039 (sản phẩm có vẻ đạt) nhưng đó không phải bằng chứng chính thức; diff base..head của lượt này không thêm tệp số đo nào. Cần một lượt benchmark do script ngoài/cổng ghi `logs/m1/benchmark_train.json`."
     },
     {
       "id": "F-002",
       "severity": "CRITICAL",
       "file": "specs/003-ppo-train-repro/tasks.md",
       "line": 75,
-      "claim": "plan-mandated: lệnh nguyên văn của AC-1…AC-5 / FR-001 / SC-001 là `python scripts/train.py --stage elbow --seed 42` nhưng `scripts/train.py` (và `scripts/` nói chung, `configs/`) không tồn tại ở bất kỳ commit nào của repo (`git log --diff-filter=A -- scripts/train.py` rỗng); tasks.md:75 tự ghi 'CHƯA CÓ CHỦ … chưa có test riêng'. Toàn bộ e2e/integration gọi `python -m mma_ai.learning.cli`.",
-      "failure_scenario": "Nhà nghiên cứu làm đúng spec/quickstart: `python scripts/train.py --stage elbow --seed 42` ⇒ 'can't open file scripts/train.py' (mã 2), không huấn luyện được; tương tự `scripts/benchmark_train.py` ở quickstart.md:75 và `--stage balance` của AC-5 qua lệnh nguyên văn. Mã trong gói chạy đúng qua `-m`, nên sửa là thêm vỏ 5 dòng gọi `main()` (cần mở vùng ghi `scripts/**`) kèm test entrypoint cho đúng lệnh spec, hoặc người sửa lại AC/FR sang lệnh `-m` bằng Clarifications."
+      "claim": "plan-mandated: lệnh nguyên văn của AC-1…AC-5 / FR-001 / SC-001 là `python scripts/train.py --stage elbow --seed 42`, nhưng `scripts/` và `configs/` không tồn tại trong cây (`ls scripts configs` lỗi, `git ls-files scripts` rỗng); tasks.md:75 tự ghi 'CHƯA CÓ CHỦ … chưa có test riêng' và acceptance.md:26-30 vẫn gán AC-1…AC-5 bằng test gọi `python -m mma_ai.learning.cli`.",
+      "failure_scenario": "Nhà nghiên cứu làm đúng spec/quickstart: `python scripts/train.py --stage elbow --seed 42` ⇒ 'can't open file scripts/train.py' (mã 2), không huấn luyện được; tương tự `scripts/benchmark_train.py` và `--stage balance` qua lệnh nguyên văn của AC-5. Mã trong gói chạy đúng qua `-m`, nên sửa là thêm vỏ 5 dòng gọi `main()` (cần mở vùng ghi `scripts/**`) kèm test entrypoint cho đúng lệnh spec, hoặc người sửa lại AC/FR sang lệnh `-m` bằng Clarifications. Giữ CRITICAL vì người dùng gặp được và vì plan bắt viết không làm giảm mức."
     },
     {
       "id": "F-003",
       "severity": "MINOR",
       "file": "tests/e2e/test_train_acceptance.py",
       "line": 276,
-      "claim": "Ảnh e2e/T337/AC-7-dashboard-desktop-1280x800.png (đã mở): thấy đủ 6 thẻ (bước 467/4096, 443.4 bước/giây, reward -13.505, checkpoint) nhưng Loss ghi 'chưa có dữ liệu' cả 3 dòng, 6 cơ đều 0.000, checkpoint 0/'chưa có'. Test chỉ chờ env-steps khác '-' rồi đếm 5 panel/≥6 dòng cơ, không khẳng định loss/activation có giá trị sau lần cập nhật đầu (n_steps).",
-      "failure_scenario": "Hồi quy làm dashboard mãi hiện 'chưa có dữ liệu'/0.000 cho loss và kích hoạt vẫn qua e2e AC-7 (ảnh chụp ở khoảng đầu run). Giá trị thật chỉ được test_dashboard_resilience.py kiểm qua /api/progress, mà test đó bị importorskip(torch) trong cổng `tests`. Không phải lỗi sản phẩm: trainer.py:241 khởi tạo activation = 0 đến hết rollout đầu."
+      "claim": "Ảnh evidence/e2e/T337/AC-7-dashboard-desktop-1280x800.png (đã mở lượt này): thấy đủ 6 thẻ (bước 467/4096, 443.4 bước/giây, reward -13.505, trạng thái checkpoint) nhưng Tổn thất (Loss) ghi 'chưa có dữ liệu' cả 3 dòng, 6 cơ đều 0.000, số checkpoint 0/'chưa có'. Test chỉ chờ env-steps khác '-' rồi đếm panel/dòng cơ, không khẳng định loss/activation có giá trị sau lần cập nhật đầu.",
+      "failure_scenario": "Hồi quy làm dashboard mãi hiện 'chưa có dữ liệu'/0.000 cho loss và kích hoạt vẫn qua e2e AC-7 (ảnh chụp ở khoảng đầu run, cập nhật 0). Giá trị thật chỉ được test_dashboard_resilience.py kiểm qua /api/progress, mà test đó bị importorskip(torch) trong cổng `tests`. Không phải lỗi sản phẩm ở đầu vào thực tế."
     },
     {
       "id": "F-004",
       "severity": "MINOR",
       "file": "pyproject.toml",
       "line": 18,
-      "claim": "Cổng `tests` chạy `--with pytest` không kèm extra rl ⇒ 116 test skipped (log T338: 1267 passed, 116 skipped, 11 xfailed), gồm test_resume, test_train_determinism, test_dashboard_resilience, test_benchmark_train CLI thật. Bằng chứng ngoài cho AC-2/AC-4/INV-004/INV-005/NFR-REPRO-001 chỉ đến từ cổng e2e (12 passed, test_train_acceptance dùng `uv run --extra rl`).",
-      "failure_scenario": "Hồi quy chỉ test tích hợp bắt được (khôi phục RNG/optimizer, sha256 checkpoint) không làm cổng `tests` đỏ. Reviewer chạy hẹp tests/challenge/test_train_invariants.py với --extra rl: 226 passed, 8 skipped, 2 xfailed (đúng hai ca F-005) ⇒ kết luận hiện tại đứng vững nhưng cổng tự động không giữ được."
+      "claim": "Cổng `tests` chạy `--with pytest` không kèm extra rl ⇒ nhiều test phụ thuộc torch bị skipped (log cổng cũ của T338: 1267 passed, 116 skipped, 11 xfailed), gồm test_resume, test_train_determinism, test_dashboard_resilience, test_benchmark_train CLI thật. Bằng chứng ngoài cho AC-2/AC-4/INV-004/INV-005/NFR-REPRO-001 chỉ đến từ cổng e2e dùng `uv run --extra rl`. Lượt này reviewer không chạy lại cổng (luật không sinh lại bằng chứng); kết luận dựa vào log cổng đã có.",
+      "failure_scenario": "Hồi quy chỉ test tích hợp có torch bắt được (khôi phục RNG/optimizer, sha256 checkpoint) không làm cổng `tests` đỏ."
     },
     {
       "id": "F-005",
-      "severity": "OPTIONAL",
-      "file": "src/mma_ai/learning/run_dir.py",
-      "line": 29,
-      "claim": "Mang từ challenger T338 (F-005, đã đối chiếu, xfail không strict, 2 ca vẫn XFAIL khi chạy với extra rl): create_run_dir không kiểm stage chứa dấu phân cách đường dẫn (INV-001).",
-      "failure_scenario": "Chỉ chạm được qua API: CLI/TrainConfig ép stage == 'elbow'; người dùng cuối không gặp."
+      "severity": "MINOR",
+      "file": "specs/003-ppo-train-repro/checklists/acceptance.md",
+      "line": 26,
+      "claim": "Dòng AC-1…AC-6 và NFR/INV nêu 'capture E2E tên AC-1…AC-6' làm dấu vết máy, nhưng `evidence/e2e/` chỉ có ảnh/zip AC-7 (T337, T424, T521) và AC-3-*-headless.png (T424); không có tệp capture tên AC-1, AC-2, AC-4, AC-5, AC-6 vì các test e2e này là CLI, không chụp. Cổng trace_fit xanh.",
+      "failure_scenario": "Người duyệt đọc dòng 'capture E2E tên AC-1' rồi đi tìm tệp và không có. AC-1…AC-6 thực chất được chứng minh bằng test entrypoint chạy CLI, không phải bằng tệp capture; câu chữ checklist over-claim nhưng không chặn."
     },
     {
       "id": "F-006",
       "severity": "OPTIONAL",
       "file": "src/mma_ai/visualization/replay.py",
       "line": 0,
-      "claim": "plan-mandated, kích thước: diff đo sẵn +891/-239 trên 5 tệp mã (OVERSIZED, >600), nhưng toàn bộ là commit khôi phục 35130c7 mã spec 005 (replay.py +646, episode.py, cli.py, episode.schema.json, pyproject.toml) — không thuộc spec 003; mỗi tệp đã qua cổng riêng ở task T5xx và verdict T523. Không có mã sản phẩm nào của spec 003 trong diff base..head; T339 chỉ chấm bằng chứng 003.",
-      "failure_scenario": "Không có hành động chia lại khả thi ở mức tích hợp; ghi nhận để người duyệt biết reviewer không đọc sâu mã 005 trong lượt này."
+      "claim": "plan-mandated, kích thước: mã sản phẩm của diff base..head ≈ replay.py +646, episode.py +79/-239, cli.py +68, episode.schema.json +91 (dữ liệu), pyproject.toml +7 ⇒ >600 (OVERSIZED). Toàn bộ thuộc khôi phục spec 005 (replay) đã qua cổng ở các task T5xx/T4xx; phần mới của spec 007 chỉ là test (test_viewer3d_train.py) và cấu hình mypy/artifacts trong pyproject. Không có mã sản phẩm spec 003 trong diff; T339 chỉ chấm bằng chứng 003.",
+      "failure_scenario": "Không có hành động chia lại khả thi ở mức tích hợp; ghi nhận để người duyệt biết reviewer không đọc sâu mã 005 trong lượt này. Cấu hình `exclude = [\"^tests/e2e/\"]` của mypy làm cổng typecheck không soi tests/e2e — chấp nhận được vì thư mục này chạy bằng cổng e2e."
+    },
+    {
+      "id": "F-007",
+      "severity": "MINOR",
+      "file": "tests/integration/test_viewer3d_train.py",
+      "line": 64,
+      "claim": "Hạn mức chờ trong `_wait_until_started` và vòng chờ ở test_view3d_process_separate dùng `time.time()` (đồng hồ treo tường) thay cho `time.monotonic()`; vòng chờ hạn mức là quyết định không hiển nhiên mà không có comment vì sao chọn poll 0.01 s.",
+      "failure_scenario": "Đồng hồ hệ thống bị chỉnh (NTP) giữa lúc chờ làm hạn mức 5 s ngắn lại hoặc dài ra, test chập chờn trở lại — đúng loại flake mà 007 muốn loại. Chỉ ảnh hưởng test nội bộ, không phải sản phẩm."
     }
   ]
 }
