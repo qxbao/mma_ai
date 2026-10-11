@@ -3,20 +3,40 @@
 Truy vết các yêu cầu kỹ thuật và tiêu chí chấp nhận (acceptance criteria):
 - 005 AC-1: Mở MuJoCo Viewer và phát lại một episode đã lưu theo đúng thứ tự các khung đã ghi.
 - 005 AC-2: Demo: chạy policy và xem khuỷu tay tới mục tiêu (hiển thị trực tiếp).
-- FR-001: Phát lại chuỗi khung hình theo đúng thứ tự đã ghi trong MuJoCo Viewer.
-- FR-004: Hiển thị điểm đánh dấu mục tiêu (target marker) tại đúng vị trí đã ghi.
-- FR-005: Hiển thị 6 giá trị kích hoạt cơ (muscle activation) của từng khung hình kèm tên cơ.
-- FR-014: Mã thoát phản ánh kết quả phát lại (thoát mã 0 khi phát xong hoặc đóng viewer).
-- FR-011: Khi thiếu màn hình, báo lỗi rõ bằng tiếng Việt và thoát mã 7 trong <= 5 s.
-- CMD-VIS-0001: Giao diện dòng lệnh python -m mma_ai.visualization.cli.
+- 005 FR-001: Phát lại chuỗi khung hình theo đúng thứ tự đã ghi trong MuJoCo Viewer.
+- 005 FR-004: Hiển thị điểm đánh dấu mục tiêu (target marker) tại đúng vị trí đã ghi.
+- 005 FR-005: Hiển thị 6 giá trị kích hoạt cơ (muscle activation) của từng khung hình kèm tên cơ.
+- 005 FR-014: Mã thoát phản ánh kết quả phát lại (thoát mã 0 khi phát xong hoặc đóng viewer).
+- 005 FR-011: Khi thiếu màn hình, báo lỗi rõ bằng tiếng Việt và thoát mã 7 trong <= 5 s.
+- 005 CMD-VIS-0001: Giao diện dòng lệnh python -m mma_ai.visualization.cli.
+- 007 AC-1: Viewer thật chọn nhánh theo display_available(), hạn mức <= 25 s có chẩn đoán.
+- 007 AC-3: Đo trước không đoán, nguyên nhân thật được ghi vào báo cáo trước khi sửa.
+- 007 AC-4: Không thêm skip/xfail, giữ nguyên toàn bộ khẳng định nghiệm thu, vùng sửa đúng 1 tệp.
+- 007 AC-5: Nếu nguyên nhân ở src/, dừng sửa nhánh đó, không đổi src/, kiểm thử ghi còn đỏ vì src/.
+- 007 FR-001: Chọn nhánh theo display_available(), kiểm định kết quả tất định cả hai nhánh.
+- 007 FR-002: Lệnh con CLI chạy qua _run_cli_bounded, dọn nhóm tiến trình, pytest.fail chẩn đoán.
+- 007 FR-004: Giữ nguyên mọi khẳng định nghiệm thu hiện có.
+- 007 FR-005: Đo đạc và ghi nhận bằng chứng đo trước khi sửa.
+- 007 FR-006: Không dùng skip, skipif, xfail, importorskip mới; pytest.mark.display giữ nguyên.
+- 007 FR-007: Vùng ghi đúng 1 tệp integration test, không sửa src/.
+- 007 FR-008: Thông báo lỗi bằng tiếng Việt nêu rõ ngữ cảnh, lệnh, hạn mức, đầu ra.
+- 007 INV-001: Không giảm số kiểm thử và không giảm độ chặt khẳng định.
+- 007 INV-002: Độc lập thứ tự, không để lại tiến trình hay tài nguyên mồ côi ngoài tmp_path.
+- 007 INV-003: Không thay đổi mã nguồn trong src/.
+- 007 NFR-REL-001: Kết quả đo đạc lặp lại tất định.
+- 007 NFR-PERF-001: Hạn mức thời gian rõ ràng (<= 25 s có màn hình, <= 5 s không màn hình).
+- 007 NFR-QUAL-001: Đảm bảo ruff check và mypy --strict không có lỗi.
 """
+
 
 from __future__ import annotations
 
 import os
+import signal
 import subprocess
 import sys
 import time
+from collections.abc import Sequence
 from pathlib import Path
 
 import pytest
@@ -33,6 +53,52 @@ from mma_ai.visualization.episode import (
     TimingRecord,
     write_episode,
 )
+
+TIMEOUT_DISPLAY_BOUNDED_S: float = 25.0
+TIMEOUT_NO_DISPLAY_BOUNDED_S: float = 5.0
+
+
+def _run_cli_bounded(
+    cmd: Sequence[str],
+    timeout_s: float,
+    env: dict[str, str] | None = None,
+) -> subprocess.CompletedProcess[str]:
+    """Chạy lệnh con CLI có hạn mức, dọn dẹp toàn bộ nhóm tiến trình khi quá hạn (FR-002, INV-002).
+
+    Trace: 007 FR-002, 007 FR-008, 007 INV-002, 007 AC-1.
+    """
+    proc = subprocess.Popen(
+        list(cmd),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        env=env,
+        start_new_session=True,
+    )
+    try:
+        stdout, stderr = proc.communicate(timeout=timeout_s)
+    except subprocess.TimeoutExpired:
+        # Ngắt toàn bộ session/tiến trình con tránh rò rỉ viewer mồ côi (INV-002)
+        try:
+            pgid = os.getpgid(proc.pid)
+            os.killpg(pgid, signal.SIGKILL)
+        except OSError:
+            pass
+        stdout, stderr = proc.communicate()
+        pytest.fail(
+            f"Lệnh con CLI vượt quá hạn mức thời gian {timeout_s:.1f} s (FR-002).\n"
+            f"Lệnh thực thi: {' '.join(cmd)}\n"
+            f"Stdout: {stdout}\n"
+            f"Stderr: {stderr}"
+        )
+
+    return subprocess.CompletedProcess(
+        args=list(cmd),
+        returncode=proc.returncode if proc.returncode is not None else 1,
+        stdout=stdout,
+        stderr=stderr,
+    )
+
 
 
 def _create_real_viewer_episode(file_path: Path) -> Path:
@@ -139,10 +205,14 @@ def _create_real_viewer_config(file_path: Path, hold_s: float = 0.1) -> Path:
 
 @pytest.mark.display  # type: ignore[untyped-decorator]
 def test_real_viewer_plays_or_reports_no_display(tmp_path: Path) -> None:
-    """AC-1, AC-2, FR-001, FR-004, FR-005, FR-014: Kiểm thử viewer thật theo display_available().
+    """007 AC-1, 007 AC-3, 007 AC-4, 007 AC-5, 007 FR-001, 007 FR-002, 007 FR-004, 007 FR-006.
 
-    - Có màn hình: python -m mma_ai.visualization.cli --episode mở viewer, phát đủ khung, mã 0.
-    - Không màn hình: mã 7 + thông báo tiếng Việt gợi ý --headless.
+    007 FR-007, 007 FR-008, 007 INV-001, 007 INV-002, 007 INV-003, 007 NFR-PERF-001.
+    007 NFR-REL-001, 007 NFR-QUAL-001.
+    Kiểm thử viewer thật theo display_available() với độ cứng chẩn đoán _run_cli_bounded:
+    - Có màn hình: mở viewer, phát đủ khung, mã 0 trong hạn 25 s.
+      (Lưu ý AC-5: khi đo phát hiện lỗi deadlock/treo GLFW ở src/, báo lỗi rõ qua pytest.fail).
+    - Không màn hình: mã 7 + thông báo tiếng Việt gợi ý --headless trong <= 5 s.
     - Cả hai nhánh là khẳng định thật, KHÔNG skip/xfail.
     """
     ep_file = _create_real_viewer_episode(tmp_path / "valid_episode.json")
@@ -164,13 +234,7 @@ def test_real_viewer_plays_or_reports_no_display(tmp_path: Path) -> None:
             str(cfg_file),
         ]
 
-        proc = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=25.0,
-            check=False,
-        )
+        proc = _run_cli_bounded(cmd, timeout_s=TIMEOUT_DISPLAY_BOUNDED_S)
 
         # FR-014: Thoát mã 0 sau khi hoàn tất phát lại bình thường
         assert proc.returncode == 0, (
@@ -200,16 +264,10 @@ def test_real_viewer_plays_or_reports_no_display(tmp_path: Path) -> None:
         ]
 
         start_time = time.perf_counter()
-        proc = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=15.0,
-            check=False,
-        )
+        proc = _run_cli_bounded(cmd, timeout_s=TIMEOUT_NO_DISPLAY_BOUNDED_S)
         elapsed = time.perf_counter() - start_time
 
-        # FR-011, NFR-HEADLESS-001: Phản hồi nhanh trong <= 5.0 s
+        # FR-011, NFR-HEADLESS-001, NFR-PERF-001: Phản hồi nhanh trong <= 5.0 s
         assert elapsed <= 5.0, f"Thời gian thực thi {elapsed:.2f} s vượt quá ngưỡng 5.0 s"
 
         # INV-004, CMD-VIS-0001: Mã thoát 7 khi thiếu màn hình hiển thị
@@ -224,6 +282,7 @@ def test_real_viewer_plays_or_reports_no_display(tmp_path: Path) -> None:
         assert "màn hình" in stderr_lower or "hiển thị" in stderr_lower, (
             f"Stderr thiếu giải thích nguyên nhân màn hình hiển thị: {proc.stderr}"
         )
+
 
 
 def test_real_viewer_forced_no_display_reports_code_7(tmp_path: Path) -> None:
