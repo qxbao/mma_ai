@@ -203,7 +203,7 @@ def _create_real_viewer_config(file_path: Path, hold_s: float = 0.1) -> Path:
     return file_path
 
 
-@pytest.mark.display  # type: ignore[untyped-decorator]
+@pytest.mark.display(reason="Viewer cần giữ biến môi trường màn hình nếu có.")  # type: ignore[untyped-decorator]
 def test_real_viewer_plays_or_reports_no_display(tmp_path: Path) -> None:
     """007 AC-1, 007 AC-3, 007 AC-4, 007 AC-5, 007 FR-001, 007 FR-002, 007 FR-004, 007 FR-006.
 

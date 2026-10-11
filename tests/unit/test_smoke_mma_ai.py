@@ -38,9 +38,21 @@ def test_smoke_fr_019_headless_display_isolation() -> None:
     assert "WAYLAND_DISPLAY" not in os.environ
 
 
-@pytest.mark.display  # type: ignore[untyped-decorator]
+@pytest.mark.display(reason="Kiểm tra marker giữ lại biến môi trường hiển thị.")  # type: ignore[untyped-decorator]
 def test_smoke_fr_019_display_marker_preserves_display(monkeypatch: pytest.MonkeyPatch) -> None:
     """FR-019: Marker display cho phép sử dụng biến môi trường hiển thị khi cần."""
     # Khi test tự đặt hoặc môi trường có cấu hình, marker cho phép giữ nguyên
     monkeypatch.setenv("DISPLAY", ":99")
     assert os.environ.get("DISPLAY") == ":99"
+
+
+def test_inv_006_unmarked_test_forces_display_probe_off() -> None:
+    """INV-006, AC-6: test không mang marker màn hình ép dò thất bại ở tiến trình con."""
+    child = subprocess.run(
+        [sys.executable, "-c", "import os; print(os.environ.get('MMA_AI_FORCE_NO_DISPLAY'))"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+
+    assert child.stdout.strip() == "1"
