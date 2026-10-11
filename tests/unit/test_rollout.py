@@ -248,6 +248,40 @@ def test_inf_action_blocked_before_step(monkeypatch: pytest.MonkeyPatch) -> None
     assert rec.end_reason in ("abnormal_action", "abnormal")
 
 
+def test_complex_action_blocked_before_step(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Kiểm tra hành động số phức hoặc chứa phần ảo NaN/Inf bị chặn ngay trước env.step.
+
+    Truy vết: 004 FR-003, 004 FR-016, 004 INV-003, 004 AC-1.
+    """
+    env = ElbowReachEnv()
+    step_called = False
+    original_step = env.step
+
+    def spy_step(action: Any) -> Any:
+        nonlocal step_called
+        step_called = True
+        return original_step(action)
+
+    monkeypatch.setattr(env, "step", spy_step)
+
+    # Hành động số phức chứa phần ảo NaN
+    complex_nan_action = np.array([complex(0.5, float("nan"))] * 6)
+    bad_policy = BadActionPolicy(complex_nan_action, name="complex_nan_policy")
+
+    records = run_policy_on_targets(
+        env, bad_policy, n_targets=1, repeats=1, seed_base=8888
+    )
+
+    assert len(records) == 1
+    assert not step_called, "env.step tuyệt đối KHÔNG được gọi khi hành động là số phức!"
+    rec = records[0]
+    assert rec.abnormal is True
+    assert rec.reached is False
+    assert rec.final_distance_m is None
+    assert rec.nan_count == 6
+    assert rec.end_reason in ("abnormal_action", "abnormal")
+
+
 def test_episode_record_fields_and_dict() -> None:
     """Kiểm tra đầy đủ thuộc tính và khả năng chuyển đổi dict của EpisodeRecord.
 

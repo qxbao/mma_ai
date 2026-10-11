@@ -13,6 +13,7 @@ Hiện thực các yêu cầu và bất biến theo hợp đồng phân hệ đ�
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from typing import Any
 
@@ -174,7 +175,32 @@ def _run_single_episode(
 
         # Chặn tại biên và thẩm định hành động ngay trước env.step (004 FR-003, 004 INV-003)
         try:
-            act_arr = np.asarray(raw_action, dtype=np.float64).reshape(-1)
+            raw_arr = np.asarray(raw_action)
+            # Kiểm tra nếu hành động có chứa kiểu số phức (INV-003: hành động phải là số thực)
+            if np.iscomplexobj(raw_arr):
+                n_nans = int(np.isnan(raw_arr).sum())
+                n_infs = int(np.isinf(raw_arr).sum())
+                if n_nans > 0 or n_infs > 0:
+                    nan_count += n_nans
+                    inf_count += n_infs
+                abnormal = True
+                end_reason = "abnormal_action"
+                break
+
+            if raw_arr.dtype == object:
+                # Kiểm tra từng phần tử nếu mảng là kiểu đối tượng (object chứa complex)
+                for item in raw_arr.flat:
+                    if isinstance(item, complex):
+                        if math.isnan(item.real) or math.isnan(item.imag):
+                            nan_count += 1
+                        if math.isinf(item.real) or math.isinf(item.imag):
+                            inf_count += 1
+                        abnormal = True
+                if abnormal:
+                    end_reason = "abnormal_action"
+                    break
+
+            act_arr = raw_arr.astype(np.float64).reshape(-1)
         except Exception:
             abnormal = True
             end_reason = "abnormal_action"
