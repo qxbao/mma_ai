@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
 from jsonschema import validate
 
 from mma_ai.compat.env_report import build_environment_report, main, render_text
@@ -115,7 +116,9 @@ def test_render_text_has_one_line_per_check() -> None:
     ) == len(report["checks"])
 
 
-def test_cli_json_is_single_object_and_exit_follows_overall(capsys) -> None:
+def test_cli_json_is_single_object_and_exit_follows_overall(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     status = main(["--json"])
     captured = capsys.readouterr()
     decoded = json.loads(captured.out)
@@ -124,6 +127,6 @@ def test_cli_json_is_single_object_and_exit_follows_overall(capsys) -> None:
     assert captured.out.count("\n") == 1
 
 
-def test_cli_unknown_option_returns_two(capsys) -> None:
+def test_cli_unknown_option_returns_two(capsys: pytest.CaptureFixture[str]) -> None:
     assert main(["--unknown"]) == 2
     assert "--unknown" in capsys.readouterr().err
