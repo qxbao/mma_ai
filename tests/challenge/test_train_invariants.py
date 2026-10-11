@@ -722,6 +722,9 @@ def test_inv001_concurrent_creation_same_second_yields_unique_dirs(
     assert all((root / run_id / "checkpoints").is_dir() for run_id in results)
 
 
+@pytest.mark.requires_symlink(  # type: ignore[untyped-decorator]
+    reason="Tạo liên kết tượng trưng (symlink) cần quyền đặc biệt trên Windows"
+)
 def test_inv001_symlinked_and_file_collisions_do_not_write_through(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
