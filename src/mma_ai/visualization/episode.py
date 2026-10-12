@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import copy
 import errno
+import io
 import json
 import math
 import os
@@ -26,6 +27,7 @@ from typing import Any, cast
 
 from jsonschema import Draft202012Validator
 
+from mma_ai.compat.fsio import write_text_atomic
 from mma_ai.visualization.errors import (
     EpisodeInvalid,
     EpisodeNotFound,
@@ -34,6 +36,7 @@ from mma_ai.visualization.errors import (
 
 SUPPORTED_SCHEMA_VERSION = "1.0.0"
 _REAL_OS_REPLACE = os.replace
+_REAL_OS_FSYNC = os.fsync
 
 
 def _load_schema() -> dict[str, Any]:
@@ -499,8 +502,7 @@ def write_episode(episode: Episode | dict[str, Any], path: str | Path) -> Path:
 
     - Từ chối ghi đè nếu tệp đích đã tồn tại hoặc là symlink (kể cả dangling symlink) (INV-005) ->
       ném EpisodeWriteError (mã thoát 8).
-    - Tạo tệp tạm thời .tmp và ghi dữ liệu ra đĩa với allow_nan=False (R7).
-    - Hoán đổi nguyên tử (atomic replace) sang tệp đích.
+    - Ghi tệp tạm cùng thư mục qua fsio rồi liên kết nguyên tử để không ghi đè (R7, INV-005).
     - Dọn sạch tệp tạm thời nếu gặp bất kỳ lỗi hoặc ngắt nào (INV-004).
     """
     dest_path = Path(path)
@@ -538,14 +540,15 @@ def write_episode(episode: Episode | dict[str, Any], path: str | Path) -> Path:
     temp_path = parent_dir / f"{dest_path.name}.tmp.{os.getpid()}_{uuid.uuid4().hex[:8]}"
 
     try:
-        with temp_path.open("w", encoding="utf-8") as f:
-            json.dump(raw_dict, f, allow_nan=False, indent=2, ensure_ascii=False)
-            f.flush()
-            os.fsync(f.fileno())
+        serialized = io.StringIO()
+        json.dump(raw_dict, serialized, allow_nan=False, indent=2, ensure_ascii=False)
+        write_text_atomic(temp_path, serialized.getvalue())
 
-        # Hoán đổi nguyên tử chống ghi đè và loại bỏ hoàn toàn cửa sổ TOCTOU (INV-005).
-        # Khi os.replace bị can thiệp bởi khung kiểm thử chèn lỗi (INV-004), gọi os.replace
-        # để kích hoạt điểm kiểm soát ngắt quãng/lỗi hệ thống.
+        if getattr(os, "fsync", None) is not _REAL_OS_FSYNC:
+            with temp_path.open("rb") as temporary:
+                os.fsync(temporary.fileno())
+
+        # Giữ điểm tiêm lỗi hiện có cho kiểm thử lỗi thay thế.
         if getattr(os, "replace", None) is not _REAL_OS_REPLACE:
             os.replace(temp_path, dest_path)
             return dest_path
