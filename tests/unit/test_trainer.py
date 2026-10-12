@@ -262,6 +262,7 @@ def test_resume_from_checkpoint(tmp_path: Path) -> None:
     assert ckpt_path.is_file()
 
     loaded = load_checkpoint(ckpt_path, for_training=True)
+    loaded.raw_data["path"] = r"C:\runs\checkpoints\state.pt"
 
     # Lượt chạy con tiếp tục từ checkpoint
     config_2 = _make_fast_config(tmp_path, total_timesteps=16, n_steps=8, every_updates=1)
@@ -269,6 +270,8 @@ def test_resume_from_checkpoint(tmp_path: Path) -> None:
     run_dir_2 = tmp_path / "run_child"
 
     trainer_2 = Trainer(cfg=config_2, env=env_2, run_dir=run_dir_2, resume_checkpoint=loaded)
+    assert trainer_2.resumed_from is not None
+    assert trainer_2.resumed_from["checkpoint"] == "runs/checkpoints/state.pt"
     res_2 = trainer_2.run()
 
     assert res_2.status == "done"
@@ -277,7 +280,7 @@ def test_resume_from_checkpoint(tmp_path: Path) -> None:
 
     manifest_child = json.loads((run_dir_2 / "manifest.json").read_text(encoding="utf-8"))
     assert manifest_child["resumed_from"] is not None
-    assert manifest_child["resumed_from"]["checkpoint"] == "checkpoints/ckpt_u000001_final.pt"
+    assert manifest_child["resumed_from"]["checkpoint"] == "runs/checkpoints/state.pt"
 
 
 def teardown_module() -> None:
