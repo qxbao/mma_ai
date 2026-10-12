@@ -16,6 +16,7 @@ from typing import Any
 import numpy as np
 import torch
 
+from mma_ai.compat.pathrules import to_record_path
 from mma_ai.environment.errors import PhysicsInstabilityError
 from mma_ai.learning.checkpoint import (
     CheckpointMeta,
@@ -41,6 +42,11 @@ from mma_ai.learning.ppo import PPOAgent, compute_gae
 from mma_ai.learning.progress import ProgressWriter
 from mma_ai.learning.repro import seed_everything
 from mma_ai.learning.train_config import TrainConfig
+
+
+def _record_checkpoint_path(path: str | Path) -> str:
+    """Chuẩn hóa đường dẫn checkpoint thành dạng tương đối đa nền tảng."""
+    return to_record_path(path)
 
 
 @dataclass(frozen=True)
@@ -147,7 +153,7 @@ class Trainer:
                     f"mô hình hiện tại có '{model_sha}'."
                 )
             raw_path = loaded.raw_data.get("path", "checkpoints/checkpoint.pt")
-            ckpt_rel_path = str(raw_path).lstrip("/")
+            ckpt_rel_path = _record_checkpoint_path(str(raw_path))
             ckpt_sha256 = str(loaded.raw_data.get("sha256", "0" * 64))
             resumed_run_id = str(loaded.raw_data.get("run_id", "parent_run"))
 

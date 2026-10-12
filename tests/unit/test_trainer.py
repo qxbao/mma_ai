@@ -288,3 +288,12 @@ def teardown_module() -> None:
         if mod.startswith("mma_ai.learning") or mod == "torch" or mod.startswith("torch."):
             sys.modules.pop(mod, None)
 
+
+def test_inv_005_resumed_checkpoint_path_uses_portable_record_form() -> None:
+    """INV-005: Đường dẫn checkpoint tiếp tục luôn tương đối và dùng dấu `/`."""
+    _torch()
+    from mma_ai.learning.trainer import _record_checkpoint_path
+
+    assert _record_checkpoint_path(r"C:\runs\checkpoints\state.pt") == (
+        "runs/checkpoints/state.pt"
+    )
