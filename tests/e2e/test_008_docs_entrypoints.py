@@ -3,10 +3,15 @@
 Truy vết: AC-1, AC-2, AC-3, AC-4, AC-5, INV-001, INV-002,
 INV-003, INV-004, NFR-DOC-001, NFR-DOC-002, NFR-DOC-003, NFR-DOC-004,
 NFR-GATE-001, NFR-QUAL-001.
+Truy vết đồng bộ: 010/AC-1, 010/AC-2, 010/AC-3, 010/FR-010,
+010/FR-011, 010/INV-001, 010/INV-003, 010/INV-004, 010/INV-005,
+010/NFR-DOC-001, 010/NFR-DOC-002, 010/NFR-GATE-001, 010/NFR-QUAL-001.
 """
 
 from __future__ import annotations
 
+import json
+import os
 import re
 import subprocess
 import sys
@@ -20,17 +25,25 @@ import pytest
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 GUIDES = {"training.md": "train", "evaluation.md": "evaluate", "replay-demo.md": "replay"}
+PLATFORM_GUIDE = "platforms.md"
+ALL_GUIDES = (*GUIDES, PLATFORM_GUIDE)
+CAPABILITY_MARKERS = (
+    "requires_display", "requires_cuda", "requires_symlink",
+    "windows_only", "requires_xdist", "requires_git_history",
+)
 DOCUMENTS = (
     PROJECT_ROOT / "README.md",
     PROJECT_ROOT / "CONTRIBUTING.md",
     PROJECT_ROOT / "CHANGELOG.md",
-    *(PROJECT_ROOT / "docs/guides" / name for name in GUIDES),
+    *(PROJECT_ROOT / "docs/guides" / name for name in ALL_GUIDES),
 )
 COMMANDS = {
     "train": [sys.executable, "scripts/train.py"],
     "evaluate": [sys.executable, "-m", "mma_ai.evaluation.cli"],
     "replay": [sys.executable, "-m", "mma_ai.visualization.cli"],
     "benchmark": [sys.executable, "-m", "mma_ai.learning.benchmark"],
+    "env-report": [sys.executable, "-m", "mma_ai.compat.env_report"],
+    "pytest": [sys.executable, "-m", "pytest"],
     "uv-run": ["uv", "run"],
     "uv-sync": ["uv", "sync"],
     "mypy": ["uv", "run", "--isolated", "--with", "mypy", "mypy"],
@@ -52,9 +65,6 @@ def _help(command: str) -> str:
         [*COMMANDS[command], "--help"], cwd=PROJECT_ROOT,
         capture_output=True, text=True, timeout=45, check=False,
     )
-    if (command in {"train", "evaluate"} and result.returncode != 0
-            and ("ModuleNotFoundError" in result.stderr or "ImportError" in result.stderr)):
-        pytest.skip(f"Thiếu phụ thuộc nhóm rl/eval: {result.stderr.strip()}")
     assert result.returncode == 0, (
         f"Lệnh {command} --help trả mã {result.returncode}: "
         f"{result.stdout}\n{result.stderr}"
@@ -66,6 +76,13 @@ def _help(command: str) -> str:
 def _flags(text: str) -> set[str]:
     """Trích cờ dài (long options) để so khớp nguyên cờ."""
     return set(FLAG_RE.findall(text))
+
+
+def _supported_flags(command: str) -> set[str]:
+    """Đối chiếu nguồn CLI tối giản không có --help; CLI khác dùng trợ giúp thật."""
+    if command == "env-report":
+        return _flags(_read(PROJECT_ROOT / "src/mma_ai/compat/env_report.py"))
+    return _flags(_help(command))
 
 
 def _documented_commands(text: str) -> list[str]:
@@ -86,8 +103,12 @@ def _command_for_line(line: str) -> str:
         ("mma_ai.evaluation.cli", "evaluate"),
         ("mma_ai.visualization.cli", "replay"),
         ("mma_ai.learning.benchmark", "benchmark"),
+        ("mma_ai.compat.env_report", "env-report"),
+        ("pytest", "pytest"),
     ):
-        if line.startswith(f"python -m {module} "):
+        if line.startswith(f"python -m {module} ") or (
+            command == "env-report" and line == f"python -m {module}"
+        ):
             return command
     if line.startswith("uv sync"):
         return "uv-sync"
@@ -145,10 +166,14 @@ def test_ac2_inv003_platform_claims_match_draft_support() -> None:
     )[1].split("\n## ", 1)[0]
     support_spec = _read(PROJECT_ROOT / "specs/006-cross-platform-support/spec.md")
     assert re.search(r"^status: draft$", support_spec, re.MULTILINE)
-    for claim in ("Linux", "WSL2", "Windows", "macOS", "specs/006-cross-platform-support/"):
-        assert claim in platform
-    assert "đang được triển khai" in platform
-    assert "chưa xác nhận khả năng chạy" in platform
+    assert "specs/006-cross-platform-support/" in platform
+    rows = dict(re.findall(r"^- \*\*(.+?)\*\*: (.+)$", platform, re.MULTILINE))
+    assert "đã kiểm" in rows["Linux"] and "chưa kiểm" not in rows["Linux"]
+    for label in ("Windows 11", "WSL2", "macOS", "CUDA", "Ô CI chạy thật trên GitHub Actions"):
+        assert "chưa kiểm" in rows[label], f"{label} thiếu giới hạn kiểm chứng"
+        assert "đã kiểm" not in rows[label], f"{label} khẳng định vượt bằng chứng"
+    for claim in ("hỗ trợ đầy đủ", "đã xác nhận khả năng chạy", "chạy được trên mọi nền tảng"):
+        assert claim not in platform.lower(), f"Khẳng định vượt bằng chứng: {claim}"
 
 
 def test_ac2_nfr_doc002_first_step_is_executable() -> None:
@@ -165,10 +190,6 @@ def test_ac2_nfr_doc002_first_step_is_executable() -> None:
         capture_output=True, text=True, timeout=600, check=False,
     )
     elapsed = time.monotonic() - start
-    if result.returncode != 0 and (
-        "ModuleNotFoundError" in result.stderr or "ImportError" in result.stderr
-    ):
-        pytest.skip(f"Thiếu phụ thuộc nhóm rl: {result.stderr.strip()}")
     assert result.returncode == 0, result.stderr
     assert "usage:" in result.stdout.lower()
     assert elapsed <= 600, f"Entrypoint đầu tiên mất {elapsed:.2f} giây"
@@ -194,7 +215,7 @@ def test_ac2_ac3_ac5_inv001_documented_flags(path: Path) -> None:
             else:
                 assert not documented, f"Cờ lệnh chưa đối chiếu trong {path}: {line}"
         else:
-            missing = documented - _flags(_help(command))
+            missing = documented - _supported_flags(command)
             assert not missing, f"Cờ sai trong {path.name}, lệnh {command}: {sorted(missing)}"
 
 
@@ -246,8 +267,9 @@ def test_ac1_ac2_ac3_ac4_ac5_document_structure() -> None:
     assert "Keep a Changelog" in changelog
 
     guides_dir = PROJECT_ROOT / "docs/guides"
-    assert {p.name for p in guides_dir.iterdir() if p.is_file()} == set(GUIDES)
-    for name in GUIDES:
+    assert {p.name for p in guides_dir.iterdir() if p.is_file()} == set(ALL_GUIDES)
+    assert f"docs/guides/{PLATFORM_GUIDE}" in readme
+    for name in ALL_GUIDES:
         guide = _read(guides_dir / name)
         assert len(guide.splitlines()) <= 120, f"{name} dài quá 120 dòng"
         assert "../../README.md" in guide
@@ -265,3 +287,89 @@ def test_ac2_ac3_ac4_ac5_inv004_relative_links(path: Path) -> None:
             continue
         destination = path.parent / unquote(parsed.path)
         assert destination.exists(), f"Liên kết gãy tại {path.name}: {raw_target}"
+
+
+def _capture_cli(name: str, result: subprocess.CompletedProcess[str]) -> None:
+    """Lưu đầu ra CLI theo kịch bản (scenario) khi cổng cấp thư mục capture."""
+    record = f"exit={result.returncode}\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+    print(f"{name}\n{record}")
+    capture_dir = os.environ.get("AI_SDLC_CAPTURE_DIR")
+    if capture_dir:
+        destination = Path(capture_dir)
+        destination.mkdir(parents=True, exist_ok=True)
+        (destination / f"{name}.txt").write_text(record, encoding="utf-8")
+
+
+@pytest.mark.parametrize("argument", ("--json", "--unknown-platform-option"))
+def test_010_ac1_inv004_env_report_entrypoint(argument: str) -> None:
+    """010/AC-1, 010/INV-004: JSON và cờ lạ đi qua điểm vào (entrypoint) thật."""
+    result = subprocess.run(
+        [*COMMANDS["env-report"], argument], cwd=PROJECT_ROOT,
+        capture_output=True, text=True, encoding="utf-8", timeout=45, check=False,
+    )
+    name = "json" if argument == "--json" else "unknown-option"
+    _capture_cli(f"010-AC-1-env-report-{name}", result)
+    if argument == "--json":
+        assert result.returncode in {0, 1}, result.stderr
+        report = json.loads(result.stdout)
+        assert isinstance(report, dict) and report.get("schema_version")
+    else:
+        assert result.returncode == 2, result.stderr
+
+
+def test_010_ac1_inv004_platform_guide_commands_and_markers() -> None:
+    """010/AC-1, 010/INV-004: ba lệnh và sáu dấu năng lực khớp nguồn thật."""
+    guide = _read(PROJECT_ROOT / "docs/guides" / PLATFORM_GUIDE)
+    lines = _documented_commands(guide)
+    assert lines == [
+        "python -m mma_ai.compat.env_report",
+        "python -m mma_ai.compat.env_report --json",
+        "python -m pytest -q --capability-report capability.json",
+    ]
+    assert [_command_for_line(line) for line in lines] == ["env-report", "env-report", "pytest"]
+    result = subprocess.run(
+        [*COMMANDS["pytest"], "--help"], cwd=PROJECT_ROOT,
+        capture_output=True, text=True, encoding="utf-8", timeout=45, check=False,
+    )
+    _capture_cli("010-AC-1-pytest-help", result)
+    assert result.returncode == 0, result.stderr
+    assert {"--capability-report", "--capability-max-ratio"} <= _flags(result.stdout)
+    assert _flags(guide) <= _supported_flags("env-report") | _flags(result.stdout)
+    source = _read(PROJECT_ROOT / "tests/unit/capability_gate.py")
+    for marker in CAPABILITY_MARKERS:
+        assert f"`{marker}`" in guide
+        assert re.search(rf'^\s*"{marker}":', source, re.MULTILINE), marker
+    assert "check_env.py" not in guide
+
+
+def test_010_ac1_ac2_inv001_unreleased_platform_changes() -> None:
+    """010/AC-1, 010/AC-2, 010/INV-001: thay đổi có truy vết và giới hạn kiểm chứng."""
+    unreleased = _read(PROJECT_ROOT / "CHANGELOG.md").split(
+        "## [Unreleased]\n", 1
+    )[1].split("\n## ", 1)[0]
+    assert "### Added" in unreleased and "### Changed" in unreleased
+    for feature in (
+        "006-cross-platform-support", "007-stabilize-viewer-tests",
+        "008-project-docs", "009-git-history-capability",
+    ):
+        assert f"specs/{feature}/" in LINK_RE.findall(unreleased)
+    source = _read(PROJECT_ROOT / "tests/unit/capability_gate.py")
+    for marker in CAPABILITY_MARKERS:
+        assert f"`{marker}`" in unreleased
+        assert re.search(rf'^\s*"{marker}":', source, re.MULTILINE), marker
+    assert not _documented_commands(unreleased)
+    assert not re.search(r"^\s*```(?:sh|bash)\b", unreleased, re.MULTILINE)
+    limits = [line for line in unreleased.splitlines() if "Windows" in line and "macOS" in line]
+    assert any("CI" in line and re.search(r"chưa (?:được )?kiểm", line) for line in limits)
+
+
+def test_010_ac2_inv001_platform_guide_verification_limits() -> None:
+    """010/AC-2, 010/INV-001: hướng dẫn không suy ra nền tảng đã kiểm từ cấu hình."""
+    guide = _read(PROJECT_ROOT / "docs/guides" / PLATFORM_GUIDE)
+    limits = guide.split("## Giới hạn kiểm chứng", 1)[1]
+    rows = dict(re.findall(r"^\| ([^|]+?) \| ([^|]+?) \|$", limits, re.MULTILINE))
+    assert "Đã kiểm" in rows["Linux"]
+    for label in ("Windows 11", "WSL2", "macOS", "CUDA", "GitHub Actions"):
+        matching = [value for key, value in rows.items() if label in key]
+        assert len(matching) == 1, f"Thiếu dòng giới hạn {label}"
+        assert "Chưa kiểm" in matching[0] and "Đã kiểm" not in matching[0]
