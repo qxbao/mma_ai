@@ -114,6 +114,7 @@ def test_ac2_inv004_readme_quickstart() -> None:
     ]
 
 
+@pytest.mark.requires_git_history(reason="Máy không có lịch sử git")
 def test_inv002_document_commits_keep_product_code_untouched() -> None:
     """INV-002: các commit tạo tài liệu không sửa mã sản phẩm hay CI."""
     allowed = {
