@@ -235,7 +235,7 @@ def test_ac2_git_history_probe_false_on_oserror(monkeypatch: pytest.MonkeyPatch)
 
 
 def test_ac2_git_history_probe_false_on_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
-    """AC-2, FR-003, NFR-QUAL-001, INV-003: timeout git có giới hạn năm giây."""
+    """AC-2, FR-003, 009/NFR-QUAL-001, INV-003: timeout git tối đa năm giây."""
     import capability_gate
 
     observed: dict[str, object] = {}
@@ -255,10 +255,10 @@ def test_ac2_git_history_probe_false_on_timeout(monkeypatch: pytest.MonkeyPatch)
 def test_ac2_nfr_gate_001_requires_git_history_deselected_without_dot_git(
     tmp_path: Path,
 ) -> None:
-    """AC-2, AC-3, FR-004, NFR-GATE-001, INV-002, INV-006:
-    test lịch sử của 008 bị loại trên archive.
+    """AC-2, 009/AC-3, FR-004, NFR-GATE-001, INV-002, INV-006:
+    test lịch sử của 008 bị loại trên archive; mã INV-002 ở đây là của 009.
 
-    Kết quả hỗ trợ cổng verify, nhưng không tự kiểm toàn bộ AC-3 hay thân test INV-002.
+    Test này không thay lần chạy ai-sdlc verify --branch ai-sdlc/integration của cổng máy.
     """
     plugin_root = tmp_path / "tests" / "unit"
     plugin_root.mkdir(parents=True)
@@ -321,3 +321,21 @@ def test_ac2_nfr_gate_001_requires_git_history_deselected_without_dot_git(
             "reason": "Máy không có lịch sử git",
         }
     ]
+
+
+def test_009_inv_002_project_dependency_files_unchanged() -> None:
+    """009/INV-002: đặc tả yêu cầu không sửa pyproject.toml và uv.lock.
+
+    Đây là kiểm tra trạng thái git cục bộ, khác INV-002 của 008 về tài liệu commit.
+    """
+    import subprocess
+
+    changed_files = subprocess.run(
+        ["git", "diff", "--name-only", "HEAD", "--", "pyproject.toml", "uv.lock"],
+        cwd=_ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.splitlines()
+
+    assert changed_files == []
