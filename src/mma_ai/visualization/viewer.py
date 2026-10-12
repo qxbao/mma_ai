@@ -18,6 +18,10 @@ from typing import TYPE_CHECKING, Any, Sequence
 
 import numpy as np
 
+from mma_ai.compat.display import viewer_launch_hint
+from mma_ai.compat.platform_info import detect_platform
+from mma_ai.visualization.errors import DisplayUnavailable
+
 if TYPE_CHECKING:
     import mujoco
 
@@ -60,7 +64,19 @@ class ViewerSink:
         if handle is not None:
             self._handle = handle
         else:
-            self._handle = mujoco.viewer.launch_passive(self.model, self.data)
+            profile = detect_platform()
+            launch_hint = viewer_launch_hint(profile=profile)
+            if launch_hint is not None:
+                raise DisplayUnavailable(f"Lỗi hiển thị giao diện đồ hoạ: {launch_hint}")
+            try:
+                self._handle = mujoco.viewer.launch_passive(self.model, self.data)
+            except Exception as error:
+                launch_hint = viewer_launch_hint(error=str(error), profile=profile)
+                if launch_hint is None:
+                    raise
+                raise DisplayUnavailable(
+                    f"Lỗi hiển thị giao diện đồ hoạ: {launch_hint}"
+                ) from error
 
     def set_target(
         self,

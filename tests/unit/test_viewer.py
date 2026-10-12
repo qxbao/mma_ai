@@ -221,6 +221,67 @@ def test_viewer_sink_calls_launch_passive_when_no_handle_provided(
     assert sink.is_open() is True
 
 
+def test_macos_without_mjpython_reports_vietnamese_hint(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """INV-004, AC-3: từ chối khởi chạy viewer trên macOS khi thiếu mjpython."""
+    import mujoco.viewer
+
+    import mma_ai.visualization.viewer as viewer_module
+    from mma_ai.compat.platform_info import PlatformProfile
+    from mma_ai.visualization.errors import DisplayUnavailable
+
+    profile = PlatformProfile("macos", "14", "arm64", (3, 12, 0), False, True)
+    monkeypatch.setattr(viewer_module, "detect_platform", lambda: profile, raising=False)
+    launch_calls: list[bool] = []
+    monkeypatch.setattr(
+        mujoco.viewer,
+        "launch_passive",
+        lambda *_args: launch_calls.append(True),
+    )
+    loaded = load_muscle_model("myoelbow")
+
+    with pytest.raises(DisplayUnavailable, match="mjpython -m") as error:
+        viewer_module.ViewerSink(
+            loaded.model,
+            mujoco.MjData(loaded.model),
+            _create_sample_config(),
+        )
+
+    assert error.value.exit_code == 7
+    assert launch_calls == []
+
+
+def test_macos_launch_error_mentions_mjpython(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """INV-004, AC-3: ánh xạ lỗi khởi chạy nhắc mjpython sang lỗi màn hình."""
+    import mujoco.viewer
+
+    import mma_ai.visualization.viewer as viewer_module
+    from mma_ai.compat.platform_info import PlatformProfile
+    from mma_ai.visualization.errors import DisplayUnavailable
+
+    profile = PlatformProfile("macos", "14", "arm64", (3, 12, 0), False, True)
+    monkeypatch.setattr(viewer_module, "detect_platform", lambda: profile, raising=False)
+    monkeypatch.setattr(sys, "executable", "/usr/bin/mjpython")
+    monkeypatch.setattr(
+        mujoco.viewer,
+        "launch_passive",
+        lambda *_args: (_ for _ in ()).throw(RuntimeError("must be run with mjpython")),
+    )
+    loaded = load_muscle_model("myoelbow")
+
+    with pytest.raises(DisplayUnavailable, match="mjpython -m") as error:
+        viewer_module.ViewerSink(
+            loaded.model,
+            mujoco.MjData(loaded.model),
+            _create_sample_config(),
+        )
+
+    assert error.value.exit_code == 7
+
+
 def test_viewer_sink_show_sets_state_and_forwards(monkeypatch: pytest.MonkeyPatch) -> None:
     """Kiểm tra show() cập nhật trạng thái và gọi forward (FR-001, FR-005, INV-002, AC-1, AC-2)."""
     from mma_ai.visualization.viewer import ViewerSink
