@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib
+import importlib.util
 import json
 import math
 import sys
@@ -15,6 +16,7 @@ _MARKERS = (
     "display",
     "requires_display",
     "requires_cuda",
+    "requires_xdist",
     "requires_symlink",
     "windows_only",
     "posix_only",
@@ -57,6 +59,7 @@ def pytest_configure(config: pytest.Config) -> None:
         "display": "Yêu cầu màn hình hiển thị.",
         "requires_display": "Yêu cầu màn hình hiển thị.",
         "requires_cuda": "Yêu cầu CUDA khả dụng.",
+        "requires_xdist": "Yêu cầu pytest-xdist.",
         "requires_symlink": "Yêu cầu hệ điều hành hỗ trợ liên kết tượng trưng (symbolic link).",
         "windows_only": "Chỉ chạy trên Windows.",
         "posix_only": "Chỉ chạy trên hệ điều hành POSIX.",
@@ -74,6 +77,8 @@ def _platform_kind() -> str:
 
 
 def _capability_available(marker: str) -> bool:
+    if marker == "requires_xdist":
+        return importlib.util.find_spec("xdist") is not None
     if marker == "requires_display":
         from mma_ai.compat.display import probe_display
 

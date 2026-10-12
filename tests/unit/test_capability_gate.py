@@ -132,6 +132,8 @@ def test_inv_006_all_required_markers_are_registered(tmp_path: Path) -> None:
         "def test_symlink(): assert True\n"
         "@pytest.mark.requires_cuda(reason='Cần CUDA')\n"
         "def test_cuda(): assert True\n"
+        "@pytest.mark.requires_xdist(reason='Cần pytest-xdist')\n"
+        "def test_xdist(): assert True\n"
         "@pytest.mark.posix_only(reason='Chỉ POSIX')\n"
         "def test_posix(): assert True\n"
         "@pytest.mark.linux_only(reason='Chỉ Linux')\n"
@@ -169,6 +171,7 @@ def test_inv_006_all_required_markers_are_registered(tmp_path: Path) -> None:
     assert "PytestUnknownMarkWarning" not in result.stdout + result.stderr
 
 
+@pytest.mark.requires_xdist(reason="Máy không có pytest-xdist")  # type: ignore[untyped-decorator]
 def test_regress_f_001_xdist_reports_deselected_and_enforces_ratio(tmp_path: Path) -> None:
     """F-001, INV-006, AC-6, NFR-CI-001: xdist phải giữ báo cáo và ngưỡng loại test."""
     report_path = tmp_path / "capabilities.json"
