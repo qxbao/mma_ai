@@ -45,6 +45,15 @@ def _runs(root: Path) -> list[Path]:
     return sorted(path for path in root.iterdir() if (path / "manifest.json").is_file())
 
 
+def _ui_runs(root: Path) -> list[Path]:
+    """Trả các thư mục run có giao diện quan sát đã sẵn sàng."""
+    if not root.is_dir():
+        return []
+    return sorted(
+        path for path in root.iterdir() if path.is_dir() and (path / "ui.json").is_file()
+    )
+
+
 def _manifest(run_dir: Path) -> dict[str, Any]:
     """Nạp hồ sơ JSON của một lượt train đã hoàn thành."""
     return cast(
@@ -249,11 +258,11 @@ def test_ac_7_progress_ui_live(tmp_path: Path) -> None:
     ui_pid: int | None = None
     try:
         _wait_until(
-            lambda: len(_runs(runs_dir)) == 1 and (_runs(runs_dir)[0] / "ui.json").is_file(),
+            lambda: len(_ui_runs(runs_dir)) == 1,
             timeout=20.0,
             message="Không thấy ui.json từ monitoring CLI",
         )
-        run_dir = _runs(runs_dir)[0]
+        run_dir = _ui_runs(runs_dir)[0]
         ui_info = json.loads((run_dir / "ui.json").read_text(encoding="utf-8"))
         ui_url = ui_info["url"]
         ui_pid = int(ui_info["pid"])
@@ -261,22 +270,33 @@ def test_ac_7_progress_ui_live(tmp_path: Path) -> None:
         from playwright.sync_api import sync_playwright  # type: ignore[import-not-found]
 
         console_errors: list[str] = []
+        snapshot_ready = False
         capture_dir = os.environ.get("AI_SDLC_CAPTURE_DIR")
         with sync_playwright() as playwright:
             browser = playwright.chromium.launch()
             context = browser.new_context(viewport={"width": 1280, "height": 800})
             context.tracing.start(screenshots=True, snapshots=True, sources=True)
             page = context.new_page()
+
             def record_console_error(message: Any) -> None:
-                if message.type == "error":
+                if message.type == "error" and "Failed to load resource" not in message.text:
                     console_errors.append(message.text)
+
+            def record_http_error(response: Any) -> None:
+                is_progress_request = response.url.rstrip("/").endswith("/api/progress")
+                if response.status == 503 and is_progress_request and not snapshot_ready:
+                    return
+                if response.status >= 400:
+                    console_errors.append(f"HTTP {response.status}: {response.url}")
 
             page.on("console", record_console_error)
             page.on("pageerror", lambda error: console_errors.append(str(error)))
+            page.on("response", record_http_error)
             page.goto(ui_url, wait_until="domcontentloaded")
             page.wait_for_function(
-                "document.getElementById('env-steps').textContent.trim() !== '-'"
+                "document.querySelectorAll('#muscles-list .muscle-row').length === 6"
             )
+            snapshot_ready = True
             assert page.locator("h1").count() == 1
             panels = page.locator(
                 "#panel-reward, #panel-loss, #panel-activation, "
