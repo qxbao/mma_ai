@@ -192,3 +192,43 @@ def teardown_module() -> None:
     for mod in list(sys.modules):
         if mod == "mma_ai.learning" or mod.startswith("mma_ai.learning."):
             sys.modules.pop(mod, None)
+
+
+def test_inv_003_inv_005_ac_4_manifest_paths_are_portable_property() -> None:
+    """INV-003, INV-005, AC-4: 100 hồ sơ giữ mọi đường dẫn tương đối và dùng dấu `/`."""
+    from mma_ai.learning.manifest import build_manifest
+
+    rng = random.Random(20261012)
+    for index in range(100):
+        run_index = f"run-{rng.randrange(1_000_000):06d}"
+        artifact_index = rng.randrange(1_000_000)
+        drive = chr(rng.randrange(ord("A"), ord("Z") + 1))
+        windows_path = f"{drive}:\\experiments\\{run_index}\\artifact-{artifact_index}.bin"
+        manifest = build_manifest(
+            run_id=f"20261010T080000Z_elbow_s{index}",
+            config=_base_config(index, 10),
+            seed=index,
+            resumed_from={
+                "run_id": f"20261010T080000Z_elbow_s{index}",
+                "checkpoint": windows_path,
+                "checkpoint_sha256": "a" * 64,
+            },
+            model={
+                "sha256": "b" * 64,
+                "source": windows_path,
+                "muscle_names": ["TRIlong"],
+            },
+            checkpoints=[{"path": windows_path}],
+            resources={"ram_peak_mb": 256},
+        )
+
+        paths = [
+            manifest["resumed_from"]["checkpoint"],
+            manifest["model"]["source"],
+            manifest["checkpoints"][0]["path"],
+        ]
+        for path in paths:
+            assert "\\" not in path
+            assert not path.startswith("/")
+            assert not (len(path) >= 2 and path[1] == ":")
+            assert path == f"experiments/{run_index}/artifact-{artifact_index}.bin"

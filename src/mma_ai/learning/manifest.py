@@ -16,6 +16,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping, Sequence, cast
 
+from mma_ai.compat.fsio import write_text_atomic
+from mma_ai.compat.pathrules import to_record_path
 from mma_ai.learning.errors import NonFiniteError, RunDirError
 
 # Mẫu regex định danh lượt chạy (run id) theo schema
@@ -173,7 +175,7 @@ def build_manifest(
     if resolved_resumed is not None:
         resumed_dict = {
             "run_id": str(resolved_resumed["run_id"]),
-            "checkpoint": str(resolved_resumed["checkpoint"]).lstrip("/"),
+            "checkpoint": to_record_path(resolved_resumed["checkpoint"]),
             "checkpoint_sha256": str(resolved_resumed["checkpoint_sha256"]),
         }
     else:
@@ -202,14 +204,14 @@ def build_manifest(
     if model is not None:
         resolved_model = {
             "sha256": str(model["sha256"]),
-            "source": str(model["source"]).lstrip("/"),
+            "source": to_record_path(model["source"]),
             "muscle_names": list(model["muscle_names"]),
         }
     elif env is not None and hasattr(env, "model_record"):
         rec = env.model_record()
         resolved_model = {
             "sha256": str(rec["sha256"]),
-            "source": str(rec["source"]).lstrip("/"),
+            "source": to_record_path(rec["source"]),
             "muscle_names": list(rec["muscle_names"]),
         }
     elif "model" in base:
@@ -245,7 +247,7 @@ def build_manifest(
         else:
             c_dict = dict(ckpt)
         if "path" in c_dict:
-            c_dict["path"] = str(c_dict["path"]).lstrip("/")
+            c_dict["path"] = to_record_path(c_dict["path"])
         resolved_checkpoints.append(c_dict)
 
     # 10. Khả năng tái lập (reproducibility)
@@ -484,7 +486,6 @@ def write_manifest(run_dir: str | Path | Any, manifest: dict[str, Any]) -> Path:
 
     run_path.mkdir(parents=True, exist_ok=True)
     target_file = run_path / "manifest.json"
-    tmp_file = run_path / "manifest.json.tmp"
 
     # BƯỚC 2: Kiểm tra bất biến INV-001 bảo vệ thư mục run đã kết thúc
     if target_file.is_file():
@@ -499,21 +500,7 @@ def write_manifest(run_dir: str | Path | Any, manifest: dict[str, Any]) -> Path:
         except json.JSONDecodeError:
             pass
 
-    # BƯỚC 3: Ghi tệp .tmp, fsync và thay thế nguyên tử (os.replace)
-    try:
-        with tmp_file.open("w", encoding="utf-8") as f:
-            json.dump(manifest, f, indent=2, ensure_ascii=False)
-            f.flush()
-            os.fsync(f.fileno())
-
-        os.replace(tmp_file, target_file)
-    except Exception:
-        if tmp_file.exists():
-            try:
-                tmp_file.unlink()
-            except OSError:
-                pass
-        raise
+    write_text_atomic(target_file, json.dumps(manifest, indent=2, ensure_ascii=False))
 
     return target_file
 
