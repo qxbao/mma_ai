@@ -4,7 +4,7 @@ title: Hướng dẫn phát lại và trình diễn
 doc_type: guide
 owner_agent: docs
 status: active
-updated: "2026-10-12"
+updated: "2026-10-13"
 ---
 
 # Hướng dẫn phát lại và trình diễn
@@ -44,6 +44,6 @@ Phát lại phiên chuyển động đã lưu hoặc tạo phiên từ điểm k
 | `4` | Checkpoint lỗi; kiểm tra tệp đầu vào. |
 | `5` | Tệp phiên lỗi; kiểm tra tệp đầu vào. |
 | `6` | Mô hình không khớp; kiểm tra tính tương thích. |
-| `7` | Không có màn hình dùng được; thử `--headless`. |
+| `7` | Không có màn hình dùng được; thử `--headless`. Trên macOS, chạy bằng `python` thường khi không có `--headless` cần trình xem (viewer) qua `mjpython`: khi khởi chạy thất bại, lệnh trả mã `7` kèm gợi ý dùng `mjpython`; chưa kiểm trên macOS thật. |
 | `8` | Lỗi ghi tệp; kiểm tra đường dẫn đích. |
 | `130` | Đã ngắt bằng Ctrl-C. |
