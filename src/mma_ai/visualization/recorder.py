@@ -16,12 +16,13 @@ from __future__ import annotations
 import hashlib
 import math
 from datetime import datetime, timezone
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import Any
 
 import mujoco
 import numpy as np
 
+from mma_ai.compat.pathrules import is_absolute_any_os
 from mma_ai.environment.errors import PhysicsInstabilityError
 from mma_ai.visualization.episode import (
     SUPPORTED_SCHEMA_VERSION,
@@ -94,8 +95,8 @@ def resolve_source(
 
             ckpt = load_checkpoint(target_path)
             ckpt_rel = str(target_path)
-            if ckpt_rel.startswith("/"):
-                ckpt_rel = target_path.name
+            if is_absolute_any_os(ckpt_rel):
+                ckpt_rel = PureWindowsPath(ckpt_rel).name
             sha = (
                 hashlib.sha256(target_path.read_bytes()).hexdigest()
                 if target_path.is_file()
@@ -109,8 +110,8 @@ def resolve_source(
             )
         except Exception:
             ckpt_rel = str(target_path)
-            if ckpt_rel.startswith("/"):
-                ckpt_rel = target_path.name
+            if is_absolute_any_os(ckpt_rel):
+                ckpt_rel = PureWindowsPath(ckpt_rel).name
             sha = (
                 hashlib.sha256(target_path.read_bytes()).hexdigest()
                 if target_path.is_file()

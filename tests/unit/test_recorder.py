@@ -27,7 +27,7 @@ from mma_ai.environment.errors import PhysicsInstabilityError
 from mma_ai.environment.single_agent import make_env
 from mma_ai.visualization.episode import Episode, SourceRecord, validate_episode_dict
 from mma_ai.visualization.errors import DemoUnstable
-from mma_ai.visualization.recorder import record_episode
+from mma_ai.visualization.recorder import record_episode, resolve_source
 
 try:
     import jsonschema
@@ -378,6 +378,18 @@ def test_source_provenance_preserved() -> None:
     )
     assert ep_dict_src.source is not None
     assert ep_dict_src.source.checkpoint_path == "runs/exp_02/checkpoints/latest.pt"
+
+
+@pytest.mark.parametrize(  # type: ignore[untyped-decorator]
+    "path",
+    [r"C:\runs\exp_01\checkpoints\best.pt", "C:/runs/exp_01/checkpoints/best.pt"],
+)
+def test_inv_005_windows_absolute_checkpoint_records_filename(path: str) -> None:
+    """INV-005: Đường dẫn checkpoint tuyệt đối kiểu Windows chỉ lộ tên tệp."""
+    source = resolve_source(path)
+
+    assert source is not None
+    assert source.checkpoint_path == "best.pt"
 
 
 def test_recorded_episode_validates_against_schema(episode_schema: dict[str, Any]) -> None:

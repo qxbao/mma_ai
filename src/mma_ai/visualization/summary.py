@@ -13,10 +13,10 @@ Cung cấp cấu trúc và hàm tóm tắt máy đọc được theo hợp đồ
 from __future__ import annotations
 
 import math
-import os
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
+from mma_ai.compat.pathrules import to_record_path
 from mma_ai.visualization.errors import EpisodeInvalid
 
 SUPPORTED_SCHEMA_VERSION = "1.0.0"
@@ -39,17 +39,7 @@ def _to_relative_path(path_val: str | Path | None) -> str | None:
     if not raw_str:
         return None
 
-    path_obj = Path(raw_str)
-    if path_obj.is_absolute():
-        try:
-            rel = path_obj.relative_to(Path.cwd())
-            return str(rel).replace("\\", "/")
-        except ValueError:
-            # Đường dẫn tuyệt đối nằm ngoài thư mục làm việc hiện tại
-            rel_str = os.path.relpath(path_obj, Path.cwd())
-            return rel_str.replace("\\", "/")
-
-    return raw_str.replace("\\", "/")
+    return to_record_path(raw_str)
 
 
 def _check_finite(obj: Any, path: str = "summary") -> None:
