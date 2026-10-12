@@ -244,7 +244,7 @@ def test_only_train_split_requested(tmp_path: Path) -> None:
         trainer.run()
 
 
-def test_resume_from_checkpoint(tmp_path: Path) -> None:
+def test_regress_tdd_red_resume_checkpoint_portable_path(tmp_path: Path) -> None:
     """FR-009, INV-004: Khôi phục và tiếp tục huấn luyện từ một checkpoint hợp lệ."""
     _torch()
     from mma_ai.learning.checkpoint import load_checkpoint
