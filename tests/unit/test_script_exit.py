@@ -285,3 +285,63 @@ def test_cli_active_sink_closed_before_os_exit(
     main(["--episode", "any.json"])
     assert exit_called is True
 
+
+def test_006_ac_4_main_configures_utf8_before_replay(monkeypatch: Any) -> None:
+    """006 AC-4, NFR-ENC-001: main cấu hình UTF-8 trước khi phát lại."""
+    events: list[str] = []
+
+    def configure_utf8() -> None:
+        events.append("utf8")
+
+    monkeypatch.setattr("mma_ai.visualization.cli.ensure_utf8_stdio", configure_utf8)
+
+    def replay(args: Any) -> int:
+        events.append("replay")
+        return 0
+
+    monkeypatch.setattr("mma_ai.visualization.cli.run_replay", replay)
+    monkeypatch.setattr("mma_ai.visualization.cli.was_viewer_opened", lambda: False)
+
+    assert main(["--headless"]) == 0
+    assert events == ["utf8", "replay"]
+
+
+def test_006_ac_3_macos_mjpython_failure_keeps_no_display_exit_code(
+    monkeypatch: Any,
+) -> None:
+    """006 AC-3, FR-007: lỗi mjpython trên macOS dùng mã thiếu màn hình 7."""
+    monkeypatch.setattr(
+        "mma_ai.visualization.cli.run_replay",
+        lambda args: (_ for _ in ()).throw(RuntimeError("viewer requires mjpython")),
+    )
+    monkeypatch.setattr("mma_ai.visualization.cli.was_viewer_opened", lambda: False)
+    from mma_ai.compat.platform_info import PlatformProfile
+
+    monkeypatch.setattr(
+        "mma_ai.visualization.cli.detect_platform",
+        lambda: PlatformProfile("macos", "14", "arm64", (3, 12, 0), False, True),
+    )
+    monkeypatch.setattr("mma_ai.visualization.cli.sys.executable", "/usr/bin/python")
+
+    assert main(["--episode", "episode.json"]) == 7
+
+
+def test_006_ac_1_headless_skips_display_probe(monkeypatch: Any) -> None:
+    """006 AC-1, FR-008: CLI headless không dò màn hình hay mở viewer."""
+    events: list[str] = []
+
+    def replay(args: Any) -> int:
+        events.append("replay")
+        return 0
+
+    monkeypatch.setattr("mma_ai.visualization.cli.run_replay", replay)
+
+    def launch_hint(**kwargs: Any) -> None:
+        events.append("viewer-hint")
+        return None
+
+    monkeypatch.setattr("mma_ai.visualization.cli.viewer_launch_hint", launch_hint)
+    monkeypatch.setattr("mma_ai.visualization.cli.was_viewer_opened", lambda: False)
+
+    assert main(["--headless"]) == 0
+    assert events == ["replay"]

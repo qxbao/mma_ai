@@ -13,6 +13,9 @@ import os
 import sys
 from collections.abc import Sequence
 
+from mma_ai.compat.display import viewer_launch_hint
+from mma_ai.compat.platform_info import detect_platform
+from mma_ai.compat.stdio import ensure_utf8_stdio
 from mma_ai.visualization.replay import (
     get_active_viewer_sink,
     run_replay,
@@ -35,15 +38,29 @@ def main(argv: Sequence[str] | None = None) -> int:
     Returns:
         Mã thoát nguyên tương ứng theo hợp đồng CMD-VIS-0001.
     """
+    ensure_utf8_stdio()
     effective_argv = list(argv) if argv is not None else sys.argv[1:]
+    headless = "--headless" in effective_argv
 
     try:
         exit_code = run_replay(effective_argv)
+        replay_error: Exception | None = None
     except KeyboardInterrupt:
         exit_code = 130
     except Exception as err:
+        replay_error = err
         sys.stderr.write(f"Lỗi không lường trước tại điểm vào CLI: {err}\n")
         exit_code = 1
+
+    platform = detect_platform()
+    if not headless and platform.kind == "macos":
+        launch_hint = viewer_launch_hint(
+            error=None if replay_error is None else str(replay_error),
+            profile=platform,
+        )
+        if launch_hint is not None and exit_code != 0:
+            sys.stderr.write(f"{launch_hint}\n")
+            exit_code = 7
 
     # Luôn xả bộ đệm xuất nhập chuẩn để không thất thoát thông tin tóm tắt và thông báo
     sys.stdout.flush()
