@@ -19,6 +19,7 @@ from typing import Any
 
 import yaml
 
+from mma_ai.compat.pathrules import is_absolute_any_os
 from mma_ai.evaluation.errors import EvalConfigError
 
 _SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
@@ -456,17 +457,24 @@ class EvalConfig:
         cls._validate_keys("paths", set(paths_data.keys()), _PATHS_REQUIRED_KEYS)
 
         runs_dir = paths_data["runs_dir"]
-        if not isinstance(runs_dir, str) or len(runs_dir) == 0 or runs_dir.startswith("/"):
+        if (
+            not isinstance(runs_dir, str)
+            or len(runs_dir) == 0
+            or is_absolute_any_os(runs_dir)
+        ):
+            detail = "không bắt đầu bằng '/'"
+            if isinstance(runs_dir, str) and not runs_dir.startswith("/"):
+                detail = "không phải đường dẫn tuyệt đối"
             raise EvalConfigError(
                 "Giá trị 'paths.runs_dir' phải là đường dẫn tương đối không rỗng và "
-                f"không bắt đầu bằng '/', nhận được: {runs_dir!r}"
+                f"{detail}, nhận được: {runs_dir!r}"
             )
 
         env_override = paths_data["env_config_override"]
         if env_override is not None:
             is_valid_env = (
                 isinstance(env_override, str)
-                and not env_override.startswith("/")
+                and not is_absolute_any_os(env_override)
                 and env_override.endswith(".yaml")
             )
             if not is_valid_env:

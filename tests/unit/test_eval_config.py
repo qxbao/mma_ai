@@ -148,6 +148,43 @@ def test_invalid_values_raise(tmp_path: Path) -> None:
             EvalConfig.load(temp_yaml)
 
 
+def test_t629_ac_4_absolute_paths_are_rejected(tmp_path: Path) -> None:
+    """AC-4: Từ chối đường dẫn tuyệt đối theo cú pháp POSIX và Windows."""
+    absolute_paths = [
+        "/absolute/path",
+        "\\rooted\\path",
+        "\\\\server\\share",
+        "C:\\folder\\config",
+        "C:folder",
+    ]
+    for field in ("runs_dir", "env_config_override"):
+        for absolute_path in absolute_paths:
+            config = EvalConfig.load().as_dict()
+            value = absolute_path if field == "runs_dir" else f"{absolute_path}.yaml"
+            config["paths"][field] = value
+            config_path = tmp_path / f"{field}_{len(value)}.yaml"
+            config_path.write_text(yaml.safe_dump(config), encoding="utf-8")
+
+            with pytest.raises(EvalConfigError) as exc_info:
+                EvalConfig.load(config_path)
+
+            assert repr(value) in str(exc_info.value)
+
+
+def test_t629_ac_4_relative_paths_are_accepted(tmp_path: Path) -> None:
+    """AC-4: Chấp nhận đường dẫn tương đối ở cả hai trường cấu hình."""
+    config = EvalConfig.load().as_dict()
+    config["paths"]["runs_dir"] = "runs/custom"
+    config["paths"]["env_config_override"] = "configs/environment.yaml"
+    config_path = tmp_path / "relative_paths.yaml"
+    config_path.write_text(yaml.safe_dump(config), encoding="utf-8")
+
+    loaded = EvalConfig.load(config_path)
+
+    assert loaded.paths.runs_dir == "runs/custom"
+    assert loaded.paths.env_config_override == "configs/environment.yaml"
+
+
 def test_missing_and_extra_keys_raise(tmp_path: Path) -> None:
     """FR-018: Ném EvalConfigError khi thiếu khoá bắt buộc hoặc có khoá lạ không cho phép."""
     cfg = EvalConfig.load()
