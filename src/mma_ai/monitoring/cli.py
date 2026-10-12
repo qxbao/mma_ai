@@ -20,6 +20,8 @@ import time
 from pathlib import Path
 from typing import Sequence
 
+from mma_ai.compat.fsio import write_text_atomic
+from mma_ai.compat.stdio import ensure_utf8_stdio
 from mma_ai.monitoring.dashboard import serve
 
 __all__: list[str] = ["main"]
@@ -79,6 +81,7 @@ def main(
     Trả về:
         Mã thoát nguyên (0 khi hoàn tất/đóng sạch, khác 0 khi lỗi khởi động).
     """
+    ensure_utf8_stdio()
     parser = _build_parser()
     args = parser.parse_args(list(argv) if argv is not None else None)
 
@@ -114,13 +117,11 @@ def main(
         "pid": os.getpid(),
     }
     ui_path = run_path / "ui.json"
-    tmp_path = run_path / f".ui.json.{os.getpid()}.tmp"
     try:
-        tmp_path.write_text(
+        write_text_atomic(
+            ui_path,
             json.dumps(ui_info, ensure_ascii=False, indent=2),
-            encoding="utf-8",
         )
-        tmp_path.replace(ui_path)
     except Exception as err:
         sys.stderr.write(f"Lỗi ghi tệp ui.json vào thư mục run: {err}\n")
         sys.stderr.flush()

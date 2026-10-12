@@ -95,6 +95,41 @@ def test_writes_ui_json(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> N
     assert data["url"] in captured.out, "URL máy chủ phải được in ra stdout"
 
 
+def test_006_ac_1_main_configures_utf8_before_argument_parsing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """006 AC-1, AC-4: cấu hình UTF-8 trước khi CLI có thể phát thông báo lỗi."""
+    configured: list[bool] = []
+    monkeypatch.setattr(
+        cli, "ensure_utf8_stdio", lambda: configured.append(True), raising=False
+    )
+
+    with pytest.raises(SystemExit):
+        cli.main(["--unknown"])
+
+    assert configured == [True]
+
+
+def test_006_inv_003_atomic_ui_write_cleans_temporary_file_on_failure(
+    tmp_path: Path,
+) -> None:
+    """006 INV-003, INV-005, AC-4: lỗi thay ui.json không để lại tệp tạm."""
+    run_dir = tmp_path / "run_atomic_failure"
+    run_dir.mkdir()
+    stop_event = threading.Event()
+    stop_event.set()
+
+    with patch(
+        "mma_ai.compat.fsio.replace_atomic", side_effect=OSError("lỗi giả lập")
+    ):
+        exit_code = cli.main(
+            ["--run", str(run_dir), "--port", "0"], stop_event=stop_event
+        )
+
+    assert exit_code == 1
+    assert sorted(path.name for path in run_dir.iterdir()) == []
+
+
 def test_port_in_use_exits_nonzero_message(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
@@ -198,7 +233,10 @@ def test_ui_json_write_failure_exits_nonzero(
     run_dir = tmp_path / "run_write_err"
     run_dir.mkdir(parents=True)
 
-    with patch.object(Path, "replace", side_effect=OSError("Lỗi ghi đĩa giả lập")):
+    with patch(
+        "mma_ai.compat.fsio.replace_atomic",
+        side_effect=OSError("Lỗi ghi đĩa giả lập"),
+    ):
         exit_code = cli.main(["--run", str(run_dir), "--port", "0"])
         assert exit_code != 0, "Lỗi ghi ui.json phải thoát khác 0"
 
