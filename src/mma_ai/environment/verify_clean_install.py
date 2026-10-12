@@ -19,6 +19,10 @@ import time
 from pathlib import Path
 from typing import Any, Callable, Sequence
 
+from mma_ai.compat.fsio import write_text_atomic
+from mma_ai.compat.pathrules import venv_python
+from mma_ai.compat.stdio import ensure_utf8_stdio
+
 REQUIRED_PACKAGES: tuple[str, ...] = ("gymnasium", "mujoco", "myo-sim", "numpy")
 
 
@@ -141,7 +145,7 @@ def verify_clean_install(
         sync_exit = _execute_command(runner, sync_cmd, cwd=root, env=env)
         step_exit_codes["sync"] = sync_exit
 
-        py_bin = venv_path / "bin" / "python"
+        py_bin = venv_python(venv_path)
         pytest_exit: int | None = None
 
         # Bước 2: Chạy kiểm thử môi trường nếu bước đồng bộ thành công
@@ -196,7 +200,7 @@ def verify_clean_install(
         }
 
         content = json.dumps(record, indent=2, ensure_ascii=False) + "\n"
-        out_file.write_text(content, encoding="utf-8")
+        write_text_atomic(out_file, content)
         return overall_exit_code, record
 
 
@@ -207,6 +211,7 @@ def main(
     output_path: Path | None = None,
 ) -> int:
     """Điểm nhập chính (main entrypoint) cho CLI và thực thi trực tiếp."""
+    ensure_utf8_stdio()
     parser = argparse.ArgumentParser(
         description="Xác minh cài đặt sạch mma-ai trong môi trường ảo tạm."
     )

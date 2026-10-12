@@ -210,3 +210,99 @@ def test_record_paths_relative(tmp_path: Path) -> None:
                 assert_no_absolute_paths(item, f"{key_path}[{i}]")
 
     assert_no_absolute_paths(record)
+
+
+def test_ac_1_ac_5_uses_windows_python_from_fake_platform(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """AC-1, AC-5: Lệnh pytest dùng Python trong Scripts trên hồ sơ Windows giả."""
+    from mma_ai.compat import pathrules
+    from mma_ai.compat.platform_info import PlatformProfile
+
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    (project_root / "uv.lock").write_text("# lockfile\n", encoding="utf-8")
+    monkeypatch.setattr(
+        pathrules,
+        "detect_platform",
+        lambda: PlatformProfile("windows", "10", "AMD64", (3, 11, 0), False, True),
+    )
+    import mma_ai.environment.verify_clean_install as clean_install
+
+    queried_executables: list[Path | None] = []
+
+    def record_query(
+        py_executable: Path | None, custom_versions: dict[str, str] | None = None
+    ) -> dict[str, str]:
+        queried_executables.append(py_executable)
+        return {}
+
+    monkeypatch.setattr(
+        clean_install,
+        "_query_installed_versions",
+        record_query,
+    )
+    runner = MockRunner()
+
+    assert main(
+        argv=[],
+        runner=runner,
+        project_root=project_root,
+        output_path=project_root / "result.json",
+    ) == 0
+
+    assert queried_executables[0] is not None
+    assert queried_executables[0].as_posix().endswith(".venv/Scripts/python.exe")
+
+
+def test_inv_003_output_replace_failure_preserves_previous_record(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """INV-003: Thay tệp thất bại giữ nguyên byte cũ và dọn tệp tạm."""
+    from mma_ai.compat import fsio
+    from mma_ai.compat.fsio import AtomicWriteError
+
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    (project_root / "uv.lock").write_text("# lockfile\n", encoding="utf-8")
+    output_path = project_root / "result.json"
+    previous = b'{"previous": true}\n'
+    output_path.write_bytes(previous)
+
+    def fail_replace(source: str | Path, destination: str | Path) -> None:
+        raise PermissionError("locked")
+
+    assert fsio.replace_atomic.__kwdefaults__ is not None
+    monkeypatch.setitem(fsio.replace_atomic.__kwdefaults__, "replace", fail_replace)
+    with pytest.raises(AtomicWriteError):
+        main(
+            argv=[],
+            runner=MockRunner(),
+            project_root=project_root,
+            output_path=output_path,
+        )
+
+    assert output_path.read_bytes() == previous
+    assert sorted(path.name for path in project_root.iterdir()) == ["result.json", "uv.lock"]
+
+
+def test_ac_1_main_configures_utf8_before_verification(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """AC-1: main thiết lập đầu ra UTF-8 trước khi chạy quy trình xác minh."""
+    import mma_ai.environment.verify_clean_install as clean_install
+
+    calls: list[str] = []
+
+    def record_utf8() -> None:
+        calls.append("utf8")
+
+    def record_verification(**kwargs: Any) -> tuple[int, dict[str, Any]]:
+        calls.append("verify")
+        return 0, {}
+
+    monkeypatch.setattr(clean_install, "ensure_utf8_stdio", record_utf8)
+    monkeypatch.setattr(clean_install, "verify_clean_install", record_verification)
+
+    assert clean_install.main(argv=[], project_root=tmp_path) == 0
+    assert calls == ["utf8", "verify"]
