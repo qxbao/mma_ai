@@ -4,7 +4,7 @@ title: "Ma trận truy vết — chỉ mục phân hệ"
 doc_type: tracing
 owner_agent: spec
 status: draft
-updated: "2026-10-12"
+updated: "2026-10-13"
 ---
 
 <!-- ai-sdlc:chi-muc-phan-he — MÁY SINH, sửa tệp phân hệ trong thư mục con, không sửa tệp này -->
@@ -21,3 +21,4 @@ Mỗi phân hệ (= mỗi `specs/<NNN-slug>/`) một tệp. Mở ĐÚNG tệp c�
 - [Ma trận truy vết 007-stabilize-viewer-tests](trace/007-stabilize-viewer-tests.md) — 13 KB
 - [Ma trận truy vết 008-project-docs](trace/008-project-docs.md) — 11 KB
 - [Ma trận truy vết 009-git-history-capability](trace/009-git-history-capability.md) — 8 KB
+- [Ma trận truy vết 010-docs-platform-sync](trace/010-docs-platform-sync.md) — 11 KB
