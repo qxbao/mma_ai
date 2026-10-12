@@ -231,6 +231,32 @@ def test_paths_relative() -> None:
     assert sum_saved["source"]["checkpoint_path"] == "checkpoints/model.pt"
 
 
+def test_inv_005_windows_absolute_paths_are_recorded_relatively() -> None:
+    """INV-005: Đường dẫn tuyệt đối kiểu Windows được ghi theo dạng tương đối."""
+    episode = _make_sample_episode(n_frames=2)
+    model_chk = ModelCheck(
+        match=True,
+        compatible=True,
+        episode_sha256=SAMPLE_XML_HASH_A,
+        current_sha256=SAMPLE_XML_HASH_A,
+    )
+
+    summary = summarize_episode(
+        episode,
+        model_chk,
+        source={
+            "episode_path": r"C:\runs\exp1\demo.episode.json",
+            "checkpoint_path": r"C:\checkpoints\model.pt",
+            "checkpoint_sha256": SAMPLE_CKPT_HASH,
+        },
+        saved_episode=r"C:\runs\exp1\saved.episode.json",
+    )
+
+    assert summary["source"]["episode_path"] == "runs/exp1/demo.episode.json"
+    assert summary["source"]["checkpoint_path"] == "checkpoints/model.pt"
+    assert summary["saved_episode"] == "runs/exp1/saved.episode.json"
+
+
 def test_single_frame_episode_no_zero_division() -> None:
     """Kiểm tra episode chỉ có 1 khung không gây lỗi chia cho 0 (FR-010, API-VIS-0006, AC-1)."""
     episode = _make_sample_episode(n_frames=1)
