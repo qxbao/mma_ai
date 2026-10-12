@@ -1,7 +1,8 @@
 """Kiểm thử đầu-cuối (end-to-end, E2E) tài liệu qua entrypoint CLI thật.
 
 Truy vết: AC-1, AC-2, AC-3, AC-4, AC-5, INV-001, INV-002,
-INV-003, INV-004, NFR-DOC-001, NFR-DOC-002, NFR-DOC-003, NFR-DOC-004.
+INV-003, INV-004, NFR-DOC-001, NFR-DOC-002, NFR-DOC-003, NFR-DOC-004,
+NFR-GATE-001, NFR-QUAL-001.
 """
 
 from __future__ import annotations
@@ -116,7 +117,7 @@ def test_ac2_inv004_readme_quickstart() -> None:
 
 @pytest.mark.requires_git_history(reason="Máy không có lịch sử git")
 def test_inv002_document_commits_keep_product_code_untouched() -> None:
-    """INV-002: các commit tạo tài liệu không sửa mã sản phẩm hay CI."""
+    """INV-002, NFR-GATE-001, NFR-QUAL-001: các commit tạo tài liệu không sửa mã sản phẩm hay CI."""
     allowed = {
         "README.md", "LICENSE", "CONTRIBUTING.md", "CHANGELOG.md",
         *(f"docs/guides/{name}" for name in GUIDES),
