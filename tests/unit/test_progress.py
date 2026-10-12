@@ -60,7 +60,9 @@ def test_fr_020_nfr_perf_002_snapshot_atomic_and_schema(tmp_path: Path) -> None:
     target = tmp_path / "progress.json"
     payload = json.loads(target.read_text(encoding="utf-8"))
     Draft202012Validator(_schema(), format_checker=FormatChecker()).validate(payload)
-    assert not (tmp_path / "progress.json.tmp").exists()
+    raw = target.read_bytes()
+    assert b"\r" not in raw
+    assert not raw.startswith(b"\xef\xbb\xbf")
 
 
 def test_fr_020_min_interval_respected(tmp_path: Path) -> None:
@@ -104,3 +106,31 @@ def test_fr_020_final_snapshot_always_written(tmp_path: Path) -> None:
     final["status"] = "done"
     assert writer.write(final, final=True) is True
     assert json.loads((tmp_path / "progress.json").read_text(encoding="utf-8"))["status"] == "done"
+
+
+def test_inv_003_failed_replace_preserves_progress_and_cleans_temporary(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    """INV-003, AC-4: lỗi thay thế giữ nguyên ảnh chụp cũ và dọn tệp tạm."""
+    from mma_ai.compat import fsio
+
+    writer = _writer(tmp_path, interval=0.0)
+    writer.write(_snapshot())
+    target = tmp_path / "progress.json"
+    previous = target.read_bytes()
+
+    def fail_replace(*args: Any, **kwargs: Any) -> None:
+        raise OSError("thay thế bị từ chối")
+
+    monkeypatch.setattr(fsio, "replace_atomic", lambda *args, **kwargs: fail_replace())
+    final = _snapshot()
+    final["status"] = "done"
+    try:
+        writer.write(final, final=True)
+    except OSError:
+        pass
+    else:
+        raise AssertionError("lỗi thay thế phải được truyền tới bên gọi")
+
+    assert target.read_bytes() == previous
+    assert not (tmp_path / "progress.json.tmp").exists()

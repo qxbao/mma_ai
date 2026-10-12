@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import json
-import os
 import time
 from collections.abc import Callable, Mapping
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
+from mma_ai.compat.fsio import write_text_atomic
 
 
 def prepare_snapshot(
@@ -82,12 +83,10 @@ class ProgressWriter:
     def _write_atomically(self, payload: Mapping[str, Any]) -> None:
         self._run_dir.mkdir(parents=True, exist_ok=True)
         target = self._run_dir / "progress.json"
-        temporary = self._run_dir / "progress.json.tmp"
-        with temporary.open("w", encoding="utf-8") as stream:
-            json.dump(payload, stream, ensure_ascii=False, allow_nan=False, separators=(",", ":"))
-            stream.flush()
-            os.fsync(stream.fileno())
-        os.replace(temporary, target)
+        serialized = json.dumps(
+            payload, ensure_ascii=False, allow_nan=False, separators=(",", ":")
+        )
+        write_text_atomic(target, serialized)
 
 
 def _format_timestamp(seconds: float) -> str:
