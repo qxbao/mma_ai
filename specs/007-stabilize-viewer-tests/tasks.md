@@ -118,7 +118,7 @@ Không có hành vi sản phẩm nào đổi (chỉ sửa kiểm thử) nên kh�
 
 - [x] T706 [US1] Sửa nguyên nhân gốc ở `src/` làm cổng `tests` đỏ `EXIT_NONZERO`: đưa `set_texts`/`clear_texts` ra khỏi khối `lock_ctx` của `ViewerSink.show`, thêm ca thử hồi quy — src/mma_ai/visualization/viewer.py; tests/unit/test_viewer.py
 - [x] T707 [US3] SỬA ĐẶC TẢ: chỉnh INV-003/FR-007 của spec.md cho khớp tệp e2e mới (T705) và ngoại lệ `src/mma_ai/visualization/viewer.py` theo AC-5 — specs/007-stabilize-viewer-tests/spec.md
-- [ ] T710 QA: nối mã rủi ro `003/AC-5` nguyên văn vào docstring test E2E stage chưa triển khai (phần e2e) — tests/e2e/test_train_acceptance.py
+- [x] T710 QA: nối mã rủi ro `003/AC-5` nguyên văn vào docstring test E2E stage chưa triển khai (phần e2e) — tests/e2e/test_train_acceptance.py
 - [x] T711 Reviewer: chấm phần mới của lượt hội tụ (T706…T710), phụ thuộc bắc cầu mọi task — evidence/reviews/T711.verdict
 
 > Bỏ hai tư vấn (so chữ, sai): `specs/004-eval-vs-random-plots/quickstart.md` và `specs/005-replay-3d-muscle-demo/quickstart.md` mục `Điều kiện tiên quyết` chỉ là bước dựng môi trường (không phải kịch bản kiểm chứng), mã AC/INV nằm ở các kịch bản 1…N ngay sau; đồng thời hai tệp thuộc feature khác, ngoài vùng ghi của 007.
