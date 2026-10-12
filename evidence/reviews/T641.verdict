@@ -1,0 +1,74 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "run-20261012-0ecb0c",
+  "task_id": "T641",
+  "round": 1,
+  "sha_reviewed": "be316a799b76f74daa7a6f782a337c0686644ac5",
+  "verdict": "REQUEST_CHANGES",
+  "findings": [
+    {
+      "id": "F-001",
+      "severity": "CRITICAL",
+      "file": "tests/unit/capability_gate.py",
+      "line": 142,
+      "claim": "INV-006/AC-6: cổng năng lực (plugin loại test theo năng lực) chỉ in tóm tắt và áp trần `--capability-max-ratio` ở tiến trình đã thu thập test; dưới pytest-xdist (đúng lệnh cổng `tests` dùng `-n auto`) tiến trình điều phối không có báo cáo nên loại hàng loạt không bị chặn và không ai thấy. Trùng với F-001 của evidence/reviews/T639.challenge (CRITICAL, REQUEST_CHANGES); không có commit nào sau đó sửa src/ hay capability_gate.py (a5c9ecf, 409ba0f, ae9d555 chỉ chạm tests/).",
+      "failure_scenario": "Tái hiện trên HEAD be316a7 bằng một test hẹp: `uv run --isolated --with pytest --with pytest-xdist pytest -q -p no:cacheprovider tests/challenge/poc_inv006_xdist_report.py` → `test_f001_xdist_run_still_reports_deselected_and_enforces_ratio` ĐỎ (reviewer chạy lại, 2 failed). Bộ test có test gắn `windows_only`/`requires_cuda` trên máy Linux không CUDA: chạy tuần tự báo 'bị loại 2/3' và thoát mã 1 khi vượt trần 5%; chạy `-n 2` (lệnh cổng thật) không liệt kê test bị loại, mã thoát 0. Báo cáo T640 'loại 1/1552 (0.1%)' chỉ lấy được từ lần chạy tuần tự `--collect-only`, không phải từ lệnh cổng."
+    },
+    {
+      "id": "F-002",
+      "severity": "CRITICAL",
+      "file": "specs/006-cross-platform-support/checklists/acceptance.md",
+      "line": 0,
+      "claim": "Không có checklist chấp nhận của feature 006: thư mục specs/006-cross-platform-support/ chỉ có contracts, data-model.md, plan.md, quickstart.md, research.md, spec.md, tasks.md (các feature 001–003 có checklists/acceptance.md). Verdict không thể đối chiếu từng dòng THIẾU/AC–test mức entrypoint theo luật reviewer; vai reviewer không được tự tạo tệp của qa.",
+      "failure_scenario": "`ls specs/006-cross-platform-support/checklists` → No such file or directory. AC-1…AC-6 chỉ có bảng trạng thái trong .ai/runs/run-20261012-0ecb0c/reports/qa-006-crossplatform.md (lời khai, nằm ngoài worktree/ngoài cổng), nên không có điều khoản nghiệm thu nào do kit đo được; APPROVE im lặng sẽ bỏ qua đúng điểm này. Cách sửa: qa/conductor sinh checklists/acceptance.md với mỗi AC một dòng + test entrypoint (đã có sẵn trong tests/e2e/test_platform_acceptance.py) rồi review lại."
+    },
+    {
+      "id": "F-003",
+      "severity": "MINOR",
+      "file": "src/mma_ai/__init__.py",
+      "line": 5,
+      "claim": "Nhập gói `mma_ai` có hiệu ứng phụ ở mức mô-đun: gọi `probe_display()` (khởi tạo GLFW thật) và đổi `os.environ['MUJOCO_GL']='egl'` khi màn hình không khả dụng; còn đọc biến `MMA_AI_FORCE_NO_DISPLAY` (móc cho test, conftest.py đặt nó) ngay trong mã sản phẩm. Không có AC/INV/plan nào yêu cầu hành vi này (plan nói glfw nhập lười, INV-002 cấm việc nặng ở mức mô-đun), không test nào khoá `MUJOCO_GL`. Dòng 9 dùng biểu thức điều kiện làm câu lệnh (`... if not ... else None`) và thiếu comment VÌ SAO chọn egl.",
+      "failure_scenario": "Mỗi `import mma_ai.*` (train, eval, benchmark, worker con) trên máy có DISPLAY nhưng GLFW không dùng được sẽ khởi tạo/kết thúc GLFW một lần và lặng lẽ ép MUJOCO_GL=egl cho cả tiến trình – khác hành vi Linux nền của 001–005 (INV-001). Trên macOS glfw.init() từ luồng không chính khi import chưa kiểm được (CHƯA KIỂM). Chưa chạm được lỗi thật trên Linux nên MINOR; nên chuyển việc chọn backend vào điểm gọi viewer/recorder."
+    },
+    {
+      "id": "F-004",
+      "severity": "MINOR",
+      "file": "src/mma_ai/compat/display.py",
+      "line": 109,
+      "claim": "INV-004 'MUST NOT treo' / spec 'không treo, ≤ 5 s': `probe_display` gọi bộ khởi tạo GLFW đồng bộ, không trần thời gian, và nó chạy ngay lúc `import mma_ai` (F-003). Trùng F-002 của T639.challenge; PoC `test_f002_probe_display_is_bounded_when_glfw_init_hangs` ĐỎ khi reviewer chạy lại.",
+      "failure_scenario": "glfw_init ngủ 8 s (mô phỏng GLFW treo ở phiên Windows không tương tác): probe_display chặn đủ 8 s, mọi lệnh `python -m mma_ai…` đứng 8 s. GLFW thật thường trả False/ngoại lệ nên chỉ tái hiện bằng bộ khởi tạo tiêm ⇒ MINOR."
+    },
+    {
+      "id": "F-005",
+      "severity": "MINOR",
+      "file": "pyproject.toml",
+      "line": 100,
+      "claim": "FR-019 / plan Q8 / hiến chương V và mục xác nhận của T641: `pyproject.toml` và `uv.lock` PHẢI không đổi. Diff a67e83c..be316a7 thêm `[dependency-groups] dev = [mypy, ruff]` (commit f75d352, T607 — tệp không thuộc outputs của task nào theo plan) và +165 dòng uv.lock (mypy, librt, pathspec, ast-serialize…). Chỉ thêm, không đổi gói chạy.",
+      "failure_scenario": "`git diff a67e83c..be316a7 -- pyproject.toml uv.lock` khác rỗng ⇒ không xác nhận được 'không đổi'. `uv sync` mặc định kéo thêm nhóm dev (mypy/ruff) cho mọi người dùng; ô CI `uv lock --check` vẫn xanh. Không ảnh hưởng đường chạy sản phẩm nên MINOR, nhưng phải hoàn nguyên hoặc ghi quyết định (plan/spec) trước khi merge."
+    },
+    {
+      "id": "F-006",
+      "severity": "MINOR",
+      "file": "tests/unit/test_platform_characterization.py",
+      "line": 0,
+      "claim": "spec.md dòng 466 và T641: test đặc trưng T612 phải xanh NGUYÊN VĂN sau thay đổi. Hai commit sửa sau T612 đã sửa chính tệp đó: acf7054 (thêm dấu `display`) và 77d4879 (xoá MMA_AI_FORCE_NO_DISPLAY, tiêm `_default_glfw_init` trả True, đổi docstring) — tệp mốc Linux bị điều chỉnh để khớp mã mới thay vì mã khớp mốc.",
+      "failure_scenario": "Trước 77d4879, test 'DISPLAY đặt ⇒ viewer khả dụng' sẽ đỏ vì probe_display giờ gọi GLFW thật; việc tiêm True che đúng chỗ INV-001 đổi hành vi (DISPLAY có nhưng GLFW không khởi tạo được: trước = khả dụng, nay = không khả dụng). Chưa chứng minh là hồi quy với người dùng ⇒ MINOR; cần ghi nhận quyết định đổi hành vi hoặc hoàn nguyên test."
+    },
+    {
+      "id": "F-007",
+      "severity": "MINOR",
+      "file": ".github/workflows/ci.yml",
+      "line": 0,
+      "claim": "sizing: mã sản phẩm (src/, .github, conftest.py, pyproject, .gitignore) = +1017/-189 ⇒ OVERSIZED (>600) cho phạm vi tích hợp. Nhãn `plan-mandated`: diff gộp của ~170 task nhỏ (mỗi task ≤ ~250 dòng: compat/env_report.py +250, fsio.py +184 lớn nhất), không phải một slice; không đòi chia lại.",
+      "failure_scenario": "Không có kịch bản lỗi; ghi nhận theo luật sizing-budget. Ngoài ra các lệnh cổng trong ci.yml (matrix 3 OS × py3.11/3.12) mới chỉ được kiểm tĩnh vì kho chưa có remote."
+    },
+    {
+      "id": "F-008",
+      "severity": "OPTIONAL",
+      "file": "src/mma_ai/compat/fsio.py",
+      "line": 121,
+      "claim": "⚠️ Không kiểm được từ diff: mọi khẳng định Windows 11/macOS thật (AC-1…AC-6 phần ba OS), 6 ô CI thật, NFR-PARITY-001 'số test thu thập không giảm' (T640 tự nhận chưa có mốc test-count; 1552 thu thập, không có số trước để so), và 0 skip/xfail mới chỉ được test_no_new_skip_xfail chứng (117 skipped/11 xfailed trong lần chạy T640 cần đối chiếu mốc). Giữ nhãn CHƯA KIỂM. Ghi nhận thêm F-003/F-004/F-005 OPTIONAL của T639.challenge (tên tạm làm tên đích ≥241 ký tự, quyền 0600 sau ghi nguyên tử, symlink thành tệp thường, `str(exc)` không bảo vệ, to_record_path ngoài miền hợp lệ) — không phá bất biến.",
+      "failure_scenario": "Không phải lỗi tái hiện được; là khoảng trống bằng chứng cần conductor biết khi duyệt cuối."
+    }
+  ]
+}
