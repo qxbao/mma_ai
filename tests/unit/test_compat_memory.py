@@ -16,14 +16,17 @@ def _profile(kind: PlatformKind) -> PlatformProfile:
 
 
 def test_linux_kib_to_mib() -> None:
+    """NFR-RAM-001: Linux đổi 262 144 KiB thành 256 MiB."""
     assert ram_mib_from_raw(262_144, "linux") == pytest.approx(256.0, abs=0.001)
 
 
 def test_macos_bytes_to_mib() -> None:
+    """NFR-RAM-001: macOS đổi 268 435 456 byte thành 256 MiB."""
     assert ram_mib_from_raw(268_435_456, "macos") == 256.0
 
 
 def test_windows_bytes_to_mib() -> None:
+    """NFR-RAM-001: Windows đổi 268 435 456 byte thành 256 MiB."""
     assert ram_mib_from_raw(268_435_456, "windows") == 256.0
 
 
