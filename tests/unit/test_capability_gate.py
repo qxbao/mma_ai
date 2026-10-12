@@ -255,7 +255,11 @@ def test_ac2_git_history_probe_false_on_timeout(monkeypatch: pytest.MonkeyPatch)
 def test_ac2_nfr_gate_001_requires_git_history_deselected_without_dot_git(
     tmp_path: Path,
 ) -> None:
-    """AC-2, FR-004, NFR-GATE-001, INV-006: archive loại test có báo cáo đúng ngưỡng."""
+    """AC-2, AC-3, FR-004, NFR-GATE-001, INV-002, INV-006:
+    test lịch sử của 008 bị loại trên archive.
+
+    Kết quả hỗ trợ cổng verify, nhưng không tự kiểm toàn bộ AC-3 hay thân test INV-002.
+    """
     plugin_root = tmp_path / "tests" / "unit"
     plugin_root.mkdir(parents=True)
     (plugin_root / "capability_gate.py").write_bytes(
