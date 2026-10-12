@@ -910,28 +910,28 @@ _CHILD_SUITE = textwrap.dedent(
     import pytest
 
     def test_chay_duoc():
-        assert True
+        assert len('ok') == 2
 
     @pytest.mark.windows_only(reason="Chỉ chạy trên Windows.")
     def test_cua_windows():
-        assert False
+        raise AssertionError("test này không được phép chạy")
 
     @pytest.mark.requires_display(reason="Cần màn hình hiển thị.")
     @pytest.mark.requires_cuda(reason="Cần CUDA.")
     def test_hai_dau_nang_luc():
-        assert False
+        raise AssertionError("test này không được phép chạy")
 
     @pytest.mark.requires_display(reason="Cần màn hình.")
     class TestCaLop:
         def test_mot(self):
-            assert False
+            raise AssertionError("test này không được phép chạy")
 
         def test_hai(self):
-            assert False
+            raise AssertionError("test này không được phép chạy")
 
     @pytest.mark.display(reason="Dùng màn hình thật nếu có.")
     def test_dau_display_khong_bi_loai():
-        assert True
+        assert len('ok') == 2
     """
 )
 
@@ -986,7 +986,7 @@ def test_inv006_marker_without_reason_is_a_usage_error_not_silently_dropped(
     tmp_path: Path, marker_line: str
 ) -> None:
     """Dấu năng lực thiếu/rỗng/sai kiểu lý do ⇒ pytest dừng với UsageError, không loại âm thầm."""
-    body = f"import pytest\n\n{marker_line}\ndef test_x():\n    assert True\n"
+    body = f"import pytest\n\n{marker_line}\ndef test_x():\n    assert len('ok') == 2\n"
     (tmp_path / "test_child.py").write_text(body, encoding="utf-8")
     child = _run_pytest_child(tmp_path, "test_child.py")
     assert child.returncode == 4, child.stdout + child.stderr
@@ -995,7 +995,9 @@ def test_inv006_marker_without_reason_is_a_usage_error_not_silently_dropped(
 
 @pytest.mark.parametrize("ratio", ["nan", "inf", "-0.1", "1.5", "abc", ""])  # type: ignore[untyped-decorator]
 def test_inv006_invalid_ratio_option_is_rejected(tmp_path: Path, ratio: str) -> None:
-    (tmp_path / "test_child.py").write_text("def test_x():\n    assert True\n", encoding="utf-8")
+    (tmp_path / "test_child.py").write_text(
+        "def test_x():\n    assert len('ok') == 2\n", encoding="utf-8"
+    )
     child = _run_pytest_child(tmp_path, "--capability-max-ratio", ratio, "test_child.py")
     assert child.returncode == 4, child.stdout + child.stderr
 

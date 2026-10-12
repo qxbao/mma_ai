@@ -27,20 +27,20 @@ from mma_ai.compat.platform_info import PlatformProfile
 ROOT = Path(__file__).resolve().parents[2]
 
 _CHILD_SUITE = textwrap.dedent(
-    '''
+    """
     import pytest
 
     def test_chay_duoc():
-        assert True
+        assert len('ok') == 2
 
     @pytest.mark.windows_only(reason="Chỉ chạy trên Windows.")
     def test_cua_windows():
-        assert False
+        raise AssertionError("test này không được phép chạy")
 
     @pytest.mark.requires_cuda(reason="Cần CUDA.")
     def test_cua_cuda():
-        assert False
-    '''
+        raise AssertionError("test này không được phép chạy")
+    """
 )
 
 
