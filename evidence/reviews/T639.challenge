@@ -1,0 +1,50 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "run-20261012-0ecb0c",
+  "task_id": "T639",
+  "round": 1,
+  "sha_reviewed": "4f05235f7c64ad977d9918cbb58de90bf0a6861e",
+  "verdict": "REQUEST_CHANGES",
+  "findings": [
+    {
+      "id": "F-001",
+      "severity": "CRITICAL",
+      "file": "tests/unit/capability_gate.py",
+      "line": 142,
+      "claim": "INV-006/AC-6: cổng năng lực chỉ hoạt động ở tiến trình đã thu thập test; dưới pytest-xdist (đúng lệnh cổng `tests` dùng `-n auto`) tiến trình điều phối không có `_capability_gate_report` nên không in tóm tắt test bị loại và không áp trần `--capability-max-ratio`.",
+      "failure_scenario": "Bộ có 3 test, 2 test gắn `windows_only`/`requires_cuda` trên máy Linux không CUDA. Chạy tuần tự `pytest -p capability_gate`: in 'Kiểm thử bị loại theo năng lực: 2/3 (66.7%; giới hạn 5.0%)' kèm nodeid + lý do, mã thoát 1. Chạy `-n 2`: chỉ in '1 passed', KHÔNG liệt kê test bị loại, mã thoát 0 — loại hàng loạt không bị chặn và không ai thấy. Tái hiện 5/5 lần: `uv run --isolated --with pytest --with pytest-xdist pytest -q -p no:cacheprovider tests/challenge/poc_inv006_xdist_report.py::test_f001_xdist_run_still_reports_deselected_and_enforces_ratio` (đỏ: `assert 0 == 1`). PoC nằm ở tệp không khớp `test_*.py` vì test_no_new_skip_xfail.py (INV-006) đếm mọi dấu bỏ qua kể cả xfail trong tests/ nên ca đỏ không được gắn dấu."
+    },
+    {
+      "id": "F-002",
+      "severity": "MINOR",
+      "file": "src/mma_ai/compat/display.py",
+      "line": 109,
+      "claim": "INV-004 'MUST NOT treo': probe_display gọi bộ khởi tạo GLFW đồng bộ, không có trần thời gian; `import mma_ai` cũng gọi nó ở `src/mma_ai/__init__.py`.",
+      "failure_scenario": "`glfw_init` ngủ 8 s (mô phỏng GLFW treo trên phiên Windows không tương tác): probe_display chặn đủ 8 s thay vì trả không khả dụng ≤ 5 s như tasks.md T639 kỳ vọng. Mức MINOR vì GLFW thật báo lỗi qua `False`/ngoại lệ chứ không có bằng chứng treo thật; chỉ tái hiện bằng bộ khởi tạo tiêm. PoC: tests/challenge/poc_inv006_xdist_report.py::test_f002_probe_display_is_bounded_when_glfw_init_hangs (đỏ 5/5)."
+    },
+    {
+      "id": "F-003",
+      "severity": "MINOR",
+      "file": "src/mma_ai/compat/pathrules.py",
+      "line": 41,
+      "claim": "INV-005 'không `\\`, không ký tự ổ đĩa' bị phá ở đầu vào ngoài miền hợp lệ: (a) đường dẫn POSIX tuyệt đối có `\\` trong tên + base kiểu Windows trả về còn `\\`; (b) `\\c:\\x`/`C:\\C:\\x` trả `c:/x` (bắt đầu bằng ổ đĩa, vẫn là tuyệt đối theo is_absolute_any_os); (c) đường dẫn chỉ có gốc (`C:\\`, `\\`) trả chuỗi rỗng; (d) khác ổ đĩa với base (`C:\\a` so `D:\\b`) ném ValueError.",
+      "failure_scenario": "to_record_path('/a\\\\b', 'C:\\\\x') == 'a\\\\b'; to_record_path('\\\\c:\\\\x') == 'c:/x'; to_record_path('C:\\\\') == ''; to_record_path('C:\\\\a', 'D:\\\\b') ném ValueError. Mọi nơi gọi trong src đều dùng base=None với đường dẫn tới từ hệ tệp thật (tên có ':' là bất hợp lệ trên Windows) nên chưa chạm được từ đầu vào sản phẩm; fuzz 5.000 chuỗi hợp lệ mỗi dạng (ổ đĩa, UNC, gốc, `\\\\?\\`, tương đối) xanh trong test_platform_invariants.py."
+    },
+    {
+      "id": "F-004",
+      "severity": "OPTIONAL",
+      "file": "src/mma_ai/compat/fsio.py",
+      "line": 121,
+      "claim": "Ghi nguyên tử khác `Path.write_text` ở ba điểm ngoài INV-003 (không phá bất biến, đều an toàn-thất-bại): tên tệp tạm `.<tên>.XXXX.tmp` làm tên đích dài ≥ 241 ký tự không ghi được; mkstemp tạo tệp quyền 0600 nên đích mất quyền theo umask; đích là symlink bị thay bằng tệp thường.",
+      "failure_scenario": "write_text_atomic('a'*245) ném AtomicWriteError (ENAMETOOLONG) trong khi Path.write_text cùng tên chạy được; tệp ghi xong có quyền 0o600 trong khi write_text cho 0o664 (umask 002) ⇒ volume Docker/thư mục chung không đọc được báo cáo; link.txt -> target.txt sau ghi trở thành tệp thường, target.txt giữ nguyên bản cũ."
+    },
+    {
+      "id": "F-005",
+      "severity": "OPTIONAL",
+      "file": "src/mma_ai/compat/display.py",
+      "line": 111,
+      "claim": "Nhánh `except Exception` gọi `str(exc)` không bảo vệ: ngoại lệ có `__str__` tự ném làm probe_display ném theo, trái INV-004 'không làm sập lệnh'.",
+      "failure_scenario": "glfw_init ném một ngoại lệ có __str__ ném RuntimeError ⇒ probe_display ném RuntimeError ra ngoài (và `import mma_ai` sập). Đầu vào hiếm/bị dựng, ngoại lệ chuẩn của GLFW/ctypes/OS đều in được ⇒ chỉ ghi nhận."
+    }
+  ]
+}
