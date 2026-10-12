@@ -54,7 +54,9 @@ class MetricsLogger:
         self._run_dir = Path(run_dir)
         self._muscle_names = tuple(muscle_names)
         self._run_dir.mkdir(parents=True, exist_ok=True)
-        self._metrics_file = (self._run_dir / "metrics.jsonl").open("a", encoding="utf-8")
+        self._metrics_file = (self._run_dir / "metrics.jsonl").open(
+            "a", encoding="utf-8", newline="\n"
+        )
         self._summary_writer = self._create_summary_writer(self._run_dir / "tb")
         self._closed = False
 
