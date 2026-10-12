@@ -323,15 +323,16 @@ def test_ac2_nfr_gate_001_requires_git_history_deselected_without_dot_git(
     ]
 
 
+@pytest.mark.requires_git_history(reason="Máy không có lịch sử git")  # type: ignore[untyped-decorator]
 def test_009_inv_002_project_dependency_files_unchanged() -> None:
     """009/INV-002: đặc tả yêu cầu không sửa pyproject.toml và uv.lock.
 
-    Đây là kiểm tra trạng thái git cục bộ, khác INV-002 của 008 về tài liệu commit.
+    So từ gốc của tính năng (feature) 28393ed để bắt cả thay đổi đã commit, khác INV-002 của 008.
     """
     import subprocess
 
     changed_files = subprocess.run(
-        ["git", "diff", "--name-only", "HEAD", "--", "pyproject.toml", "uv.lock"],
+        ["git", "diff", "--name-only", "28393ed..HEAD", "--", "pyproject.toml", "uv.lock"],
         cwd=_ROOT,
         capture_output=True,
         text=True,
