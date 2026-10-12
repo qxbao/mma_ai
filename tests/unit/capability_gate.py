@@ -6,6 +6,7 @@ import importlib
 import importlib.util
 import json
 import math
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -17,6 +18,7 @@ _MARKERS = (
     "requires_display",
     "requires_cuda",
     "requires_xdist",
+    "requires_git_history",
     "requires_symlink",
     "windows_only",
     "posix_only",
@@ -60,6 +62,7 @@ def pytest_configure(config: pytest.Config) -> None:
         "requires_display": "Yêu cầu màn hình hiển thị.",
         "requires_cuda": "Yêu cầu CUDA khả dụng.",
         "requires_xdist": "Yêu cầu pytest-xdist.",
+        "requires_git_history": "Cần lịch sử git; bản archive không kèm .git sẽ bị loại.",
         "requires_symlink": "Yêu cầu hệ điều hành hỗ trợ liên kết tượng trưng (symbolic link).",
         "windows_only": "Chỉ chạy trên Windows.",
         "posix_only": "Chỉ chạy trên hệ điều hành POSIX.",
@@ -77,6 +80,15 @@ def _platform_kind() -> str:
 
 
 def _capability_available(marker: str) -> bool:
+    if marker == "requires_git_history":
+        try:
+            completed = subprocess.run(
+                ["git", "rev-parse", "--is-inside-work-tree"], capture_output=True,
+                check=False, timeout=5, cwd=Path(__file__).resolve().parents[2]
+            )
+            return completed.returncode == 0
+        except (OSError, subprocess.TimeoutExpired):
+            return False
     if marker == "requires_xdist":
         return importlib.util.find_spec("xdist") is not None
     if marker == "requires_display":
