@@ -64,12 +64,19 @@ uv run --isolated --with pytest pytest -q
 
 ## Tình trạng nền tảng
 
-Hiện dự án nhắm tới Linux và lớp Linux trên Windows (Windows Subsystem for Linux 2, WSL2); người dùng Windows có thể dùng WSL2. Hỗ trợ Windows và macOS đang được triển khai theo [đặc tả 006](specs/006-cross-platform-support/), nên tài liệu này chưa xác nhận khả năng chạy trên hai nền tảng đó.
+Đã gộp bốn thành phần của [đặc tả 006](specs/006-cross-platform-support/): gói `mma_ai.compat` dò nền tảng, bộ nhớ RAM, màn hình và thay tệp nguyên tử (atomic file replacement); báo cáo môi trường qua `python -m mma_ai.compat.env_report`; cổng năng lực (capability gate) loại kiểm thử theo năng lực của máy; ma trận tích hợp liên tục (continuous integration, CI) gồm ba hệ điều hành × Python 3.11/3.12 trong `.github/workflows/ci.yml`. Windows gốc (native Windows) là mục tiêu chính, cùng CUDA tuỳ chọn và macOS; đây là các mục tiêu, chưa kiểm.
+
+- **Linux**: **đã kiểm** — đã chạy kiểm tra trên Linux.
+- **Windows 11**: **chưa kiểm** — chưa kiểm chứng trên Windows gốc.
+- **WSL2**: **chưa kiểm** — chưa kiểm chứng trên lớp Linux trên Windows (Windows Subsystem for Linux 2, WSL2).
+- **macOS**: **chưa kiểm** — chưa kiểm chứng trên máy macOS, kể cả trình xem (viewer) chạy bằng `mjpython`.
+- **CUDA**: **chưa kiểm** — chưa kiểm chứng trên máy có CUDA.
+- **Ô CI chạy thật trên GitHub Actions**: **chưa kiểm** — đã có cấu hình ma trận, chưa có kết quả chạy thật được xác nhận.
 
 ## Tài liệu
 
 - [Bản đồ phân hệ](docs/MAP.md) và [các đặc tả](specs/).
-- [Hướng dẫn huấn luyện](docs/guides/training.md), [hướng dẫn đánh giá](docs/guides/evaluation.md) và [hướng dẫn phát lại](docs/guides/replay-demo.md).
+- [Hướng dẫn huấn luyện](docs/guides/training.md), [hướng dẫn đánh giá](docs/guides/evaluation.md), [hướng dẫn phát lại](docs/guides/replay-demo.md) và [hướng dẫn đa nền tảng](docs/guides/platforms.md).
 - [Nhật ký thay đổi](CHANGELOG.md).
 
 ## Đóng góp
