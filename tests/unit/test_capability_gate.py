@@ -168,3 +168,25 @@ def test_inv_006_all_required_markers_are_registered(tmp_path: Path) -> None:
     assert result.returncode == 0, result.stdout + result.stderr
     assert "PytestUnknownMarkWarning" not in result.stdout + result.stderr
 
+
+def test_regress_f_001_xdist_reports_deselected_and_enforces_ratio(tmp_path: Path) -> None:
+    """F-001, INV-006, AC-6, NFR-CI-001: xdist phải giữ báo cáo và ngưỡng loại test."""
+    report_path = tmp_path / "capabilities.json"
+    result = _run_pytest(
+        tmp_path,
+        "-n",
+        "2",
+        "--capability-max-ratio=0.04",
+        f"--capability-report={report_path}",
+    )
+
+    output = result.stdout + result.stderr
+    assert result.returncode != 0, output
+    assert "Kiểm thử bị loại theo năng lực: 1/20 (5.0%; giới hạn 4.0%)." in output
+    assert "test_example.py::test_cuda" in output
+    assert "Máy không có CUDA" in output
+    assert "vượt ngưỡng" in output
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    assert report["collected"] == 20
+    assert report["deselected"] == 1
+

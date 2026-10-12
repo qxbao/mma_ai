@@ -144,6 +144,10 @@ def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
     if report is None:
         return
 
+    if hasattr(session.config, "workerinput"):
+        session.config.workeroutput["_capability_gate_report"] = report
+        return
+
     report_path = session.config.getoption("--capability-report")
     if report_path:
         try:
@@ -159,6 +163,13 @@ def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
     maximum = session.config.getoption("--capability-max-ratio")
     if report["ratio"] > maximum:
         session.exitstatus = pytest.ExitCode.TESTS_FAILED
+
+
+@pytest.hookimpl(optionalhook=True)  # type: ignore[untyped-decorator]
+def pytest_testnodedown(node: Any, error: object) -> None:
+    report = getattr(node, "workeroutput", {}).get("_capability_gate_report")
+    if report is not None and not hasattr(node.config, "_capability_gate_report"):
+        setattr(node.config, "_capability_gate_report", report)
 
 
 def pytest_terminal_summary(terminalreporter: Any, exitstatus: int, config: pytest.Config) -> None:
