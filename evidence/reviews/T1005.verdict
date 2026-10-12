@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "run-20261012-a5ac1b",
+  "task_id": "T1005",
+  "round": 1,
+  "sha_reviewed": "d375de37c382894897e1abf917f35d46e8c10d27",
+  "verdict": "APPROVE",
+  "findings": [
+    {
+      "id": "F-001",
+      "severity": "MINOR",
+      "file": "specs/010-docs-platform-sync/checklists/acceptance.md",
+      "line": 28,
+      "claim": "Checklist nghiệm thu còn ghi test của T1004 là 'dự kiến' và nhiều dòng THIẾU (AC-3, INV-005, NFR-DOC-001/002, NFR-GATE-001, NFR-QUAL-001) dù T1004 đã gộp test thật; checklist chưa được qa cập nhật sau T1004.",
+      "failure_scenario": "Người đọc checklist thấy AC-1/AC-2 chỉ có test unit và AC-3 không có test entrypoint nên không biết bằng chứng thật nằm ở đâu (test_010_ac1_inv004_env_report_entrypoint, cổng JSON của T1004). Không ảnh hưởng người dùng sản phẩm; AC-3 (ai-sdlc verify) là cổng máy, không thể là test pytest. Checklist thuộc vai qa, reviewer không sửa."
+    },
+    {
+      "id": "F-002",
+      "severity": "OPTIONAL",
+      "file": "docs/MAP.md",
+      "line": 23,
+      "claim": "Dòng 009 và 010 của bản đồ phân hệ (máy sinh) chứa mảnh văn xuôi bị cắt nhầm thành đường dẫn (ví dụ '`009/AC-3\\`', '`chưa kiểm — <lời>` (D-1): đoạn mô tả...') do bộ sinh tách cột outputs theo dấu chấm phẩy/ngoặc.",
+      "failure_scenario": "Người dùng mở MAP.md để tìm vùng mã của 010 thấy cột vùng ghi lẫn câu mô tả; chỉ làm bản đồ khó đọc, không sai nội dung tài liệu. Tệp do máy sinh nên sửa ở bộ sinh, không sửa tay."
+    },
+    {
+      "id": "F-003",
+      "severity": "OPTIONAL",
+      "file": "tests/e2e/test_008_docs_entrypoints.py",
+      "line": 29,
+      "claim": "T1004 bỏ hai nhánh pytest.skip khi thiếu phụ thuộc rl/eval; test --help của train/evaluate nay thất bại thay vì bỏ qua trên máy thiếu extra.",
+      "failure_scenario": "Chặt hơn, phù hợp INV-003 (không thêm skip) và đã xanh trên Linux không có torch (31 passed); chỉ ghi nhận hành vi đổi: máy thiếu hẳn phụ thuộc lõi sẽ đỏ thay vì xám."
+    }
+  ]
+}
