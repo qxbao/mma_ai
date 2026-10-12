@@ -20,3 +20,4 @@ Mỗi phân hệ (= mỗi `specs/<NNN-slug>/`) một tệp. Mở ĐÚNG tệp c�
 - [Ma trận truy vết 006-cross-platform-support](trace/006-cross-platform-support.md) — 29 KB
 - [Ma trận truy vết 007-stabilize-viewer-tests](trace/007-stabilize-viewer-tests.md) — 13 KB
 - [Ma trận truy vết 008-project-docs](trace/008-project-docs.md) — 11 KB
+- [Ma trận truy vết 009-git-history-capability](trace/009-git-history-capability.md) — 8 KB
