@@ -244,7 +244,7 @@ def test_only_train_split_requested(tmp_path: Path) -> None:
         trainer.run()
 
 
-def test_resume_from_checkpoint(tmp_path: Path) -> None:
+def test_regress_tdd_red_resume_checkpoint_portable_path(tmp_path: Path) -> None:
     """FR-009, INV-004: Khôi phục và tiếp tục huấn luyện từ một checkpoint hợp lệ."""
     _torch()
     from mma_ai.learning.checkpoint import load_checkpoint
@@ -262,6 +262,7 @@ def test_resume_from_checkpoint(tmp_path: Path) -> None:
     assert ckpt_path.is_file()
 
     loaded = load_checkpoint(ckpt_path, for_training=True)
+    loaded.raw_data["path"] = r"\runs\checkpoints\state.pt"
 
     # Lượt chạy con tiếp tục từ checkpoint
     config_2 = _make_fast_config(tmp_path, total_timesteps=16, n_steps=8, every_updates=1)
@@ -269,6 +270,9 @@ def test_resume_from_checkpoint(tmp_path: Path) -> None:
     run_dir_2 = tmp_path / "run_child"
 
     trainer_2 = Trainer(cfg=config_2, env=env_2, run_dir=run_dir_2, resume_checkpoint=loaded)
+    assert trainer_2.resumed_from is not None
+    assert trainer_2.resumed_from["checkpoint"] == "runs/checkpoints/state.pt"
+    assert trainer_2.resumed_from["checkpoint"] == "runs/checkpoints/state.pt"
     res_2 = trainer_2.run()
 
     assert res_2.status == "done"
@@ -277,7 +281,7 @@ def test_resume_from_checkpoint(tmp_path: Path) -> None:
 
     manifest_child = json.loads((run_dir_2 / "manifest.json").read_text(encoding="utf-8"))
     assert manifest_child["resumed_from"] is not None
-    assert manifest_child["resumed_from"]["checkpoint"] == "checkpoints/ckpt_u000001_final.pt"
+    assert manifest_child["resumed_from"]["checkpoint"] == "runs/checkpoints/state.pt"
 
 
 def teardown_module() -> None:
@@ -288,3 +292,42 @@ def teardown_module() -> None:
         if mod.startswith("mma_ai.learning") or mod == "torch" or mod.startswith("torch."):
             sys.modules.pop(mod, None)
 
+
+def test_inv_005_resumed_checkpoint_path_uses_portable_record_form() -> None:
+    """INV-005: Đường dẫn checkpoint tiếp tục luôn tương đối và dùng dấu `/`."""
+    _torch()
+    from mma_ai.learning.trainer import Trainer
+
+    config = _make_fast_config(total_timesteps=8, n_steps=8)
+    trainer = Trainer(cfg=config, env=_MockToyEnv(), run_dir=Path("run-child"))
+    checkpoint = _checkpoint_with_windows_path(config)
+
+    trainer._restore_from_checkpoint(checkpoint)
+
+    assert trainer.resumed_from is not None
+    assert trainer.resumed_from["checkpoint"] == "runs/checkpoints/state.pt"
+
+
+def _checkpoint_with_windows_path(config: TrainConfig) -> Any:
+    _torch()
+    from mma_ai.learning.checkpoint import LoadedCheckpoint
+    from mma_ai.learning.networks import ActorCritic
+    from mma_ai.learning.ppo import PPOAgent
+
+    agent_state = PPOAgent(ActorCritic(14, 6, config), config).state_dict()
+    checkpoint = LoadedCheckpoint(
+        actor_state_dict=agent_state["actor"],
+        critic_state_dict=agent_state["critic"],
+        optimizer_state_dict=agent_state["optimizer"],
+        obs_normalizer_state_dict={"mean": np.array([]), "var": np.array([]), "count": 0},
+        seed=0,
+        rng_state={"torch_cpu": _torch().get_rng_state()},
+        update_idx=0,
+        env_steps=0,
+        model_sha256="384dcb555561287fe39d960aba6496db8b825bebd21df3873bb07920a886066f",
+        library_versions={},
+        config=config,
+        log_std=agent_state["log_std"],
+        raw_data={"path": r"\runs\checkpoints\state.pt"},
+    )
+    return checkpoint

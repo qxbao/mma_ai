@@ -23,6 +23,7 @@ from mma_ai.learning.checkpoint import (
     load_checkpoint,
     save_checkpoint,
 )
+from mma_ai.learning.checkpoint_path import checkpoint_record_path
 from mma_ai.learning.errors import (
     CheckpointError,
     CheckpointIOError,
@@ -147,7 +148,7 @@ class Trainer:
                     f"mô hình hiện tại có '{model_sha}'."
                 )
             raw_path = loaded.raw_data.get("path", "checkpoints/checkpoint.pt")
-            ckpt_rel_path = str(raw_path).lstrip("/")
+            ckpt_rel_path = checkpoint_record_path(str(raw_path))
             ckpt_sha256 = str(loaded.raw_data.get("sha256", "0" * 64))
             resumed_run_id = str(loaded.raw_data.get("run_id", "parent_run"))
 
