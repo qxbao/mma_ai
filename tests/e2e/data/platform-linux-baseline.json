@@ -1,0 +1,338 @@
+{
+  "sha": "d1665d962f0d116c5f2e369c4ea527687f7e9964",
+  "os": "linux",
+  "command": "uv run --isolated --with pytest --extra rl --extra eval python tests/parity/capture_platform_baseline.py",
+  "exit_codes": {
+    "train": 0,
+    "demo": 0,
+    "replay": 0,
+    "benchmark": 0
+  },
+  "manifest": {
+    "schema_version": "1.0.0",
+    "run_id": "20261012T050257Z_elbow_s42",
+    "stage": "elbow",
+    "status": "done",
+    "seed": 42,
+    "resumed_from": null,
+    "started_utc": "2026-10-12T05:03:07Z",
+    "finished_utc": "2026-10-12T05:03:26Z",
+    "config": {
+      "schema_version": "1.0.0",
+      "stage": "elbow",
+      "seed": 42,
+      "env_config": "src/mma_ai/environment/elbow_env.yaml",
+      "ppo": {
+        "learning_rate": 0.0003,
+        "clip_range": 0.2,
+        "gamma": 0.99,
+        "gae_lambda": 0.95,
+        "entropy_coef": 0.0,
+        "value_coef": 0.5,
+        "max_grad_norm": 0.5
+      },
+      "network": {
+        "actor_hidden": [
+          256,
+          256
+        ],
+        "critic_hidden": [
+          256,
+          256
+        ],
+        "activation": "tanh",
+        "log_std_init": -0.5
+      },
+      "normalization": {
+        "normalize_obs": true,
+        "clip_obs": 10.0,
+        "epsilon": 1e-08
+      },
+      "schedule": {
+        "total_timesteps": 4096,
+        "n_steps": 2048,
+        "batch_size": 64,
+        "n_epochs": 10
+      },
+      "checkpoint": {
+        "every_updates": 1
+      },
+      "reproducibility": {
+        "rel_tolerance": 1e-06,
+        "head_updates": 10,
+        "torch_threads": 1,
+        "deterministic_algorithms": true
+      },
+      "paths": {
+        "runs_dir": "runs/moc-linux"
+      },
+      "ui": {
+        "mode": "none",
+        "host": "127.0.0.1",
+        "port": 0,
+        "snapshot_interval_s": 1.0,
+        "poll_interval_ms": 2000,
+        "history_points": 200,
+        "view3d": false
+      }
+    },
+    "library_versions": {
+      "python": "3.11.15",
+      "torch": "2.14.1",
+      "numpy": "2.4.6",
+      "gymnasium": "1.4.0",
+      "mujoco": "3.15.0",
+      "myo-sim": "0.2.3",
+      "tensorboard": "2.21.0"
+    },
+    "model": {
+      "sha256": "384dcb555561287fe39d960aba6496db8b825bebd21df3873bb07920a886066f",
+      "source": "myo_sim/elbow/myoelbow_1dof6muscles.xml",
+      "muscle_names": [
+        "TRIlong",
+        "TRIlat",
+        "TRImed",
+        "BIClong",
+        "BICshort",
+        "BRA"
+      ]
+    },
+    "device": {
+      "kind": "cpu",
+      "name": null
+    },
+    "checkpoints": [
+      {
+        "schema_version": "1.0.0",
+        "path": "checkpoints/ckpt_u000001.pt",
+        "kind": "periodic",
+        "update_idx": 1,
+        "env_steps": 2048,
+        "sha256": "83f960fc90a97d499f2b187ae872febea93c1b47938d27a711656bf19122d9db",
+        "created_utc": "2026-10-12T05:03:16.706998+00:00",
+        "model_sha256": "384dcb555561287fe39d960aba6496db8b825bebd21df3873bb07920a886066f",
+        "components": [
+          "actor",
+          "critic",
+          "obs_normalizer",
+          "optimizer",
+          "seed",
+          "rng_state"
+        ],
+        "library_versions": {
+          "torch": "2.14.1+cu130",
+          "numpy": "2.4.6"
+        },
+        "finite": true
+      },
+      {
+        "schema_version": "1.0.0",
+        "path": "checkpoints/ckpt_u000002.pt",
+        "kind": "periodic",
+        "update_idx": 2,
+        "env_steps": 4096,
+        "sha256": "0d3c6c98dab08f3995db3ccf666edb2fd09094f6f7806b99fc75e74c769fc1ea",
+        "created_utc": "2026-10-12T05:03:26.492030+00:00",
+        "model_sha256": "384dcb555561287fe39d960aba6496db8b825bebd21df3873bb07920a886066f",
+        "components": [
+          "actor",
+          "critic",
+          "obs_normalizer",
+          "optimizer",
+          "seed",
+          "rng_state"
+        ],
+        "library_versions": {
+          "torch": "2.14.1+cu130",
+          "numpy": "2.4.6"
+        },
+        "finite": true
+      },
+      {
+        "schema_version": "1.0.0",
+        "path": "checkpoints/ckpt_u000002_final.pt",
+        "kind": "final",
+        "update_idx": 2,
+        "env_steps": 4096,
+        "sha256": "0d3c6c98dab08f3995db3ccf666edb2fd09094f6f7806b99fc75e74c769fc1ea",
+        "created_utc": "2026-10-12T05:03:26.519532+00:00",
+        "model_sha256": "384dcb555561287fe39d960aba6496db8b825bebd21df3873bb07920a886066f",
+        "components": [
+          "actor",
+          "critic",
+          "obs_normalizer",
+          "optimizer",
+          "seed",
+          "rng_state"
+        ],
+        "library_versions": {
+          "torch": "2.14.1+cu130",
+          "numpy": "2.4.6"
+        },
+        "finite": true
+      }
+    ],
+    "reward_metrics": {
+      "n_updates": 2,
+      "n_episodes": 173,
+      "head_updates": 2,
+      "head_mean_return": [
+        -4.197435469167365,
+        -6.235825049523428
+      ],
+      "first_mean_return": -4.197435469167365,
+      "last_mean_return": -6.235825049523428,
+      "success_rate": 0.8901734104046243
+    },
+    "throughput": {
+      "env_steps": 4096,
+      "env_steps_per_second": 213.6982341202095,
+      "wall_clock_seconds": 19.167215007008053
+    },
+    "resources": {
+      "cpu_model": "x86_64",
+      "cpu_logical_cores": 12,
+      "cpu_utilization_pct": null,
+      "ram_peak_mb": 898.828125,
+      "gpu_name": null,
+      "gpu_utilization_pct": null,
+      "vram_peak_mb": null
+    },
+    "numeric_health": {
+      "nan_count": 0,
+      "inf_count": 0
+    },
+    "reproducibility": {
+      "rel_tolerance": 1e-06,
+      "head_updates": 10,
+      "device_kind": "cpu",
+      "torch_threads": 1,
+      "deterministic_algorithms": true
+    },
+    "ui": {
+      "mode": "none",
+      "url": null,
+      "view3d": false
+    },
+    "error": null
+  },
+  "summary": {
+    "schema_version": "1.0.0",
+    "mode": "episode",
+    "headless": true,
+    "source": {
+      "episode_path": "runs/moc-linux/episode.json",
+      "checkpoint_path": null,
+      "checkpoint_sha256": null
+    },
+    "model_check": {
+      "match": true,
+      "compatible": true,
+      "episode_sha256": "384dcb555561287fe39d960aba6496db8b825bebd21df3873bb07920a886066f",
+      "current_sha256": "384dcb555561287fe39d960aba6496db8b825bebd21df3873bb07920a886066f",
+      "reasons": []
+    },
+    "n_frames": 2,
+    "n_actions": 1,
+    "duration_sim_s": 0.04,
+    "seed": 12345,
+    "target": {
+      "position_m": [
+        -0.22142739154759047,
+        0.05952764247337371,
+        0.8430929871649351
+      ],
+      "split": "test",
+      "index": 0
+    },
+    "outcome": {
+      "end_reason": "reached",
+      "reached": true,
+      "final_distance_m": 0.01910949594134169
+    },
+    "activation": {
+      "muscle_names": [
+        "TRIlong",
+        "TRIlat",
+        "TRImed",
+        "BIClong",
+        "BICshort",
+        "BRA"
+      ],
+      "min": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "max": [
+        0.46823206078583707,
+        0.40555898888199243,
+        0.5690257770182671,
+        0.46308170156472483,
+        0.4523061922872863,
+        0.5247395118980509
+      ],
+      "mean": [
+        0.23411603039291853,
+        0.20277949444099622,
+        0.28451288850913353,
+        0.23154085078236242,
+        0.22615309614364315,
+        0.26236975594902545
+      ],
+      "final": [
+        0.46823206078583707,
+        0.40555898888199243,
+        0.5690257770182671,
+        0.46308170156472483,
+        0.4523061922872863,
+        0.5247395118980509
+      ]
+    },
+    "saved_episode": null,
+    "playback": null,
+    "warnings": []
+  },
+  "report": {
+    "schema_version": "1.0.0",
+    "created_utc": "2026-10-12T05:04:48Z",
+    "seed": 42,
+    "env_steps_per_run": 256,
+    "repeats": 5,
+    "ui_off": {
+      "env_steps_per_second": [
+        228.56795474445514,
+        256.910624068803,
+        328.1914649068303,
+        237.5094466306375,
+        164.85184075697634
+      ],
+      "median": 237.5094466306375
+    },
+    "ui_on": {
+      "env_steps_per_second": [
+        274.22805890914987,
+        366.20250792352635,
+        245.72291455398712,
+        206.49325308765353,
+        165.45025785185356
+      ],
+      "median": 245.72291455398712
+    },
+    "ratio_median": 1.0346,
+    "threshold": 0.9,
+    "passed": true,
+    "ui_cost": {
+      "cpu_utilization_pct_delta": null,
+      "ram_peak_mb_delta": -4.73,
+      "vram_peak_mb_delta": null
+    },
+    "view3d": {
+      "measured": false,
+      "reason": "không có màn hình (DISPLAY chưa đặt)"
+    }
+  }
+}
