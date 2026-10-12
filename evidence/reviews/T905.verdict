@@ -1,34 +1,26 @@
 {
   "schema_version": "1.0.0",
-  "run_id": "run-20261012-552bd8",
+  "run_id": "run-20261012-b129bc",
   "task_id": "T905",
   "round": 1,
-  "sha_reviewed": "90becae60b3d101450a055f670481d100d65343b",
-  "verdict": "REQUEST_CHANGES",
+  "sha_reviewed": "b9f47622ae09164ec227c85da9a75b636b4276fb",
+  "verdict": "APPROVE",
   "findings": [
     {
       "id": "F-001",
-      "severity": "CRITICAL",
+      "severity": "MINOR",
       "file": "tests/unit/test_capability_gate.py",
-      "line": 326,
-      "claim": "plan-mandated: T904 (2) bắt test `009/INV-002` dùng `@pytest.mark.requires_git_history(reason=\"Máy không có lịch sử git\")` để bị loại có báo cáo khi không có `.git`; `test_009_inv_002_project_dependency_files_unchanged` KHÔNG có decorator và gọi `git diff ... check=True` nên ném CalledProcessError khi không có kho git.",
-      "failure_scenario": "Giải nén `git archive HEAD` vào thư mục riêng (không `.git`), chạy `pytest -q -p no:cacheprovider tests/unit/test_capability_gate.py --capability-report=<tệp>` ⇒ `1 failed, 10 passed`: `subprocess.CalledProcessError: Command ['git','diff','--name-only','HEAD','--','pyproject.toml','uv.lock'] returned non-zero exit status 129` ở test này. Đây đúng là kịch bản mà feature 009 tồn tại để chặn (US3: cổng toàn hệ trên archive không đỏ vì test cần git; AC-2/FR-007: loại có báo cáo, không FAIL). Ở môi trường có git test PASS nên cổng trong worktree xanh và che lỗi này. Sửa: thêm đúng decorator trên hàm (cùng cách test INV-002 của 008)."
+      "line": 335,
+      "claim": "Test `009/INV-002` neo cứng mốc `28393ed..HEAD` với `check=True`: phép dò `requires_git_history` chỉ kiểm có HEAD, không kiểm mốc 28393ed có trong kho; và mốc không có hạn cuối nên mọi thay đổi hợp lệ về sau ở pyproject.toml/uv.lock (feature khác) đều làm test đỏ vĩnh viễn.",
+      "failure_scenario": "(1) Clone nông (shallow) hoặc kho không chứa đối tượng 28393ed nhưng có HEAD ⇒ phép dò trả True, test chạy, `git diff` thoát 128 ⇒ CalledProcessError ⇒ FAIL thay vì bị loại có báo cáo. (2) Feature sau thêm phụ thuộc vào pyproject.toml/uv.lock ⇒ `changed_files != []` ⇒ test của 009 đỏ dù 009 không vi phạm. Mức MINOR: là công cụ kiểm nội bộ, không phải hành vi sản phẩm; hiện tại trên nhánh tích hợp (28393ed là tổ tiên của HEAD, 0 thay đổi hai tệp) test xanh. Gợi ý: gắn mốc với phạm vi feature (so từ mốc đến commit cuối của 009) hoặc xử lý mốc vắng như lý do loại."
     },
     {
       "id": "F-002",
       "severity": "MINOR",
-      "file": "tests/unit/test_capability_gate.py",
-      "line": 336,
-      "claim": "Phép kiểm `git diff --name-only HEAD -- pyproject.toml uv.lock` chỉ so cây làm việc với HEAD, không so với diff của feature; T904 (2) đòi kiểm hai tệp 'không nằm trong diff của feature'.",
-      "failure_scenario": "Một commit sửa `pyproject.toml` hoặc `uv.lock` rồi để cây sạch ⇒ `git diff HEAD` rỗng ⇒ test PASS, không phát hiện vi phạm 009/INV-002 sau khi đã commit. Reviewer vẫn phải tự quét `git diff <base> <head>` (đã làm: 0 thay đổi ở hai tệp này trong khoảng 28393ed..90becae). Mức MINOR vì là công cụ kiểm nội bộ, không phải hành vi sản phẩm."
-    },
-    {
-      "id": "F-003",
-      "severity": "MINOR",
       "file": "specs/009-git-history-capability/checklists/acceptance.md",
       "line": 0,
-      "claim": "⚠️ Không kiểm được từ diff: AC-3 (`ai-sdlc verify --branch ai-sdlc/integration` xanh đủ 5 cổng gồm risk_coverage) và mã rủi ro `009/INV-002`, `009/AC-3`, `009/NFR-QUAL-001` có được cổng risk_coverage nhận hay không. Test `009/AC-3` trong repo KHÔNG thay lần chạy verify của cổng máy; INV-002 của 008 chỉ được chứng minh ở môi trường có git (FR-010).",
-      "failure_scenario": "Người đọc coi docstring có mã `009/...` là đã chứng minh AC-3 hay đã qua risk_coverage; thực tế đó chỉ là kết quả cổng máy chạy ngoài repo, lượt này không chạy lại và không tự ghi."
+      "claim": "⚠️ Không kiểm được từ diff: AC-3 (`ai-sdlc verify --branch ai-sdlc/integration` xanh đủ 5 cổng gồm risk_coverage) và việc cổng risk_coverage nhận ba mã `009/INV-002`, `009/AC-3`, `009/NFR-QUAL-001`. Checklist vẫn ghi THIẾU test entrypoint cho AC-3 (plan-mandated D-7: không tạo test gọi verify). Test `009/AC-3` trong repo KHÔNG thay lần chạy verify của cổng máy; INV-002 của 008 chỉ được chứng minh ở môi trường có git (FR-010).",
+      "failure_scenario": "Người đọc coi docstring có mã `009/AC-3` là đã chứng minh AC-3 hoặc đã qua risk_coverage; thực tế đó là kết quả của cổng máy chạy ngoài repo, lượt này không tự ghi và không chạy lại (CHƯA KIỂM)."
     }
   ]
 }
