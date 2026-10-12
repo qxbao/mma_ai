@@ -61,7 +61,7 @@ Không có task nào đổi hành vi mà test của task/feature trước đang 
 
 **Kiểm thử độc lập**: quickstart KB-1, KB-2, KB-4, KB-5 (grep mục, đếm lệnh, `wc -l`, UTF-8, liên kết).
 
-- [ ] T801 [US1] [US2] [US4] Viết `LICENSE` (MIT chuẩn, `Copyright (c) 2026 Dương Quan Bao`), `README.md` (tiêu đề + mô tả 2–3 dòng, huy hiệu, 10 mục bắt buộc, đúng 4 lệnh) và `CONTRIBUTING.md` (≤ 100 dòng) — README.md; LICENSE; CONTRIBUTING.md
+- [x] T801 [US1] [US2] [US4] Viết `LICENSE` (MIT chuẩn, `Copyright (c) 2026 Dương Quan Bao`), `README.md` (tiêu đề + mô tả 2–3 dòng, huy hiệu, 10 mục bắt buộc, đúng 4 lệnh) và `CONTRIBUTING.md` (≤ 100 dòng) — README.md; LICENSE; CONTRIBUTING.md
 
 <a id="user-story-us5us6-changelog-va-ba-huong-dan-p2"></a>
 ## User story US5–US6 — CHANGELOG và ba hướng dẫn (P2)
@@ -70,13 +70,13 @@ Không có task nào đổi hành vi mà test của task/feature trước đang 
 
 **Kiểm thử độc lập**: quickstart KB-6, KB-7, KB-4.
 
-- [ ] T802 [US5] [US6] Viết `CHANGELOG.md` (Keep a Changelog, `[Unreleased]` + `[0.1.0]`) và ba hướng dẫn `docs/guides/training.md`, `docs/guides/evaluation.md`, `docs/guides/replay-demo.md` (mỗi tệp ≤ 120 dòng) — CHANGELOG.md; docs/guides/training.md; docs/guides/evaluation.md; docs/guides/replay-demo.md
+- [x] T802 [US5] [US6] Viết `CHANGELOG.md` (Keep a Changelog, `[Unreleased]` + `[0.1.0]`) và ba hướng dẫn `docs/guides/training.md`, `docs/guides/evaluation.md`, `docs/guides/replay-demo.md` (mỗi tệp ≤ 120 dòng) — CHANGELOG.md; docs/guides/training.md; docs/guides/evaluation.md; docs/guides/replay-demo.md
 
 <a id="doi-chieu-doc-lap"></a>
 ## Đối chiếu độc lập
 
-- [ ] T804 [US1] [US5] [US6] QA: viết E2E `tests/e2e/test_008_docs_entrypoints.py` chạy `--help` của bốn entrypoint thật và đối chiếu cờ trong tài liệu
-- [ ] T803 [US3] Reviewer: chạy `--help` bốn lệnh và đối chiếu từng lệnh/cờ trong `README.md`, `CONTRIBUTING.md`, `docs/guides/*` với trợ giúp thật và mã; ghi báo cáo và verdict — evidence/reviews/T803.verdict; .ai/runs/*/reports/reviewer-docs-check.md
+- [x] T804 [US1] [US5] [US6] QA: viết E2E `tests/e2e/test_008_docs_entrypoints.py` chạy `--help` của bốn entrypoint thật và đối chiếu cờ trong tài liệu
+- [x] T803 [US3] Reviewer: chạy `--help` bốn lệnh và đối chiếu từng lệnh/cờ trong `README.md`, `CONTRIBUTING.md`, `docs/guides/*` với trợ giúp thật và mã; ghi báo cáo và verdict — evidence/reviews/T803.verdict; .ai/runs/*/reports/reviewer-docs-check.md
 
 <a id="quyet-dinh-ve-vai-challenger"></a>
 ### Quyết định về vai `challenger`

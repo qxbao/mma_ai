@@ -117,18 +117,18 @@ Hành vi Linux KHÔNG đổi, nhưng một số test cũ khẳng định "không
 
 **Mục tiêu**: tám mô-đun lá `compat`, plugin loại theo năng lực, test đặc trưng Linux — nền cho mọi story (AC-1…AC-6). Mỗi mô-đun có tham số tiêm nên nhánh Windows/macOS chạy được trên Linux (FR-023).
 
-- [ ] T601 [US1] Gói lá `compat` và nhận diện nền tảng `detect_platform` — src/mma_ai/compat/__init__.py, platform_info.py, tests/unit/test_compat_platform.py
-- [ ] T602 [US2] Đo RAM đỉnh theo OS `memory` — src/mma_ai/compat/memory.py, tests/unit/test_compat_memory.py
-- [ ] T603 [US3] Phép dò màn hình dùng chung `display` — src/mma_ai/compat/display.py, tests/unit/test_compat_display.py
-- [ ] T604 [US4] Năng lực symlink / đường dẫn dài / đo RAM / UTF-8 `capabilities` — src/mma_ai/compat/capabilities.py, tests/unit/test_compat_capabilities.py
-- [ ] T605 [US4] Ép UTF-8 đầu ra chuẩn `stdio` — src/mma_ai/compat/stdio.py, tests/unit/test_compat_stdio.py
-- [ ] T606 [US6] Plugin loại test theo năng lực và `conftest.py` cách ly theo OS — tests/unit/capability_gate.py, tests/unit/test_capability_gate.py, conftest.py
-- [ ] T607 [US4] Luật đường dẫn `pathrules` — src/mma_ai/compat/pathrules.py, tests/unit/test_compat_pathrules.py
-- [ ] T608 [US4] Ghi nguyên tử `fsio` — src/mma_ai/compat/fsio.py, tests/unit/test_compat_fsio.py, tests/integration/test_atomic_replace_locked_windows.py
-- [ ] T609 [US5] Báo cáo môi trường `env_report` (`CMD-PLT-0001`) — src/mma_ai/compat/env_report.py, tests/unit/test_env_report.py
-- [ ] T610 [US5] Test hợp đồng ví dụ và CLI `check_env` — tests/integration/test_contract_examples_platform.py, tests/integration/test_check_env_cli.py
-- [ ] T611 [US6] Test quét không thêm `skip`/`xfail` — tests/unit/test_no_new_skip_xfail.py
-- [ ] T612 [US7] Test đặc trưng hành vi Linux (xanh trên mã cũ, trước mọi thay đổi) — tests/unit/test_platform_characterization.py
+- [x] T601 [US1] Gói lá `compat` và nhận diện nền tảng `detect_platform` — src/mma_ai/compat/__init__.py, platform_info.py, tests/unit/test_compat_platform.py
+- [x] T602 [US2] Đo RAM đỉnh theo OS `memory` — src/mma_ai/compat/memory.py, tests/unit/test_compat_memory.py
+- [x] T603 [US3] Phép dò màn hình dùng chung `display` — src/mma_ai/compat/display.py, tests/unit/test_compat_display.py
+- [x] T604 [US4] Năng lực symlink / đường dẫn dài / đo RAM / UTF-8 `capabilities` — src/mma_ai/compat/capabilities.py, tests/unit/test_compat_capabilities.py
+- [x] T605 [US4] Ép UTF-8 đầu ra chuẩn `stdio` — src/mma_ai/compat/stdio.py, tests/unit/test_compat_stdio.py
+- [x] T606 [US6] Plugin loại test theo năng lực và `conftest.py` cách ly theo OS — tests/unit/capability_gate.py, tests/unit/test_capability_gate.py, conftest.py
+- [x] T607 [US4] Luật đường dẫn `pathrules` — src/mma_ai/compat/pathrules.py, tests/unit/test_compat_pathrules.py
+- [x] T608 [US4] Ghi nguyên tử `fsio` — src/mma_ai/compat/fsio.py, tests/unit/test_compat_fsio.py, tests/integration/test_atomic_replace_locked_windows.py
+- [x] T609 [US5] Báo cáo môi trường `env_report` (`CMD-PLT-0001`) — src/mma_ai/compat/env_report.py, tests/unit/test_env_report.py
+- [x] T610 [US5] Test hợp đồng ví dụ và CLI `check_env` — tests/integration/test_contract_examples_platform.py, tests/integration/test_check_env_cli.py
+- [x] T611 [US6] Test quét không thêm `skip`/`xfail` — tests/unit/test_no_new_skip_xfail.py
+- [x] T612 [US7] Test đặc trưng hành vi Linux (xanh trên mã cũ, trước mọi thay đổi) — tests/unit/test_platform_characterization.py
 
 <a id="phase-2-chuyen-diem-gan-nen-tang-cua-ma-002005-sang-compat"></a>
 ## Phase 2 — Chuyển điểm gắn nền tảng của mã 002–005 sang `compat`
@@ -137,45 +137,45 @@ Hành vi Linux KHÔNG đổi, nhưng một số test cũ khẳng định "không
 
 **Kiểm thử độc lập**: sau mỗi task, `uv run python -m pytest -q -p no:cacheprovider tests/unit/test_platform_characterization.py` + test của tệp đó xanh.
 
-- [ ] T613 [US2] `resources.py` bỏ `import resource` mức mô-đun, gọi `memory` — src/mma_ai/learning/resources.py, tests/integration/test_ram_real_measure.py
-- [ ] T614 [US3] `display_available()` gọi phép dò chung — src/mma_ai/visualization/display.py, tests/unit/test_display.py
-- [ ] T615 [US3] Viewer replay báo `mjpython` trên macOS — src/mma_ai/visualization/viewer.py, tests/unit/test_viewer.py
-- [ ] T616 [US3] `View3D.has_display()` gọi phép dò chung và báo `mjpython` — src/mma_ai/monitoring/viewer3d.py, tests/integration/test_viewer3d.py
-- [ ] T617 [US3] `evaluate_view3d_status()`, ghi báo cáo benchmark nguyên tử, ép UTF-8 — src/mma_ai/learning/benchmark.py, tests/unit/test_benchmark_logic.py
-- [ ] T618 [US4] Checkpoint ghi nguyên tử qua `fsio` — src/mma_ai/learning/checkpoint.py
-- [ ] T619 [US4] Manifest ghi nguyên tử và đường dẫn tương đối theo luật chung — src/mma_ai/learning/manifest.py
-- [ ] T620 [US4] Tiến độ ghi nguyên tử — src/mma_ai/learning/progress.py
-- [ ] T621 [US4] Jsonl chỉ số ghi LF cố định — src/mma_ai/learning/metrics_log.py
-- [ ] T622 [US4] Trainer làm tương đối đường dẫn checkpoint theo luật chung — src/mma_ai/learning/trainer.py
-- [ ] T623 [US4] `create_run_dir` báo đường dẫn quá dài và dọn dở dang — src/mma_ai/learning/run_dir.py, tests/unit/test_run_dir.py
-- [ ] T624 [US4] CLI train và so sánh run ép UTF-8 — src/mma_ai/learning/cli.py, src/mma_ai/learning/compare_cli.py
-- [ ] T625 [US1] CLI quan sát: `ui.json` nguyên tử, ép UTF-8 — src/mma_ai/monitoring/cli.py
-- [ ] T626 [US4] Episode ghi nguyên tử — src/mma_ai/visualization/episode.py
-- [ ] T627 [US4] Recorder và tóm tắt dùng `to_record_path` — src/mma_ai/visualization/recorder.py, src/mma_ai/visualization/summary.py
-- [ ] T628 [US1] CLI replay/demo ép UTF-8 — src/mma_ai/visualization/cli.py
-- [ ] T629 [US4] `eval_config` dùng `is_absolute_any_os` — src/mma_ai/evaluation/eval_config.py, tests/unit/test_eval_config.py
-- [ ] T630 [US4] Báo cáo evaluate: đường dẫn tương đối, ghi LF; CLI evaluate ép UTF-8 — src/mma_ai/evaluation/report.py, src/mma_ai/evaluation/cli.py
-- [ ] T631 [US1] `verify_clean_install` tìm Python venv theo OS, ghi nguyên tử, ép UTF-8 — src/mma_ai/environment/verify_clean_install.py, tests/unit/test_verify_clean_install.py
+- [x] T613 [US2] `resources.py` bỏ `import resource` mức mô-đun, gọi `memory` — src/mma_ai/learning/resources.py, tests/integration/test_ram_real_measure.py
+- [x] T614 [US3] `display_available()` gọi phép dò chung — src/mma_ai/visualization/display.py, tests/unit/test_display.py
+- [x] T615 [US3] Viewer replay báo `mjpython` trên macOS — src/mma_ai/visualization/viewer.py, tests/unit/test_viewer.py
+- [x] T616 [US3] `View3D.has_display()` gọi phép dò chung và báo `mjpython` — src/mma_ai/monitoring/viewer3d.py, tests/integration/test_viewer3d.py
+- [x] T617 [US3] `evaluate_view3d_status()`, ghi báo cáo benchmark nguyên tử, ép UTF-8 — src/mma_ai/learning/benchmark.py, tests/unit/test_benchmark_logic.py
+- [x] T618 [US4] Checkpoint ghi nguyên tử qua `fsio` — src/mma_ai/learning/checkpoint.py
+- [x] T619 [US4] Manifest ghi nguyên tử và đường dẫn tương đối theo luật chung — src/mma_ai/learning/manifest.py
+- [x] T620 [US4] Tiến độ ghi nguyên tử — src/mma_ai/learning/progress.py
+- [x] T621 [US4] Jsonl chỉ số ghi LF cố định — src/mma_ai/learning/metrics_log.py
+- [x] T622 [US4] Trainer làm tương đối đường dẫn checkpoint theo luật chung — src/mma_ai/learning/trainer.py
+- [x] T623 [US4] `create_run_dir` báo đường dẫn quá dài và dọn dở dang — src/mma_ai/learning/run_dir.py, tests/unit/test_run_dir.py
+- [x] T624 [US4] CLI train và so sánh run ép UTF-8 — src/mma_ai/learning/cli.py, src/mma_ai/learning/compare_cli.py
+- [x] T625 [US1] CLI quan sát: `ui.json` nguyên tử, ép UTF-8 — src/mma_ai/monitoring/cli.py
+- [x] T626 [US4] Episode ghi nguyên tử — src/mma_ai/visualization/episode.py
+- [x] T627 [US4] Recorder và tóm tắt dùng `to_record_path` — src/mma_ai/visualization/recorder.py, src/mma_ai/visualization/summary.py
+- [x] T628 [US1] CLI replay/demo ép UTF-8 — src/mma_ai/visualization/cli.py
+- [x] T629 [US4] `eval_config` dùng `is_absolute_any_os` — src/mma_ai/evaluation/eval_config.py, tests/unit/test_eval_config.py
+- [x] T630 [US4] Báo cáo evaluate: đường dẫn tương đối, ghi LF; CLI evaluate ép UTF-8 — src/mma_ai/evaluation/report.py, src/mma_ai/evaluation/cli.py
+- [x] T631 [US1] `verify_clean_install` tìm Python venv theo OS, ghi nguyên tử, ép UTF-8 — src/mma_ai/environment/verify_clean_install.py, tests/unit/test_verify_clean_install.py
 
 <a id="phase-3-tich-hop-ci-va-tai-lieu-cai-dat"></a>
 ## Phase 3 — Tích hợp, CI và tài liệu cài đặt
 
 **Mục tiêu**: chứng minh nhập được mọi mô-đun, `spawn`, ba nơi dò màn hình cùng kết luận, UTF-8/LF; CI ma trận 6 ô; tài liệu cài đặt Windows gốc (AC-1, AC-4, AC-5, AC-6).
 
-- [ ] T632 [US1] Test tích hợp: nhập mọi mô-đun, `spawn`, ba nơi dò màn hình thống nhất — tests/integration/test_cross_platform_imports.py, tests/integration/test_spawn_context.py, tests/integration/test_display_consumers_agree.py
-- [ ] T633 [US4] Test tích hợp: mọi CLI chịu `PYTHONIOENCODING=cp1252`, tệp ghi ra không có `\r`/BOM — tests/integration/test_cross_platform_cli_utf8.py
-- [ ] T635 [US6] Workflow CI ma trận 3 OS × Python 3.11/3.12 — .github/workflows/ci.yml
-- [ ] T634 [US6] Test tĩnh tệp workflow CI — tests/integration/test_ci_workflow.py
+- [x] T632 [US1] Test tích hợp: nhập mọi mô-đun, `spawn`, ba nơi dò màn hình thống nhất — tests/integration/test_cross_platform_imports.py, tests/integration/test_spawn_context.py, tests/integration/test_display_consumers_agree.py
+- [x] T633 [US4] Test tích hợp: mọi CLI chịu `PYTHONIOENCODING=cp1252`, tệp ghi ra không có `\r`/BOM — tests/integration/test_cross_platform_cli_utf8.py
+- [x] T635 [US6] Workflow CI ma trận 3 OS × Python 3.11/3.12 — .github/workflows/ci.yml
+- [x] T634 [US6] Test tĩnh tệp workflow CI — tests/integration/test_ci_workflow.py
 
 <a id="qa-va-review-doc-lap"></a>
 ## QA và review độc lập
 
-- [ ] T636 Challenger: gắn dấu `linux_only` có lý do cho test `setrlimit` (không đổi nghĩa khẳng định) — tests/challenge/test_env_invariants.py
-- [ ] T637 Challenger: gắn dấu `requires_symlink` có lý do cho test `symlink_to` (không đổi nghĩa khẳng định) — tests/challenge/test_train_invariants.py
-- [ ] T638 QA: E2E AC-1…AC-6 trên entrypoint thật (CLI `python -m mma_ai…`, `python -m mma_ai.compat.env_report`) — tests/e2e/test_platform_acceptance.py
-- [ ] T639 Challenger: dựng vector/fuzz đánh sập INV-003, INV-004 (và luật đường dẫn/ghi tệp) — tests/challenge/test_platform_invariants.py, evidence/reviews/T639.challenge
-- [ ] T640 QA: báo cáo kiểm chứng đa nền tảng (bằng chứng cổng Linux; mục kiểm tay Windows 11/macOS/CUDA giữ CHƯA KIỂM) — .ai/runs/*/reports/qa-006-crossplatform.md
-- [ ] T641 Reviewer: đối chiếu diff, bằng chứng cổng và báo cáo `T640`, ghi verdict — evidence/reviews/T641.verdict
+- [x] T636 Challenger: gắn dấu `linux_only` có lý do cho test `setrlimit` (không đổi nghĩa khẳng định) — tests/challenge/test_env_invariants.py
+- [x] T637 Challenger: gắn dấu `requires_symlink` có lý do cho test `symlink_to` (không đổi nghĩa khẳng định) — tests/challenge/test_train_invariants.py
+- [x] T638 QA: E2E AC-1…AC-6 trên entrypoint thật (CLI `python -m mma_ai…`, `python -m mma_ai.compat.env_report`) — tests/e2e/test_platform_acceptance.py
+- [x] T639 Challenger: dựng vector/fuzz đánh sập INV-003, INV-004 (và luật đường dẫn/ghi tệp) — tests/challenge/test_platform_invariants.py, evidence/reviews/T639.challenge
+- [x] T640 QA: báo cáo kiểm chứng đa nền tảng (bằng chứng cổng Linux; mục kiểm tay Windows 11/macOS/CUDA giữ CHƯA KIỂM) — .ai/runs/*/reports/qa-006-crossplatform.md
+- [x] T641 Reviewer: đối chiếu diff, bằng chứng cổng và báo cáo `T640`, ghi verdict — evidence/reviews/T641.verdict
 
 <a id="quyet-dinh-ve-vai-challenger"></a>
 ### Quyết định về vai `challenger`
