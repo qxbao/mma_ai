@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import importlib.util
 import subprocess
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -33,6 +34,23 @@ from mma_ai.learning.errors import CheckpointIOError, NonFiniteError
 def test_regress_tdd_red_train_cli_module_is_present() -> None:
     """FR-015, CMD-TRN-0001: Khẳng định độc lập mô-đun learning.cli tồn tại trên base."""
     assert importlib.util.find_spec("mma_ai.learning.cli") is not None
+
+
+def test_ac1_train_cli_configures_utf8_stdio_before_argument_parsing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """AC-1, FR-013: CLI huấn luyện cấu hình UTF-8 trước khi phân tích cờ."""
+    calls: list[tuple[str, str]] = []
+
+    class Stream:
+        def reconfigure(self, *, encoding: str, errors: str) -> None:
+            calls.append((encoding, errors))
+
+    monkeypatch.setattr(sys, "stdout", Stream())
+    monkeypatch.setattr(sys, "stderr", Stream())
+
+    assert cli.main(["--help"]) == 0
+    assert calls == [("utf-8", "replace"), ("utf-8", "replace")]
 
 
 class _DummyEnv:

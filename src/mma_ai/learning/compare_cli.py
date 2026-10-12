@@ -22,6 +22,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Sequence
 
+from mma_ai.compat.stdio import ensure_utf8_stdio
 from mma_ai.learning.manifest import read_manifest
 from mma_ai.learning.repro import compare_runs
 
@@ -80,6 +81,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         - 1 khi ngoài dung sai hoặc không thể so sánh được.
         - 2 khi tham số không hợp lệ, thiếu hoặc hỏng hồ sơ run manifest.
     """
+    ensure_utf8_stdio()
     parser = _build_parser()
     try:
         args = parser.parse_args(list(argv) if argv is not None else None)

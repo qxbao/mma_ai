@@ -10,13 +10,32 @@ Kiểm tra các trường hợp:
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from typing import Any
 
 import pytest
 
+import mma_ai.learning.compare_cli as compare_cli
 from mma_ai.learning.compare_cli import main
 from mma_ai.learning.manifest import build_manifest, write_manifest
+
+
+def test_ac1_compare_cli_configures_utf8_stdio_before_argument_parsing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """AC-1, FR-013: CLI so sánh cấu hình UTF-8 trước khi phân tích cờ."""
+    calls: list[tuple[str, str]] = []
+
+    class Stream:
+        def reconfigure(self, *, encoding: str, errors: str) -> None:
+            calls.append((encoding, errors))
+
+    monkeypatch.setattr(sys, "stdout", Stream())
+    monkeypatch.setattr(sys, "stderr", Stream())
+
+    assert compare_cli.main(["--help"]) == 0
+    assert calls == [("utf-8", "replace"), ("utf-8", "replace")]
 
 
 def _dummy_config(tolerance: float = 1e-6) -> dict[str, Any]:
