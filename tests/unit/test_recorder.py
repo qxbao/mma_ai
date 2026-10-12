@@ -380,7 +380,7 @@ def test_source_provenance_preserved() -> None:
     assert ep_dict_src.source.checkpoint_path == "runs/exp_02/checkpoints/latest.pt"
 
 
-@pytest.mark.parametrize(
+@pytest.mark.parametrize(  # type: ignore[untyped-decorator]
     "path",
     [r"C:\runs\exp_01\checkpoints\best.pt", "C:/runs/exp_01/checkpoints/best.pt"],
 )
