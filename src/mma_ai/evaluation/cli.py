@@ -18,6 +18,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any, NoReturn
 
+from mma_ai.compat.stdio import ensure_utf8_stdio
 from mma_ai.evaluation.errors import EvalError
 from mma_ai.evaluation.eval_config import EvalConfig
 from mma_ai.evaluation.runner import EvalResult, evaluate_checkpoint
@@ -196,6 +197,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         int: Mã thoát chuẩn CLI (0 nếu thành công, 1 lỗi không xác định, 2 lỗi tham số,
             4 checkpoint lỗi, 5 rò rỉ tập dữ liệu, 6 thiếu biểu đồ, 7 lỗi ghi đĩa, 130 Ctrl-C).
     """
+    ensure_utf8_stdio()
     parser = _build_parser()
     try:
         args = parser.parse_args(list(argv) if argv is not None else None)

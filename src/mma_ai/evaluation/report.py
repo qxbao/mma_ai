@@ -34,6 +34,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
 
+from mma_ai.compat.fsio import write_text_atomic
+from mma_ai.compat.pathrules import to_record_path
 from mma_ai.evaluation.errors import EvalWriteError
 from mma_ai.evaluation.eval_config import EvalConfig
 from mma_ai.evaluation.metrics import PolicyResult
@@ -209,7 +211,7 @@ def build_report(
         created_str = str(created_utc)
 
     # 3. Chuẩn hoá đường dẫn checkpoint và charts đảm bảo tương đối
-    ckpt_path_str = str(checkpoint_path).replace("\\", "/").lstrip("/")
+    ckpt_path_str = to_record_path(checkpoint_path)
     if not ckpt_path_str.endswith(".pt"):
         raise ValueError(
             f"Đường dẫn checkpoint phải kết thúc bằng .pt, nhận được: '{ckpt_path_str}'"
@@ -219,7 +221,7 @@ def build_report(
     for ch_name in ["loss", "reward", "activation"]:
         raw_val = charts_dict.get("files", {}).get(ch_name)
         if raw_val is not None:
-            cleaned_charts_files[ch_name] = str(raw_val).replace("\\", "/").lstrip("/")
+            cleaned_charts_files[ch_name] = to_record_path(raw_val)
         else:
             cleaned_charts_files[ch_name] = None
 
@@ -430,7 +432,7 @@ def save_evaluation_result(
         # Bắt buộc cấm NaN/Infinity theo hợp đồng NFR-REL-001
         payload = json.dumps(report, indent=2, ensure_ascii=False, allow_nan=False)
         report_file = tmp_path / "report.json"
-        report_file.write_text(payload, encoding="utf-8")
+        write_text_atomic(report_file, payload)
 
         if records is not None:
             write_episodes_csv(records, tmp_path / "episodes.csv")

@@ -31,6 +31,28 @@ from mma_ai.evaluation.runner import EvalResult
 from mma_ai.evaluation.stats import Verdict
 
 
+def test_006_inv_005_ac_4_main_configures_utf8_before_parsing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """006 INV-005 AC-4: CLI cấu hình UTF-8 trước khi phân tích tham số."""
+    events: list[str] = []
+
+    class Parser:
+        def parse_args(self, args: list[str] | None) -> None:
+            events.append("parse")
+            raise SystemExit(2)
+
+    monkeypatch.setattr(
+        "mma_ai.evaluation.cli.ensure_utf8_stdio",
+        lambda: events.append("utf8"),
+        raising=False,
+    )
+    monkeypatch.setattr("mma_ai.evaluation.cli._build_parser", lambda: Parser())
+
+    assert main(["--unknown"]) == 2
+    assert events == ["utf8", "parse"]
+
+
 def test_no_criterion_override_flag() -> None:
     """FR-007, INV-003, INV-006: Kiểm tra không có cờ ghi đè tiêu chí kết luận hay hành động."""
     parser = _build_parser()

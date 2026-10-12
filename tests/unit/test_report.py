@@ -352,7 +352,7 @@ def test_failure_removes_tmp(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) ->
 
 
 def test_paths_relative() -> None:
-    """Kiểm tra các đường dẫn trong báo cáo luôn là đường dẫn tương đối (FR-013)."""
+    """006 INV-005 AC-4: đường dẫn trong báo cáo luôn tương đối và đa nền tảng."""
     cfg = EvalConfig.load()
     learned = _create_sample_policy_result("learned")
     random = _create_sample_policy_result("random")
@@ -366,7 +366,7 @@ def test_paths_relative() -> None:
         run_status="done",
         run_seed=42,
         train_seeds=[42],
-        checkpoint_path="checkpoints/ckpt_final.pt",
+        checkpoint_path=r"C:\runs\checkpoints\ckpt_final.pt",
         checkpoint_sha256="a" * 64,
         update_idx=20,
         env_steps=40960,
@@ -383,12 +383,49 @@ def test_paths_relative() -> None:
 
     ckpt_path = report["checkpoint"]["path"]
     assert not ckpt_path.startswith("/")
+    assert ckpt_path == "runs/checkpoints/ckpt_final.pt"
+    assert ":" not in ckpt_path
+    assert "\\" not in ckpt_path
     assert ckpt_path.endswith(".pt")
 
     for chart_key, c_path in report["charts"]["files"].items():
         if c_path is not None:
             assert not c_path.startswith("/")
+            assert ":" not in c_path
+            assert "\\" not in c_path
             assert c_path.endswith(".png")
+
+
+def test_inv_005_saved_report_uses_lf_only(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """006 INV-005 AC-4: báo cáo JSON dùng UTF-8 và xuống dòng LF."""
+    original_open = Path.open
+
+    def windows_default_newlines(
+        path: Path,
+        mode: str = "r",
+        buffering: int = -1,
+        encoding: str | None = None,
+        errors: str | None = None,
+        newline: str | None = None,
+    ) -> Any:
+        selected_newline = "\r\n" if "w" in mode and newline is None else newline
+        return original_open(
+            path,
+            mode,
+            buffering=buffering,
+            encoding=encoding,
+            errors=errors,
+            newline=selected_newline,
+        )
+
+    monkeypatch.setattr(Path, "open", windows_default_newlines)
+    save_evaluation_result(tmp_path, {"ghi_chu": "Cánh tay duỗi tới mục tiêu"})
+
+    raw = (tmp_path / "report.json").read_bytes()
+    assert b"\r" not in raw
+    assert "Cánh tay duỗi tới mục tiêu" in raw.decode("utf-8")
 
 
 def test_write_episodes_csv(tmp_path: Path) -> None:
